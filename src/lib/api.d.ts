@@ -25,17 +25,31 @@ declare module "@/lib/api" {
   export interface VitalAPI {
     list: (visitId: string | number) => Promise<any>;
     store: (visitId: string | number, data: any) => Promise<any>;
+    listGlobal: (params?: any) => Promise<any>;
   }
 
   export interface InvestigationAPI {
     list: (visitId: string | number) => Promise<any>;
     store: (visitId: string | number, data: any) => Promise<any>;
     update: (visitId: string | number, invId: string | number, data: any) => Promise<any>;
+    listGlobal: (params?: any) => Promise<any>;
   }
 
   export interface PrescriptionAPI {
     list: (visitId: string | number) => Promise<any>;
     store: (visitId: string | number, data: any) => Promise<any>;
+    listGlobal: (params?: any) => Promise<any>;
+  }
+
+  export interface BillingAPI {
+    list: (params?: any) => Promise<any>;
+    get: (id: string | number) => Promise<any>;
+    store: (data: any) => Promise<any>;
+  }
+
+  export interface PaymentAPI {
+    store: (billId: string | number, data: any) => Promise<any>;
+    list: (billId: string | number) => Promise<any>;
   }
 
   export interface MedicineAPI {
@@ -57,6 +71,8 @@ declare module "@/lib/api" {
   export const prescriptionAPI: PrescriptionAPI;
   export const medicineAPI: MedicineAPI;
   export const stockAPI: StockAPI;
+  export const billingAPI: BillingAPI;
+  export const paymentAPI: PaymentAPI;
 
   export default apiClient;
 }

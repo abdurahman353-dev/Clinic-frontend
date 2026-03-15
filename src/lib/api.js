@@ -133,6 +133,10 @@ export const vitalAPI = {
     store: async (visitId, data) => {
         const response = await apiClient.post(`/visits/${visitId}/vitals`, data);
         return response.data;
+    },
+    listGlobal: async (params = {}) => {
+        const response = await apiClient.get('/vitals', { params });
+        return response.data;
     }
 };
 
@@ -148,6 +152,10 @@ export const investigationAPI = {
     update: async (visitId, invId, data) => {
         const response = await apiClient.patch(`/visits/${visitId}/investigations/${invId}`, { ...data, _method: 'PATCH' });
         return response.data;
+    },
+    listGlobal: async (params = {}) => {
+        const response = await apiClient.get('/investigations', { params });
+        return response.data;
     }
 };
 
@@ -158,6 +166,10 @@ export const prescriptionAPI = {
     },
     store: async (visitId, data) => {
         const response = await apiClient.post(`/visits/${visitId}/prescriptions`, data);
+        return response.data;
+    },
+    listGlobal: async (params = {}) => {
+        const response = await apiClient.get('/prescriptions', { params });
         return response.data;
     }
 };
@@ -188,6 +200,32 @@ export const stockAPI = {
     },
     store: async (data) => {
         const response = await apiClient.post('/stocks', data);
+        return response.data;
+    }
+};
+
+export const billingAPI = {
+    list: async (params = {}) => {
+        const response = await apiClient.get('/bills', { params });
+        return response.data;
+    },
+    get: async (id) => {
+        const response = await apiClient.get(`/bills/${id}`);
+        return response.data;
+    },
+    store: async (dataSpec) => {
+        const response = await apiClient.post('/bills', dataSpec);
+        return response.data;
+    }
+};
+
+export const paymentAPI = {
+    store: async (billId, data) => {
+        const response = await apiClient.post(`/bills/${billId}/payments`, data);
+        return response.data;
+    },
+    list: async (billId) => {
+        const response = await apiClient.get(`/bills/${billId}/payments`);
         return response.data;
     }
 };

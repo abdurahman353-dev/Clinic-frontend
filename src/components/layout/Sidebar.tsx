@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Activity, NotepadText, FileText, Package } from "lucide-react";
+import { LayoutDashboard, Users, Activity, NotepadText, FileText, Package, CreditCard } from "lucide-react";
 import Image from "next/image";
 
 export function Sidebar() {
@@ -14,6 +14,7 @@ export function Sidebar() {
     { name: "Vitals", href: "/vitals", icon: Activity },
     { name: "Investigations", href: "/investigations", icon: NotepadText },
     { name: "Prescriptions", href: "/prescriptions", icon: FileText },
+    { name: "Cashier", href: "/cashier", icon: CreditCard },
     { name: "Stock", href: "/stock", icon: Package },
   ];
 
