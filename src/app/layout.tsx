@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Clinic Management System",
-  description: "Modern & professional clinic management dashboard",
+  title: "Wafaa Medical Clinic",
+  description: "Compassionate Care with Excellence",
 };
 
 export default function RootLayout({
