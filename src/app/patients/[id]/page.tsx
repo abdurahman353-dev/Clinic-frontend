@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { ArrowLeft, User as UserIcon, Calendar, Phone, Mail, Droplet, AlertTriangle, FileText, Activity } from "lucide-react";
 import Link from "next/link";
-import { apiFetch } from "@/lib/api";
+import { patientAPI } from "@/lib/api";
 import VitalsTab from "@/components/patients/VitalsTab";
 import { InvestigationsTab } from "@/components/patients/InvestigationsTab";
 import { PrescriptionsTab } from "@/components/patients/PrescriptionsTab";
@@ -20,8 +20,8 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     const fetchPatient = async () => {
       try {
-        const response = await apiFetch(`/patients/${unwrappedId}`);
-        setPatient(response.data);
+        const data = await patientAPI.get(unwrappedId); // Changed apiFetch to patientAPI.get and removed endpoint string
+        setPatient(data.data); // Changed response.data to data.data
       } catch (err: any) {
         setErrorMsg(err.message || "Failed to load patient");
       } finally {

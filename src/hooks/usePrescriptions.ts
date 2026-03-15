@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { apiFetch } from "@/lib/api";
+import { prescriptionAPI, medicineAPI, visitAPI } from "@/lib/api";
 
 export function usePrescriptions(patientId?: number) {
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
@@ -12,13 +12,13 @@ export function usePrescriptions(patientId?: number) {
     setIsLoading(true);
     setErrorMsg("");
     try {
-      const visitsResponse = await apiFetch(`/visits?filter[patient_id]=${patientId}`);
+      const visitsResponse = await visitAPI.list({ 'filter[patient_id]': patientId });
       if (!visitsResponse.data?.length) {
          setPrescriptions([]);
          return;
       }
       const visits = visitsResponse.data;
-      const rxPromises = visits.map((v: any) => apiFetch(`/visits/${v.id}/prescriptions`));
+      const rxPromises = visits.map((v: any) => prescriptionAPI.list(v.id));
       
       const rxResults = await Promise.all(rxPromises);
       const allRx = rxResults.flatMap((res) => res.data || []);
@@ -36,7 +36,7 @@ export function usePrescriptions(patientId?: number) {
 
   const fetchMedicines = useCallback(async () => {
     try {
-        const res = await apiFetch('/medicines');
+        const res = await medicineAPI.list();
         setMedicines(res.data || []);
     } catch (err) {
         console.error("Failed to load medicines", err);
@@ -47,23 +47,23 @@ export function usePrescriptions(patientId?: number) {
     let visitId;
     try {
       // Find or create visit
-      const visitsResponse = await apiFetch(`/visits?filter[patient_id]=${patientId}&sort=-created_at`);
+      const visitsResponse = await visitAPI.list({ 
+        'filter[patient_id]': patientId,
+        'sort': '-created_at'
+      });
       const recentVisit = visitsResponse.data?.[0];
       
       if (recentVisit) {
         visitId = recentVisit.id;
       } else {
-        const newVisit = await apiFetch(`/visits`, {
-          method: "POST",
-          body: JSON.stringify({ patient_id: patientId, reason: "prescription refill" })
+        const newVisit = await visitAPI.store({ 
+          patient_id: patientId, 
+          reason: "prescription refill" 
         });
         visitId = newVisit.data.id;
       }
 
-      const res = await apiFetch(`/visits/${visitId}/prescriptions`, {
-        method: "POST",
-        body: JSON.stringify(rxData)
-      });
+      const res = await prescriptionAPI.store(visitId, rxData);
       await fetchPrescriptions();
       return res.data;
     } catch (err: any) {

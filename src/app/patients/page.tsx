@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, Plus, MoreHorizontal, Filter, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { apiFetch } from "@/lib/api";
+import { patientAPI } from "@/lib/api";
 
 interface Patient {
   id: string; // the physical db ID or patient_id string
@@ -20,29 +20,40 @@ export default function PatientsList() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
-  const fetchPatients = async (search = "") => {
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchQuery]);
+
+  const fetchPatients = useCallback(async () => {
     setIsLoading(true);
     setErrorMsg("");
     try {
-      const qs = search ? `?filter[name]=${encodeURIComponent(search)}` : "";
-      const response = await apiFetch(`/patients${qs}`);
-      setPatients(response.data || []);
+      const params = {
+        'filter[name]': debouncedSearch,
+        'page[number]': 1,
+      };
+      const data = await patientAPI.list(params);
+      setPatients(data.data || []);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to load patients");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [debouncedSearch]);
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchPatients(searchQuery);
-    }, 500);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+    fetchPatients();
+  }, [fetchPatients]);
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">

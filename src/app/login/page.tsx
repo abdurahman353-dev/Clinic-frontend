@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Activity, Mail, Lock, LogIn } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { apiFetch } from "@/lib/api";
+import { authAPI } from "@/lib/api";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -18,10 +18,7 @@ export default function LoginPage() {
     setErrorMsg("");
 
     try {
-      const { user, token } = await apiFetch("/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      });
+      const { user, token } = await authAPI.login(email, password);
 
       setToken(token);
       setUser(user);

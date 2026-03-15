@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { patientAPI } from "@/lib/api";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { apiFetch } from "@/lib/api";
 
 export default function NewPatientPage() {
   const router = useRouter();
@@ -49,16 +49,7 @@ export default function NewPatientPage() {
     setErrorMsg("");
 
     try {
-      const payload = {
-        ...formData,
-        age: formData.age ? parseInt(formData.age, 10) : undefined,
-      };
-
-      await apiFetch("/patients", {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-
+      await patientAPI.store(formData);
       router.push("/patients");
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to create patient");

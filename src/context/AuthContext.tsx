@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { apiFetch } from "@/lib/api";
+import Cookies from "js-cookie";
+import { authAPI } from "@/lib/api";
 
 interface User {
   id: number;
@@ -27,50 +28,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user");
+    const storedToken = Cookies.get("admin_token");
+    const userStr = sessionStorage.getItem("admin_user");
 
-    if (storedToken && storedUser) {
+    if (storedToken) {
       setToken(storedToken);
+    }
+    
+    if (userStr) {
       try {
-        setUser(JSON.parse(storedUser));
+        setUser(JSON.parse(userStr));
       } catch (e) {
-        // ignore
+        console.error("Failed to parse user from session storage", e);
       }
     }
+    
     setIsLoading(false);
   }, []);
 
   const handleSetUser = (newUser: User | null) => {
     setUser(newUser);
     if (newUser) {
-      localStorage.setItem("user", JSON.stringify(newUser));
+      sessionStorage.setItem("admin_user", JSON.stringify(newUser));
     } else {
-      localStorage.removeItem("user");
+      sessionStorage.removeItem("admin_user");
     }
   };
 
   const handleSetToken = (newToken: string | null) => {
     setToken(newToken);
     if (newToken) {
-      localStorage.setItem("token", newToken);
+       const isSecure = process.env.NODE_ENV === 'production';
+       Cookies.set('admin_token', newToken, { expires: 7, secure: isSecure, sameSite: 'lax' });
     } else {
-      localStorage.removeItem("token");
+      Cookies.remove('admin_token');
     }
   };
 
   const logout = async () => {
-    try {
-      if (token) {
-        await apiFetch("/auth/logout", { method: "POST" });
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      handleSetUser(null);
-      handleSetToken(null);
-      window.location.href = "/login";
-    }
+    await authAPI.logout();
+    setUser(null);
+    setToken(null);
+    window.location.href = "/login";
   };
 
   return (
