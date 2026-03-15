@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { patientAPI } from "@/lib/api";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 
-export default function NewPatientPage() {
+export default function EditPatientPage({ params }: { params: Promise<{ id: string }> }) {
+  const unwrappedParams = use(params);
+  const unwrappedId = unwrappedParams.id;
+  
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
   const [formData, setFormData] = useState({
@@ -26,6 +30,35 @@ export default function NewPatientPage() {
     next_of_kin: "",
     next_of_kin_phone: "",
   });
+
+  useEffect(() => {
+    const fetchPatient = async () => {
+      try {
+        const data = await patientAPI.get(unwrappedId);
+        const p = data.data;
+        setFormData({
+          patient_type: p.patient_type || "outpatient",
+          name: p.name || "",
+          id_number: p.id_number || "",
+          phone: p.phone || "",
+          email: p.email || "",
+          gender: p.gender || "male",
+          dob: p.dob || "",
+          age: p.age?.toString() || "",
+          blood_group: p.blood_group || "",
+          address: p.address || "",
+          allergies: p.allergies || "",
+          next_of_kin: p.next_of_kin || "",
+          next_of_kin_phone: p.next_of_kin_phone || "",
+        });
+      } catch (err: any) {
+        setErrorMsg(err.message || "Failed to load patient data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPatient();
+  }, [unwrappedId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -58,7 +91,7 @@ export default function NewPatientPage() {
     setErrorMsg("");
 
     try {
-      await patientAPI.store(formData);
+      await patientAPI.update(unwrappedId, formData);
       router.push("/patients");
     } catch (err: any) {
       if (err.response?.status === 422 && err.response?.data?.errors) {
@@ -67,12 +100,20 @@ export default function NewPatientPage() {
         const firstErrorMessage = errors[firstErrorKey][0];
         setErrorMsg(firstErrorMessage);
       } else {
-        setErrorMsg(err.response?.data?.message || err.message || "Failed to create patient");
+        setErrorMsg(err.response?.data?.message || err.message || "Failed to update patient");
       }
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 md:p-8 max-w-7xl mx-auto flex justify-center items-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
@@ -84,8 +125,8 @@ export default function NewPatientPage() {
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Register New Patient</h1>
-          <p className="text-slate-500 mt-1">Enter the patient's personal and medical details</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Edit Patient</h1>
+          <p className="text-slate-500 mt-1">Update patient's personal and medical details</p>
         </div>
       </div>
 
@@ -97,7 +138,6 @@ export default function NewPatientPage() {
         )}
 
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* General Information */}
           <div className="md:col-span-2">
             <h3 className="text-lg font-medium text-slate-900 mb-4 pb-2 border-b border-slate-100">General Information</h3>
           </div>
@@ -125,7 +165,6 @@ export default function NewPatientPage() {
               value={formData.name}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              placeholder="e.g. John Doe"
             />
           </div>
 
@@ -138,7 +177,6 @@ export default function NewPatientPage() {
               value={formData.id_number}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              placeholder="Enter national ID or passport number"
             />
           </div>
 
@@ -152,7 +190,7 @@ export default function NewPatientPage() {
                 handleChange(e);
                 calculateAge(e.target.value);
               }}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm"
             />
           </div>
 
@@ -162,11 +200,9 @@ export default function NewPatientPage() {
               type="number"
               name="age"
               required
-              min="0"
               value={formData.age}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              placeholder="e.g. 34"
+              className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm"
             />
           </div>
 
@@ -177,7 +213,7 @@ export default function NewPatientPage() {
               required
               value={formData.gender}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm"
             >
               <option value="male">Male</option>
               <option value="female">Female</option>
@@ -185,7 +221,6 @@ export default function NewPatientPage() {
             </select>
           </div>
 
-          {/* Contact Information */}
           <div className="md:col-span-2 mt-4">
             <h3 className="text-lg font-medium text-slate-900 mb-4 pb-2 border-b border-slate-100">Contact Details</h3>
           </div>
@@ -198,8 +233,7 @@ export default function NewPatientPage() {
               required
               value={formData.phone}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              placeholder="e.g. +1 234 567 8900"
+              className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm"
             />
           </div>
 
@@ -210,8 +244,7 @@ export default function NewPatientPage() {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              placeholder="e.g. john@example.com"
+              className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm"
             />
           </div>
 
@@ -222,15 +255,13 @@ export default function NewPatientPage() {
               rows={2}
               value={formData.address}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              placeholder="Full resident address..."
+              className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm"
             />
           </div>
 
-          {/* Emergency & Medical */}
           <div className="md:col-span-2 mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h3 className="text-sm font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-2">Emergency Contact</h3>
+              <h3 className="text-sm font-semibold text-slate-900 mb-4 pb-2 border-b border-slate-100">Emergency Contact</h3>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Next of Kin Name</label>
@@ -256,7 +287,7 @@ export default function NewPatientPage() {
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-2">Medical History</h3>
+              <h3 className="text-sm font-semibold text-slate-900 mb-4 pb-2 border-b border-slate-100">Medical History</h3>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Blood Group</label>
@@ -285,7 +316,6 @@ export default function NewPatientPage() {
                     value={formData.allergies}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm"
-                    placeholder="List any drug, food, or environmental allergies..."
                   />
                 </div>
               </div>
@@ -296,26 +326,17 @@ export default function NewPatientPage() {
         <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3">
           <Link
             href="/patients"
-            className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Patient
-              </>
-            )}
+            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Update Patient
           </button>
         </div>
       </form>

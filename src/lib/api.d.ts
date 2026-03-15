@@ -49,6 +49,10 @@ declare module "@/lib/api" {
     store: (data: any) => Promise<any>;
   }
 
+  export interface DashboardAPI {
+    get: () => Promise<any>;
+  }
+
   export const authAPI: AuthAPI;
   export const patientAPI: PatientAPI;
   export const visitAPI: VisitAPI;
@@ -57,6 +61,7 @@ declare module "@/lib/api" {
   export const prescriptionAPI: PrescriptionAPI;
   export const medicineAPI: MedicineAPI;
   export const stockAPI: StockAPI;
+  export const dashboardAPI: DashboardAPI;
 
   export default apiClient;
 }
