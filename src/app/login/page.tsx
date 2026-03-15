@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Activity, Mail, Lock, LogIn } from "lucide-react";
+import Image from "next/image";
+import { Mail, Lock, LogIn } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { authAPI } from "@/lib/api";
 
@@ -34,13 +35,18 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center text-primary-600">
-          <div className="h-16 w-16 bg-white rounded-2xl shadow-sm border border-slate-200 flex items-center justify-center">
-            <Activity className="h-10 w-10" />
-          </div>
+        <div className="flex justify-center">
+          <Image 
+            src="/wafaa clinic logo.svg" 
+            alt="Wafaa Medical Clinic" 
+            width={240} 
+            height={80} 
+            className="h-20 w-auto object-contain"
+            priority
+          />
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900 tracking-tight">
-          Welcome to ClinicPro
+          Wafaa Medical Clinic
         </h2>
         <p className="mt-2 text-center text-sm text-slate-600">
           Sign in to access the clinic dashboard
