@@ -1,16 +1,40 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { DashboardLayout } from "./DashboardLayout";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 
-export function ClientLayout({ children }: { children: React.ReactNode }) {
+function AuthGuard({ children }: { children: React.ReactNode }) {
+  const { token, isLoading } = useAuth();
+  const router = useRouter();
   const pathname = usePathname();
-  
-  // If the user is on the login page, don't show the dashboard shell
+
+  useEffect(() => {
+    if (!isLoading && !token && pathname !== "/login") {
+      router.push("/login");
+    }
+  }, [isLoading, token, pathname, router]);
+
   if (pathname === "/login") {
     return <>{children}</>;
   }
-  
-  // Otherwise, wrap the content in the dashboard shell (sidebar + header)
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500">Loading...</div>;
+  }
+
+  if (!token) {
+    return null;
+  }
+
   return <DashboardLayout>{children}</DashboardLayout>;
+}
+
+export function ClientLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthProvider>
+      <AuthGuard>{children}</AuthGuard>
+    </AuthProvider>
+  );
 }

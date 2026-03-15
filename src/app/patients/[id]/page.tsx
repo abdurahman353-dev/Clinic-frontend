@@ -1,137 +1,163 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowLeft, Edit, Activity, NotepadText, FileText, Clock, User, Phone, MapPin } from "lucide-react";
+import { useState, useEffect, use } from "react";
+import { ArrowLeft, User as UserIcon, Calendar, Phone, Mail, Droplet, AlertTriangle, FileText, Activity } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { VitalsTab } from "../../../components/patients/VitalsTab";
-import { InvestigationsTab } from "../../../components/patients/InvestigationsTab";
-import { PrescriptionsTab } from "../../../components/patients/PrescriptionsTab";
+import { apiFetch } from "@/lib/api";
+import VitalsTab from "@/components/patients/VitalsTab";
+import { InvestigationsTab } from "@/components/patients/InvestigationsTab";
+import { PrescriptionsTab } from "@/components/patients/PrescriptionsTab";
 
-// Main patient profile view component
-export default function PatientProfile() {
-  const params = useParams();
-  const id = params.id as string;
-  const [activeTab, setActiveTab] = useState("overview");
+export default function PatientDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const unwrappedParams = use(params);
+  const unwrappedId = unwrappedParams.id;
+  
+  const [patient, setPatient] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [activeTab, setActiveTab] = useState("vitals");
 
-  const patient = {
-    id: id || "P-10024",
-    name: "Sarah Johnson",
-    age: 34,
-    gender: "Female",
-    bloodGroup: "O+",
-    phone: "+1 (555) 123-4567",
-    email: "sarah.j@example.com",
-    address: "123 Maple Street, Anytown, CA 90210",
-    allergies: "Penicillin, Peanuts",
-    status: "Active"
-  };
+  useEffect(() => {
+    const fetchPatient = async () => {
+      try {
+        const response = await apiFetch(`/patients/${unwrappedId}`);
+        setPatient(response.data);
+      } catch (err: any) {
+        setErrorMsg(err.message || "Failed to load patient");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPatient();
+  }, [unwrappedId]);
+
+  if (isLoading) {
+    return (
+      <div className="p-6 md:p-8 max-w-7xl mx-auto flex justify-center items-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (errorMsg || !patient) {
+    return (
+      <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
+        <Link href="/patients" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-700">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Patients
+        </Link>
+        <div className="bg-red-50 p-6 rounded-xl border border-red-100 text-center">
+          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+          <h3 className="text-lg font-medium text-red-800">Error Loading Patient</h3>
+          <p className="text-red-600 mt-1">{errorMsg || "Patient not found."}</p>
+        </div>
+      </div>
+    );
+  }
 
   const tabs = [
-    { id: "overview", name: "Overview", icon: User },
-    { id: "vitals", name: "Vitals", icon: Activity },
-    { id: "investigations", name: "Investigations", icon: NotepadText },
-    { id: "prescriptions", name: "Prescriptions", icon: FileText },
+    { id: "vitals", label: "Vitals", icon: Activity },
+    { id: "investigations", label: "Investigations", icon: FileText },
+    { id: "prescriptions", label: "Prescriptions", icon: Droplet },
   ];
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
-      {/* Header & Back Navigation */}
-      <div className="flex flex-col space-y-4">
-        <Link href="/patients" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-primary-600 w-fit transition-colors">
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          Back to Patients
-        </Link>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-xl border-2 border-white shadow-sm">
-              {patient.name.split(' ').map(n => n[0]).join('')}
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                {patient.name}
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  {patient.status}
-                </span>
-              </h1>
-              <p className="text-slate-500 mt-1">{patient.id} &bull; {patient.age} yrs, {patient.gender} &bull; Blood Group {patient.bloodGroup}</p>
-            </div>
-          </div>
-          <button className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 h-10 px-4 py-2 shadow-sm">
-            <Edit className="mr-2 h-4 w-4 text-slate-500" />
-            Edit Profile
-          </button>
-        </div>
-      </div>
+      <Link href="/patients" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors">
+        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Patients
+      </Link>
 
-      {/* Navigation Tabs */}
-      <div className="bg-white border-b border-slate-200">
-        <nav className="-mb-px flex space-x-8 px-4 sm:px-6 overflow-x-auto" aria-label="Tabs">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`whitespace-nowrap flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === tab.id
-                  ? "border-primary-500 text-primary-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-              }`}
-            >
-              <tab.icon className={`mr-2 h-4 w-4 ${activeTab === tab.id ? "text-primary-500" : "text-slate-400"}`} />
-              {tab.name}
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* Tab Content Areas */}
-      <div className="mt-6">
-        {activeTab === "overview" && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-1 space-y-6">
-              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-                <h3 className="text-sm font-semibold text-slate-900 tracking-wide uppercase mb-4">Contact Information</h3>
-                <dl className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <Phone className="h-5 w-5 text-slate-400 flex-shrink-0" />
-                    <div>
-                      <dt className="text-xs text-slate-500">Phone</dt>
-                      <dd className="text-sm font-medium text-slate-900">{patient.phone}</dd>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <MapPin className="h-5 w-5 text-slate-400 flex-shrink-0" />
-                    <div>
-                      <dt className="text-xs text-slate-500">Address</dt>
-                      <dd className="text-sm font-medium text-slate-900">{patient.address}</dd>
-                    </div>
-                  </div>
-                </dl>
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        {/* Patient Header */}
+        <div className="p-6 border-b border-slate-200">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+            <div className="flex items-start gap-4">
+              <div className="h-16 w-16 rounded-full bg-primary-100 flexitems-center justify-center text-primary-700 font-bold text-xl flex-shrink-0 flex items-center">
+                {patient.name?.charAt(0)}
               </div>
-              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-                <h3 className="text-sm font-semibold text-slate-900 tracking-wide uppercase mb-4">Allergies</h3>
-                <div className="flex flex-wrap gap-2">
-                  {patient.allergies.split(", ").map((allergy, i) => (
-                    <span key={i} className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-red-50 text-red-700 border border-red-100">
-                      {allergy}
-                    </span>
-                  ))}
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                  {patient.name}
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
+                    patient.patient_type === 'inpatient' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {patient.patient_type || 'outpatient'}
+                  </span>
+                </h1>
+                <p className="text-slate-500 mt-1 flex items-center gap-2">
+                  <span className="font-medium text-slate-700">{patient.id}</span>
+                  <span>&bull;</span>
+                  <span>{patient.age || "?"} yrs</span>
+                  <span>&bull;</span>
+                  <span className="capitalize">{patient.gender}</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+              <div className="flex items-center text-slate-600">
+                <Phone className="h-4 w-4 mr-2 text-slate-400" />
+                {patient.phone}
+              </div>
+              {patient.email && (
+                <div className="flex items-center text-slate-600">
+                  <Mail className="h-4 w-4 mr-2 text-slate-400" />
+                  {patient.email}
                 </div>
-              </div>
-            </div>
-            <div className="md:col-span-2 space-y-6">
-              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col items-center justify-center py-16 text-center text-slate-500">
-                <Clock className="h-12 w-12 mb-4 text-slate-300" />
-                <p>Welcome to the Patient Overview.</p>
-                <p className="text-sm mt-1">Select Vitals, Investigations, or Prescriptions tabs for detailed actions.</p>
-              </div>
+              )}
+              {patient.dob && (
+                <div className="flex items-center text-slate-600">
+                  <Calendar className="h-4 w-4 mr-2 text-slate-400" />
+                  DOB: {patient.dob}
+                </div>
+              )}
+              {patient.blood_group && (
+                <div className="flex items-center text-slate-600">
+                  <Droplet className="h-4 w-4 mr-2 text-red-400" />
+                  Blood: <span className="font-semibold ml-1">{patient.blood_group}</span>
+                </div>
+              )}
             </div>
           </div>
-        )}
 
-        {activeTab === "vitals" && <VitalsTab />}
-        {activeTab === "investigations" && <InvestigationsTab />}
-        {activeTab === "prescriptions" && <PrescriptionsTab />}
+          {patient.allergies && (
+            <div className="mt-4 p-3 bg-red-50 rounded-lg flex items-start text-red-800 border-l-4 border-red-500">
+              <AlertTriangle className="h-5 w-5 mr-2 shrink-0 text-red-500" />
+              <div>
+                <p className="text-sm font-semibold">Known Allergies:</p>
+                <p className="text-sm mt-0.5">{patient.allergies}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-slate-200">
+          <nav className="flex -mb-px" aria-label="Tabs">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`
+                  w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm flex items-center justify-center
+                  ${activeTab === tab.id
+                    ? "border-primary-500 text-primary-600"
+                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                  }
+                `}
+              >
+                <tab.icon className={`mr-2 h-4 w-4 ${activeTab === tab.id ? "text-primary-500" : "text-slate-400"}`} />
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Tab Content Placeholder */}
+        <div className="p-6 bg-slate-50 min-h-[400px]">
+          {activeTab === "vitals" && <VitalsTab patientId={patient.db_id} />}
+          {activeTab === "investigations" && <InvestigationsTab patientId={patient.db_id} />}
+          {activeTab === "prescriptions" && <PrescriptionsTab patientId={patient.db_id} />}
+        </div>
       </div>
     </div>
   );

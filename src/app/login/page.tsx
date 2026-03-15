@@ -2,22 +2,36 @@
 
 import { useState } from "react";
 import { Activity, Mail, Lock, LogIn } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { apiFetch } from "@/lib/api";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const { setUser, setToken } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      // In a real app, you'd validate credentials and set a session cookie here
-      // For this demo, we'll just redirect to the dashboard
+    setErrorMsg("");
+
+    try {
+      const { user, token } = await apiFetch("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+
+      setToken(token);
+      setUser(user);
+
       window.location.href = "/";
-    }, 1000);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to login");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -39,6 +53,11 @@ export default function LoginPage() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-sm border border-slate-200 sm:rounded-xl sm:px-10">
           <form className="space-y-6" onSubmit={handleLogin}>
+            {errorMsg && (
+              <div className="rounded-md bg-red-50 p-4">
+                <div className="text-sm text-red-700">{errorMsg}</div>
+              </div>
+            )}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-slate-700">
                 Email address
@@ -56,7 +75,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md leading-5 bg-white placeholder-slate-500 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition duration-150 ease-in-out"
-                  placeholder="doctor@clinic.com"
+                  placeholder="jhondoe@clincpro.com"
                 />
               </div>
             </div>
@@ -78,7 +97,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md leading-5 bg-white placeholder-slate-500 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition duration-150 ease-in-out"
-                  placeholder="••••••••"
+                  placeholder="admin@123"
                 />
               </div>
             </div>
@@ -107,9 +126,8 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors ${
-                  isLoading ? 'opacity-75 cursor-not-allowed' : ''
-                }`}
+                className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors ${isLoading ? 'opacity-75 cursor-not-allowed' : ''
+                  }`}
               >
                 {isLoading ? (
                   <span className="flex items-center">
@@ -128,22 +146,6 @@ export default function LoginPage() {
               </button>
             </div>
           </form>
-          
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-slate-500">Demo Credentials</span>
-              </div>
-            </div>
-            <div className="mt-6 text-center text-sm text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100">
-              <p>Email: <b>doctor@clinic.com</b></p>
-              <p>Password: <b>password123</b></p>
-              <p className="text-xs text-slate-400 mt-2">(Any values will work for this demo)</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
