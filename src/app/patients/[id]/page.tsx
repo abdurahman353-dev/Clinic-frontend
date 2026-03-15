@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, User as UserIcon, Calendar, Phone, Mail, Droplet, AlertTriangle, FileText, Activity } from "lucide-react";
 import Link from "next/link";
 import { patientAPI } from "@/lib/api";
@@ -12,10 +13,20 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
   const unwrappedParams = use(params);
   const unwrappedId = unwrappedParams.id;
   
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") || "vitals";
+  
   const [patient, setPatient] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
-  const [activeTab, setActiveTab] = useState("vitals");
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && ["vitals", "investigations", "prescriptions"].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchPatient = async () => {

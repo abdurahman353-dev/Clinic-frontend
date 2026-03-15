@@ -105,7 +105,7 @@ export default function PrescriptionsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link href={`/patients/${rx.patient_id}`} className="text-primary-600 hover:text-primary-900">
+                      <Link href={`/patients/${rx.patient_id}?tab=prescriptions`} className="text-primary-600 hover:text-primary-900">
                         View History
                       </Link>
                     </td>

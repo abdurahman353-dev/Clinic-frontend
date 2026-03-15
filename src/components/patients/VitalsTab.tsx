@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Activity, Plus, TrendingUp, Loader2, X } from "lucide-react";
+import { Activity, Plus, TrendingUp, Loader2, X, Edit2 } from "lucide-react";
 import { useVitals } from "@/hooks/useVitals";
+import toast from "react-hot-toast";
 
 export default function VitalsTab({ patientId }: { patientId: number }) {
-  const { vitals, isLoading, addVital, fetchVitals } = useVitals(patientId);
+  const { vitals, isLoading, addVital, updateVital, fetchVitals } = useVitals(patientId);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   
   const [formData, setFormData] = useState({
     vital_type: "routine",
@@ -42,18 +44,61 @@ export default function VitalsTab({ patientId }: { patientId: number }) {
     }
   };
 
+  const handleAdd = () => {
+    setEditingId(null);
+    setFormData({
+      vital_type: "routine", blood_pressure: "", pulse_rate: "", temperature: "",
+      respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: ""
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (vital: any) => {
+    setEditingId(vital.id);
+    setFormData({
+      vital_type: vital.vital_type || "routine",
+      blood_pressure: vital.blood_pressure || "",
+      pulse_rate: vital.pulse_rate || "",
+      temperature: vital.temperature || "",
+      respiratory_rate: vital.respiratory_rate || "",
+      oxygen_saturation: vital.oxygen_saturation || "",
+      weight: vital.weight || "",
+      height: vital.height || "",
+      bmi: vital.bmi || "",
+      notes: vital.notes || ""
+    });
+    setIsModalOpen(true);
+  };
+
   const handleRecord = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    const dataToSave = { ...formData };
+    const currentEditingId = editingId;
+    
+    // Optimistic close
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData({
+      vital_type: "routine", blood_pressure: "", pulse_rate: "", temperature: "",
+      respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: ""
+    });
+
     try {
-      await addVital(formData);
-      setIsModalOpen(false);
-      setFormData({
-        vital_type: "routine", blood_pressure: "", pulse_rate: "", temperature: "",
-        respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: ""
-      });
+      if (currentEditingId) {
+        const vitalToEdit = vitals.find(v => v.id === currentEditingId);
+        if (!vitalToEdit) throw new Error("Vital record not found");
+        await updateVital(vitalToEdit.visit_id, currentEditingId, dataToSave);
+        toast.success("Vitals updated successfully");
+      } else {
+        await addVital(dataToSave);
+        toast.success("Vitals recorded successfully");
+      }
     } catch (err: any) {
       alert(err.message || "Failed to record vitals");
+      setIsModalOpen(true);
+      if (currentEditingId) setEditingId(currentEditingId);
+      setFormData(dataToSave);
     } finally {
       setIsSubmitting(false);
     }
@@ -66,7 +111,7 @@ export default function VitalsTab({ patientId }: { patientId: number }) {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <h2 className="text-lg font-bold text-slate-900">Vitals History</h2>
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleAdd}
           className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-primary-600 text-white hover:bg-primary-700 h-9 px-4 shadow-sm"
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -114,6 +159,7 @@ export default function VitalsTab({ patientId }: { patientId: number }) {
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">BP / HR</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Temp / SpO2 / RR</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Wt / Ht / BMI</th>
+                      <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-slate-200 text-sm">
@@ -135,6 +181,15 @@ export default function VitalsTab({ patientId }: { patientId: number }) {
                           {row.weight ? row.weight+'kg' : '-'} &bull; {row.height ? row.height+'cm' : '-'} <br/>
                           <span className="text-xs text-slate-500">BMI: {row.bmi || '-'}</span>
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <button 
+                            onClick={() => handleEdit(row)} 
+                            className="text-primary-600 hover:text-primary-900 bg-primary-50 hover:bg-primary-100 p-1.5 rounded-md inline-flex items-center justify-center transition-colors"
+                            title="Edit Record"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -151,8 +206,8 @@ export default function VitalsTab({ patientId }: { patientId: number }) {
           <div className="bg-white w-full max-w-2xl rounded-xl shadow-xl overflow-hidden mt-10 md:mt-0">
             <div className="flex items-center justify-between p-6 border-b border-slate-200">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Record New Vitals</h3>
-                <p className="text-sm text-slate-500">Add measurement data for this patient</p>
+                <h3 className="text-lg font-bold text-slate-900">{editingId ? "Edit Vitals Record" : "Record New Vitals"}</h3>
+                <p className="text-sm text-slate-500">{editingId ? "Update existing measurement data" : "Add measurement data for this patient"}</p>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 rounded-full p-1 hover:bg-slate-100 transition-colors">
                 <X className="h-5 w-5" />

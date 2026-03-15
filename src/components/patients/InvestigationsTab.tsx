@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, CheckCircle2, Clock, Loader2, X, FileText } from "lucide-react";
+import { Plus, CheckCircle2, Clock, Loader2, X, FileText, Edit2 } from "lucide-react";
 import { useInvestigations } from "@/hooks/useInvestigations";
+import toast from "react-hot-toast";
 
 export function InvestigationsTab({ patientId }: { patientId?: number }) {
-  const { investigations, isLoading, fetchInvestigations, addInvestigation, updateInvestigationResult } = useInvestigations(patientId);
+  const { investigations, isLoading, fetchInvestigations, addInvestigation, updateInvestigation } = useInvestigations(patientId);
   
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [selectedInvId, setSelectedInvId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [requestForm, setRequestForm] = useState({
@@ -30,12 +32,27 @@ export function InvestigationsTab({ patientId }: { patientId?: number }) {
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    const dataToSave = { ...requestForm };
+    const currentEditingId = editingId;
+    
+    // Optimistic close
+    setIsRequestModalOpen(false);
+    setEditingId(null);
+    setRequestForm({ name: "", type: "lab", notes: "" });
+
     try {
-      await addInvestigation(requestForm);
-      setIsRequestModalOpen(false);
-      setRequestForm({ name: "", type: "lab", notes: "" });
+      if (currentEditingId) {
+        await updateInvestigation(currentEditingId, dataToSave);
+        toast.success("Investigation updated successfully");
+      } else {
+        await addInvestigation(dataToSave);
+        toast.success("Investigation requested successfully");
+      }
     } catch (err: any) {
-      alert(err.message || "Failed to request test");
+      alert(err.message || "Failed to process request");
+      setIsRequestModalOpen(true); // Re-open on failure
+      if (currentEditingId) setEditingId(currentEditingId);
+      setRequestForm(dataToSave);
     } finally {
       setIsSubmitting(false);
     }
@@ -45,13 +62,23 @@ export function InvestigationsTab({ patientId }: { patientId?: number }) {
     e.preventDefault();
     if (!selectedInvId) return;
     setIsSubmitting(true);
+    const dataToSave = { ...resultForm };
+    const invId = selectedInvId;
+
+    // Optimistic close
+    setIsResultModalOpen(false);
+    setSelectedInvId(null);
+    setResultForm({ result: "", status: "completed" });
+
     try {
-      await updateInvestigationResult(selectedInvId, resultForm);
-      setIsResultModalOpen(false);
-      setSelectedInvId(null);
-      setResultForm({ result: "", status: "completed" });
+      await updateInvestigation(invId, dataToSave);
+      toast.success("Test result uploaded successfully");
     } catch (err: any) {
       alert(err.message || "Failed to update test result");
+      // Recovery
+      setSelectedInvId(invId);
+      setResultForm(dataToSave);
+      setIsResultModalOpen(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -63,12 +90,28 @@ export function InvestigationsTab({ patientId }: { patientId?: number }) {
     setIsResultModalOpen(true);
   };
 
+  const handleEditRequest = (test: any) => {
+    setEditingId(test.id);
+    setRequestForm({
+       name: test.name || "",
+       type: test.type || "lab",
+       notes: test.notes || ""
+    });
+    setIsRequestModalOpen(true);
+  };
+
+  const handleAddRequest = () => {
+    setEditingId(null);
+    setRequestForm({ name: "", type: "lab", notes: "" });
+    setIsRequestModalOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-slate-900">Investigations & Labs</h2>
         <button 
-          onClick={() => setIsRequestModalOpen(true)}
+          onClick={handleAddRequest}
           className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-primary-600 text-white hover:bg-primary-700 h-9 px-4 shadow-sm"
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -119,19 +162,30 @@ export function InvestigationsTab({ patientId }: { patientId?: number }) {
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2 text-sm ml-auto sm:ml-0">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize mb-2 ${
                       test.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
                     }`}>
                       {test.status}
                     </span>
-                    {test.status !== 'completed' && (
-                      <button 
-                        onClick={() => openResultModal(test.id)}
-                        className="text-primary-600 hover:text-primary-700 font-medium text-xs bg-primary-50 px-3 py-1.5 rounded-md hover:bg-primary-100 transition-colors"
-                      >
-                        Upload Result
-                      </button>
-                    )}
+                    <div className="flex items-center justify-end gap-2 text-xs">
+                      {test.status !== 'completed' && (
+                        <>
+                          <button 
+                            onClick={() => handleEditRequest(test)}
+                            className="text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 p-1.5 rounded-md transition-colors"
+                            title="Edit Test Request"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                          <button 
+                            onClick={() => openResultModal(test.id)}
+                            className="text-primary-600 hover:text-primary-700 font-medium bg-primary-50 px-3 py-1.5 rounded-md hover:bg-primary-100 transition-colors"
+                          >
+                            Upload Result
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </li>
@@ -145,7 +199,7 @@ export function InvestigationsTab({ patientId }: { patientId?: number }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white w-full max-w-md rounded-xl shadow-xl overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-slate-200">
-              <h3 className="text-lg font-bold text-slate-900">Request Investigation</h3>
+              <h3 className="text-lg font-bold text-slate-900">{editingId ? "Edit Investigation" : "Request Investigation"}</h3>
               <button onClick={() => setIsRequestModalOpen(false)} className="text-slate-400 hover:text-slate-600 rounded-full p-1 hover:bg-slate-100">
                 <X className="h-5 w-5" />
               </button>

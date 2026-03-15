@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Mail, Lock, LogIn } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { authAPI } from "@/lib/api";
+import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -20,6 +21,7 @@ export default function LoginPage() {
 
     try {
       const { user, token } = await authAPI.login(email, password);
+      toast.success("Login successfully");
 
       setToken(token);
       setUser(user);

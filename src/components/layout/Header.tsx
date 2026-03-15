@@ -1,13 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Bell, Search, UserCircle, LogOut, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useStock } from "@/hooks/useStock";
 import Link from "next/link";
 
 export function Header() {
   const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { medicines, fetchMedicines } = useStock();
+
+  useEffect(() => {
+    fetchMedicines();
+  }, [fetchMedicines]);
+
+  const stockAlertStatus = useMemo(() => {
+    let status = 'none';
+    medicines.forEach((m: any) => {
+      const qty = m.stock?.quantity || 0;
+      const min = m.stock?.minimum_stock || 0;
+      const reorder = m.stock?.reorder_level || 0;
+      
+      if (qty <= min) {
+        status = 'critical';
+      } else if (qty <= reorder && status !== 'critical') {
+        status = 'low';
+      }
+    });
+    return status;
+  }, [medicines]);
+
+  let bellColorClass = "text-slate-400 hover:text-slate-500";
+  let bellBgClass = "hover:bg-slate-100";
+  let bellAnimationClass = "";
+
+  if (stockAlertStatus === 'critical') {
+    bellColorClass = "text-red-600";
+    bellBgClass = "bg-red-50 hover:bg-red-100";
+    bellAnimationClass = "animate-pulse";
+  } else if (stockAlertStatus === 'low') {
+    bellColorClass = "text-amber-500";
+    bellBgClass = "bg-amber-50 hover:bg-amber-100";
+    bellAnimationClass = "animate-pulse";
+  }
 
   return (
     <header className="h-16 bg-surface border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 lg:px-8 shadow-sm">
@@ -25,10 +61,10 @@ export function Header() {
       </div>
       
       <div className="flex items-center gap-4">
-        <button className="p-1.5 rounded-full text-slate-400 hover:text-slate-500 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors">
+        <Link href="/stock" className={`p-1.5 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 ${bellColorClass} ${bellBgClass} ${bellAnimationClass}`} title={stockAlertStatus !== 'none' ? `Stock Alert: ${stockAlertStatus}` : "Notifications"}>
           <span className="sr-only">View notifications</span>
           <Bell className="h-5 w-5" />
-        </button>
+        </Link>
         
         <div className="relative">
           <button 

@@ -25,6 +25,7 @@ declare module "@/lib/api" {
   export interface VitalAPI {
     list: (visitId: string | number) => Promise<any>;
     store: (visitId: string | number, data: any) => Promise<any>;
+    update: (visitId: string | number, vitalId: string | number, data: any) => Promise<any>;
     listGlobal: (params?: any) => Promise<any>;
   }
 
@@ -38,6 +39,7 @@ declare module "@/lib/api" {
   export interface PrescriptionAPI {
     list: (visitId: string | number) => Promise<any>;
     store: (visitId: string | number, data: any) => Promise<any>;
+    update: (visitId: string | number, rxId: string | number, data: any) => Promise<any>;
     listGlobal: (params?: any) => Promise<any>;
   }
 

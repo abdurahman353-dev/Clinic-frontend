@@ -6,27 +6,15 @@ export function usePrescriptions(patientId?: number) {
   const [medicines, setMedicines] = useState<any[]>([]); // To populate the dropdown
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [activeVisitId, setActiveVisitId] = useState<number | null>(null);
 
   const fetchPrescriptions = useCallback(async () => {
     if (!patientId) return;
     setIsLoading(true);
     setErrorMsg("");
     try {
-      const visitsResponse = await visitAPI.list({ 'filter[patient_id]': patientId });
-      if (!visitsResponse.data?.length) {
-         setPrescriptions([]);
-         return;
-      }
-      const visits = visitsResponse.data;
-      const rxPromises = visits.map((v: any) => prescriptionAPI.list(v.id));
-      
-      const rxResults = await Promise.all(rxPromises);
-      const allRx = rxResults.flatMap((res) => res.data || []);
-      
-      // Sort desc
-      allRx.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      
-      setPrescriptions(allRx);
+      const response = await prescriptionAPI.listGlobal({ 'filter[patient_id]': patientId });
+      setPrescriptions(response.data || []);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to load prescriptions");
     } finally {
@@ -36,7 +24,7 @@ export function usePrescriptions(patientId?: number) {
 
   const fetchMedicines = useCallback(async () => {
     try {
-        const res = await medicineAPI.list();
+        const res = await medicineAPI.list({ limit: 100 });
         setMedicines(res.data || []);
     } catch (err) {
         console.error("Failed to load medicines", err);
@@ -44,29 +32,64 @@ export function usePrescriptions(patientId?: number) {
   }, []);
 
   const addPrescription = async (rxData: any) => {
-    let visitId;
+    let visitId = activeVisitId;
     try {
-      // Find or create visit
-      const visitsResponse = await visitAPI.list({ 
-        'filter[patient_id]': patientId,
-        'sort': '-created_at'
-      });
-      const recentVisit = visitsResponse.data?.[0];
-      
-      if (recentVisit) {
-        visitId = recentVisit.id;
-      } else {
-        const newVisit = await visitAPI.store({ 
-          patient_id: patientId, 
-          reason: "prescription refill" 
+      // Find or create visit if not cached
+      if (!visitId) {
+        const visitsResponse = await visitAPI.list({ 
+          'filter[patient_id]': patientId,
+          'sort': '-created_at',
+          'page[size]': 1
         });
-        visitId = newVisit.data.id;
+        const recentVisit = visitsResponse.data?.[0];
+        
+        if (recentVisit) {
+          visitId = recentVisit.id;
+        } else {
+          const newVisit = await visitAPI.store({ 
+            patient_id: patientId, 
+            reason: "prescription refill" 
+          });
+          visitId = newVisit.data.id;
+        }
+        setActiveVisitId(visitId);
       }
 
+      if (!visitId) throw new Error("Failed to resolve visit ID");
+
       const res = await prescriptionAPI.store(visitId, rxData);
-      await fetchPrescriptions();
+      
+      if (res.data) {
+        setPrescriptions(prev => [res.data, ...prev]);
+        // Refetch medicines so the stock levels in the dropdown update
+        await fetchMedicines();
+      }
+      
       return res.data;
     } catch (err: any) {
+      throw err;
+    }
+  };
+
+  const updatePrescription = async (rxId: number, rxData: any) => {
+    try {
+      const existing = prescriptions.find(r => r.id === rxId);
+      if (!existing?.visit_id) throw new Error("Visit ID not found for prescription");
+
+      // Optimistic update
+      const prev = [...prescriptions];
+      setPrescriptions(p => p.map(item => item.id === rxId ? { ...item, ...rxData, items: rxData.items || item.items } : item));
+
+      const res = await prescriptionAPI.update(existing.visit_id, rxId, rxData);
+      
+      if (res.data) {
+        setPrescriptions(p => p.map(item => item.id === rxId ? res.data : item));
+        await fetchMedicines(); // Refresh stock
+      }
+      
+      return res.data;
+    } catch (err: any) {
+      fetchPrescriptions(); // Restore on failure
       throw err;
     }
   };
@@ -78,6 +101,7 @@ export function usePrescriptions(patientId?: number) {
     errorMsg, 
     fetchPrescriptions, 
     fetchMedicines, 
-    addPrescription 
+    addPrescription,
+    updatePrescription
   };
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { patientAPI } from "@/lib/api";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 import Link from "next/link";
 
 export default function NewPatientPage() {
@@ -59,6 +60,7 @@ export default function NewPatientPage() {
 
     try {
       await patientAPI.store(formData);
+      toast.success("Patient registered successfully");
       router.push("/patients");
     } catch (err: any) {
       if (err.response?.status === 422 && err.response?.data?.errors) {

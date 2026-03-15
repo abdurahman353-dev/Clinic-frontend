@@ -103,7 +103,7 @@ export default function VitalsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link href={`/patients/${v.patient_id}`} className="text-primary-600 hover:text-primary-900">
+                      <Link href={`/patients/${v.patient_id}?tab=vitals`} className="text-primary-600 hover:text-primary-900">
                         View Patient
                       </Link>
                     </td>

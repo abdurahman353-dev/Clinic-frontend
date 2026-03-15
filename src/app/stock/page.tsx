@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Package, AlertTriangle, Plus, Search, ArrowUpRight, ArrowDownRight, Loader2, X } from "lucide-react";
+import { Package, AlertTriangle, Plus, Search, ArrowUpRight, ArrowDownRight, Loader2, X, Edit2 } from "lucide-react";
 import { useStock } from "@/hooks/useStock";
+import toast from "react-hot-toast";
 
 export default function StockManagement() {
-  const { medicines, isLoading, fetchMedicines, addMedicine, addStock } = useStock();
+  const { medicines, isLoading, fetchMedicines, addMedicine, updateMedicine, addStock } = useStock();
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -36,25 +38,70 @@ export default function StockManagement() {
   const handleAddItemSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    const dataToSave = { ...formData };
+    const currentEditingId = editingId;
+    
+    // Optimistic UI
+    setIsAddItemModalOpen(false);
+    setEditingId(null);
+    setFormData({
+      name: "", category: "Antibiotics", unit_price: "", description: "", size: "", unit: "tablets",
+      dosage_form: "tablet", initial_stock: "", minimum_stock: "50", reorder_level: "100", batch_number: "", expiry_date: ""
+    });
+
     try {
       const payload = {
-        ...formData,
-        unit_price: formData.unit_price ? parseFloat(formData.unit_price) : 0,
-        initial_stock: formData.initial_stock ? parseInt(formData.initial_stock, 10) : 0,
-        minimum_stock: formData.minimum_stock ? parseInt(formData.minimum_stock, 10) : 0,
-        reorder_level: formData.reorder_level ? parseInt(formData.reorder_level, 10) : 0,
+        ...dataToSave,
+        unit_price: dataToSave.unit_price ? parseFloat(dataToSave.unit_price) : 0,
+        initial_stock: dataToSave.initial_stock ? parseInt(dataToSave.initial_stock, 10) : 0,
+        minimum_stock: dataToSave.minimum_stock ? parseInt(dataToSave.minimum_stock, 10) : 0,
+        reorder_level: dataToSave.reorder_level ? parseInt(dataToSave.reorder_level, 10) : 0,
       };
-      await addMedicine(payload);
-      setIsAddItemModalOpen(false);
-      setFormData({
-        name: "", category: "Antibiotics", unit_price: "", description: "", size: "", unit: "tablets",
-        dosage_form: "tablet", initial_stock: "", minimum_stock: "50", reorder_level: "100", batch_number: "", expiry_date: ""
-      });
+      if (currentEditingId) {
+        await updateMedicine(currentEditingId, payload);
+        toast.success("Item updated successfully");
+      } else {
+        await addMedicine(payload);
+        toast.success("Item added successfully");
+      }
     } catch (err: any) {
-      alert(err.message || "Failed to add new item");
+      alert(err.message || "Failed to save item");
+      // Recovery
+      setIsAddItemModalOpen(true);
+      if (currentEditingId) setEditingId(currentEditingId);
+      setFormData(dataToSave);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleEdit = (item: any) => {
+    setEditingId(item.id);
+    setFormData({
+      name: item.name || "",
+      category: item.category || "Antibiotics",
+      unit_price: item.unit_price?.toString() || "",
+      description: item.description || "",
+      size: item.size || "",
+      unit: item.unit || "tablets",
+      dosage_form: item.dosage_form || "tablet",
+      initial_stock: item.stock?.quantity?.toString() || "",
+      minimum_stock: item.stock?.minimum_stock?.toString() || "50",
+      reorder_level: item.stock?.reorder_level?.toString() || "100",
+      batch_number: item.stock?.batch_number || "",
+      // Need a YYYY-MM-DD for date inputs
+      expiry_date: item.stock?.expiry_date ? new Date(item.stock.expiry_date).toISOString().split('T')[0] : ""
+    });
+    setIsAddItemModalOpen(true);
+  };
+
+  const handleAdd = () => {
+    setEditingId(null);
+    setFormData({
+      name: "", category: "Antibiotics", unit_price: "", description: "", size: "", unit: "tablets",
+      dosage_form: "tablet", initial_stock: "", minimum_stock: "50", reorder_level: "100", batch_number: "", expiry_date: ""
+    });
+    setIsAddItemModalOpen(true);
   };
 
   const filteredInventory = useMemo(() => {
@@ -95,7 +142,7 @@ export default function StockManagement() {
           <p className="text-slate-500 mt-1">Manage clinic inventory and supplies</p>
         </div>
         <button 
-          onClick={() => setIsAddItemModalOpen(true)}
+          onClick={handleAdd}
           className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-primary-600 text-white hover:bg-primary-700 h-10 px-4 py-2 shadow-sm"
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -232,6 +279,9 @@ export default function StockManagement() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => handleEdit(item)} className="text-slate-400 hover:text-primary-600 transition-colors p-1" title="Edit Item">
+                            <Edit2 className="h-5 w-5" />
+                          </button>
                           <button onClick={() => alert("Restock flow coming soon")} className="text-slate-400 hover:text-green-600 transition-colors p-1" title="Restock">
                             <ArrowUpRight className="h-5 w-5" />
                           </button>
@@ -254,7 +304,7 @@ export default function StockManagement() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white w-full max-w-2xl rounded-xl shadow-xl overflow-hidden mt-10 md:mt-0">
              <div className="flex items-center justify-between p-6 border-b border-slate-200">
-              <h3 className="text-lg font-bold text-slate-900">Add New Item to Inventory</h3>
+              <h3 className="text-lg font-bold text-slate-900">{editingId ? "Edit Inventory Item" : "Add New Item to Inventory"}</h3>
               <button onClick={() => setIsAddItemModalOpen(false)} className="text-slate-400 hover:text-slate-600 rounded-full p-1 hover:bg-slate-100">
                 <X className="h-5 w-5" />
               </button>
@@ -292,7 +342,8 @@ export default function StockManagement() {
 
                 <div>
                    <label className="block text-sm font-medium text-slate-700 mb-1">Initial Quantity In Stock *</label>
-                   <input required type="number" min="0" name="initial_stock" value={formData.initial_stock} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 500" />
+                   <input required type="number" min="0" name="initial_stock" value={formData.initial_stock} onChange={handleChange} disabled={!!editingId} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm disabled:opacity-50 disabled:bg-slate-50" placeholder="e.g. 500" />
+                   {editingId && <p className="text-xs text-slate-500 mt-1">Quantity adjust/restock in separate flow.</p>}
                 </div>
                 <div className="flex gap-4">
                   <div className="flex-1">
@@ -332,7 +383,7 @@ export default function StockManagement() {
               <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-100">
                 <button type="button" onClick={() => setIsAddItemModalOpen(false)} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
                 <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
-                  {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : "Add to Inventory"}
+                  {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : editingId ? "Save Changes" : "Add to Inventory"}
                 </button>
               </div>
             </form>

@@ -134,6 +134,10 @@ export const vitalAPI = {
         const response = await apiClient.post(`/visits/${visitId}/vitals`, data);
         return response.data;
     },
+    update: async (visitId, vitalId, data) => {
+        const response = await apiClient.patch(`/visits/${visitId}/vitals/${vitalId}`, { ...data, _method: 'PATCH' });
+        return response.data;
+    },
     listGlobal: async (params = {}) => {
         const response = await apiClient.get('/vitals', { params });
         return response.data;
@@ -166,6 +170,10 @@ export const prescriptionAPI = {
     },
     store: async (visitId, data) => {
         const response = await apiClient.post(`/visits/${visitId}/prescriptions`, data);
+        return response.data;
+    },
+    update: async (visitId, prescriptionId, data) => {
+        const response = await apiClient.patch(`/visits/${visitId}/prescriptions/${prescriptionId}`, { ...data, _method: 'PATCH' });
         return response.data;
     },
     listGlobal: async (params = {}) => {

@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { patientAPI } from "@/lib/api";
 import { ArrowLeft, Save, Loader2, AlertTriangle } from "lucide-react";
+import toast from "react-hot-toast";
 import Link from "next/link";
 
 export default function EditPatientPage({ params }: { params: Promise<{ id: string }> }) {
@@ -92,6 +93,7 @@ export default function EditPatientPage({ params }: { params: Promise<{ id: stri
 
     try {
       await patientAPI.update(unwrappedId, formData);
+      toast.success("Patient updated successfully");
       router.push("/patients");
     } catch (err: any) {
       if (err.response?.status === 422 && err.response?.data?.errors) {

@@ -106,7 +106,7 @@ export default function InvestigationsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link href={`/patients/${inv.patient_id}`} className="text-primary-600 hover:text-primary-900">
+                      <Link href={`/patients/${inv.patient_id}?tab=investigations`} className="text-primary-600 hover:text-primary-900">
                         View Results
                       </Link>
                     </td>

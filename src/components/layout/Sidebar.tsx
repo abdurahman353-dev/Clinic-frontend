@@ -4,9 +4,43 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, Activity, NotepadText, FileText, Package, CreditCard } from "lucide-react";
 import Image from "next/image";
+import { useState, useEffect } from "react";
+import { stockAPI } from "@/lib/api";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [stockStatus, setStockStatus] = useState<'normal' | 'low' | 'critical'>('normal');
+
+  useEffect(() => {
+    const checkStock = async () => {
+      try {
+        const response = await stockAPI.list();
+        const stocks = response.data || [];
+        
+        let hasCritical = false;
+        let hasLow = false;
+
+         stocks.forEach((m: any) => {
+          const qty = m.quantity || 0;
+          const min = m.minimum_stock || 0;
+          const reorder = m.reorder_level || 0;
+
+          if (qty <= min) hasCritical = true;
+          else if (qty <= reorder) hasLow = true;
+        });
+
+        if (hasCritical) setStockStatus('critical');
+        else if (hasLow) setStockStatus('low');
+        else setStockStatus('normal');
+      } catch (error) {
+        console.error("Failed to check stock status", error);
+      }
+    };
+
+    checkStock();
+    const interval = setInterval(checkStock, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, []);
 
   const navItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -15,7 +49,12 @@ export function Sidebar() {
     { name: "Investigations", href: "/investigations", icon: NotepadText },
     { name: "Prescriptions", href: "/prescriptions", icon: FileText },
     { name: "Cashier", href: "/cashier", icon: CreditCard },
-    { name: "Stock", href: "/stock", icon: Package },
+    { 
+      name: "Stock", 
+      href: "/stock", 
+      icon: Package,
+      className: stockStatus === 'critical' ? 'animate-blink-red' : stockStatus === 'low' ? 'animate-blink-yellow' : ''
+    },
   ];
 
   return (
@@ -46,7 +85,7 @@ export function Sidebar() {
               className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${actuallyActive
                 ? "bg-primary-50 text-primary-700"
                 : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                }`}
+                } ${item.className || ""}`}
             >
               <item.icon className="h-5 w-5" />
               {item.name}

@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { DashboardLayout } from "./DashboardLayout";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { Toaster } from "react-hot-toast";
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { token, isLoading } = useAuth();
@@ -35,6 +36,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <AuthGuard>{children}</AuthGuard>
+      <Toaster position="top-right" reverseOrder={false} />
     </AuthProvider>
   );
 }
