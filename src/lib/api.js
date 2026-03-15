@@ -230,4 +230,11 @@ export const paymentAPI = {
     }
 };
 
+export const dashboardAPI = {
+    get: async () => {
+        const response = await apiClient.get('/dashboard');
+        return response.data;
+    }
+};
+
 export default apiClient;
