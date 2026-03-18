@@ -5,6 +5,7 @@ import { Users, Activity, NotepadText, TrendingUp, Calendar, Clock, Plus, Loader
 import Link from "next/link";
 import { dashboardAPI } from "@/lib/api";
 
+
 interface DashboardData {
   stats: any[];
   attendance: { day: string; count: number }[];
@@ -131,9 +132,8 @@ export default function Home() {
         <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-bold text-slate-900">Recent Activity</h2>
-            <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">View All</button>
           </div>
-          <div className="flex-1 overflow-y-auto w-full">
+          <div className="flex-1 overflow-y-auto w-full max-h-[400px] pr-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
             <ul className="space-y-6">
               {data.recentActivity.map((activity, i) => (
                 <li key={activity.id} className="relative">

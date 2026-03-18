@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { 
-  Package, 
-  AlertTriangle, 
-  Plus, 
-  Search, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  Loader2, 
+import {
+  Package,
+  AlertTriangle,
+  Plus,
+  Search,
+  ArrowUpRight,
+  ArrowDownRight,
+  Loader2,
   X,
   Edit2
 } from "lucide-react";
@@ -19,6 +19,7 @@ import { toast } from "sonner";
 export default function StockManagement() {
   const { medicines, isLoading, fetchMedicines, addMedicine, updateMedicine, addStock } = useStock();
   const [searchTerm, setSearchTerm] = useState("");
+  const [filter, setFilter] = useState("all");
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -49,7 +50,7 @@ export default function StockManagement() {
   const handleAddItemSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     const payload = {
       ...formData,
       unit_price: formData.unit_price ? parseFloat(formData.unit_price) : 0,
@@ -108,12 +109,23 @@ export default function StockManagement() {
   };
 
   const filteredInventory = useMemo(() => {
-    return medicines.filter((item: any) => 
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      item.id.toString().includes(searchTerm)
-    );
-  }, [medicines, searchTerm]);
+    return medicines.filter((item: any) => {
+      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        item.id.toString().includes(searchTerm);
+
+      if (filter === "all") return matchesSearch;
+
+      const qty = item.stock?.quantity || 0;
+      const min = item.stock?.minimum_stock || 0;
+      const reorder = item.stock?.reorder_level || 0;
+
+      if (filter === "critical") return matchesSearch && (qty <= min);
+      if (filter === "low") return matchesSearch && (qty > min && qty <= reorder);
+
+      return matchesSearch;
+    });
+  }, [medicines, searchTerm, filter]);
 
   const stats = useMemo(() => {
     let totalItems = 0;
@@ -126,7 +138,7 @@ export default function StockManagement() {
       const reorder = m.stock?.reorder_level || 0;
 
       totalItems += 1;
-      
+
       if (qty <= min) {
         critical += 1;
       } else if (qty <= reorder) {
@@ -144,7 +156,7 @@ export default function StockManagement() {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Stock Management</h1>
           <p className="text-slate-500 mt-1">Manage clinic inventory and supplies</p>
         </div>
-        <button 
+        <button
           onClick={handleAdd}
           className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-primary-600 text-white hover:bg-primary-700 h-10 px-4 py-2 shadow-sm"
         >
@@ -204,30 +216,47 @@ export default function StockManagement() {
               className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md leading-5 bg-white placeholder-slate-500 focus:outline-none focus:placeholder-slate-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition duration-150 ease-in-out"
             />
           </div>
-          <div className="flex items-center gap-2">
-             <span className="flex items-center text-xs font-medium text-slate-500"><span className="w-2 h-2 rounded-full bg-red-500 mr-2"></span>Critical</span>
-             <span className="flex items-center text-xs font-medium text-slate-500 ml-3"><span className="w-2 h-2 rounded-full bg-amber-500 mr-2"></span>Low</span>
-             <span className="flex items-center text-xs font-medium text-slate-500 ml-3"><span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>Good</span>
+          <div className="flex items-center bg-slate-100 p-1 rounded-lg">
+            <button
+              onClick={() => setFilter("all")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${filter === 'all' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              All Items
+            </button>
+            <button
+              onClick={() => setFilter("low")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${filter === 'low' ? 'bg-white text-amber-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Low Stock
+            </button>
+            <button
+              onClick={() => setFilter("critical")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${filter === 'critical' ? 'bg-white text-red-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Critical
+            </button>
           </div>
         </div>
 
         {/* Table */}
         <div className="overflow-x-auto min-h-[300px]">
           {isLoading ? (
-             <div className="flex justify-center p-12">
-               <Loader2 className="h-8 w-8 text-primary-500 animate-spin" />
-             </div>
+            <div className="flex justify-center p-12">
+              <Loader2 className="h-8 w-8 text-primary-500 animate-spin" />
+            </div>
           ) : filteredInventory.length === 0 ? (
-             <div className="p-12 text-center text-slate-500">No items found matching your criteria.</div>
+            <div className="p-12 text-center text-slate-500">No items found matching your criteria.</div>
           ) : (
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Item Details</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Category</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Batch</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Stock Level</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-                  <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Price / Unit</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Expiry</th>
+                  <th scope="col" className="px-6 py-3"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
@@ -235,25 +264,29 @@ export default function StockManagement() {
                   const qty = item.stock?.quantity || 0;
                   const min = item.stock?.minimum_stock || 0;
                   const reorder = item.stock?.reorder_level || 0;
-                  
+
                   const isCritical = qty <= min;
                   const isLow = !isCritical && qty <= reorder;
                   const statusLabel = isCritical ? 'Critical' : isLow ? 'Low Stock' : 'In Stock';
-                  
+
                   // Calculate width capped at 100% relative to 3x reorder level
                   const safeDenominator = (reorder || min || 10) * 3;
                   const percentage = Math.min(100, (qty / safeDenominator) * 100);
-                  
+
                   return (
                     <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
+                        <div className="max-w-xs">
                           <div className="text-sm font-bold text-slate-900">{item.name} {item.size && `(${item.size})`}</div>
                           <div className="text-xs text-slate-500 mt-0.5">ID: {item.id} &bull; {item.dosage_form || 'N/A'}</div>
+                          {item.description && <div className="text-[11px] text-slate-400 mt-1 line-clamp-1" title={item.description}>{item.description}</div>}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-slate-600">{item.category}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-xs font-medium text-slate-400 font-mono">{item.stock?.batch_number || 'N/A'}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
@@ -263,22 +296,27 @@ export default function StockManagement() {
                           <span className="text-xs text-slate-500">{item.unit || 'units'}</span>
                         </div>
                         <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden max-w-[120px]">
-                          <div 
-                             className={`h-1.5 rounded-full ${isCritical ? 'bg-red-500' : isLow ? 'bg-amber-500' : 'bg-green-500'}`} 
-                             style={{ width: `${percentage}%` }}
+                          <div
+                            className={`h-1.5 rounded-full ${isCritical ? 'bg-red-500' : isLow ? 'bg-amber-500' : 'bg-green-500'}`}
+                            style={{ width: `${percentage}%` }}
                           ></div>
                         </div>
                         <div className="text-[10px] text-slate-400 mt-1">Reorder at: {reorder} | Min: {min}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${
-                          isCritical ? 'bg-red-50 text-red-700 border-red-200' : 
-                          isLow ? 'bg-amber-50 text-amber-700 border-amber-200' : 
-                          'bg-slate-50 text-slate-700 border-slate-200'
-                        }`}>
-                          {isCritical && <AlertTriangle className="w-3 h-3 mr-1" />}
-                          {statusLabel}
-                        </span>
+                        <div className="text-sm font-bold text-slate-900">KSh {item.unit_price || '0.00'}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">{item.unit || 'units'}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {item.stock?.expiry_date ? (
+                          <div className={`text-xs font-medium ${new Date(item.stock.expiry_date) < new Date() ? 'text-red-600 font-bold' :
+                              new Date(item.stock.expiry_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) ? 'text-amber-600' : 'text-slate-600'
+                            }`}>
+                            {new Date(item.stock.expiry_date).toLocaleDateString()}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-slate-400 italic">No date</div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2">
@@ -312,7 +350,7 @@ export default function StockManagement() {
         <form onSubmit={handleAddItemSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2"><h4 className="text-sm font-semibold text-slate-900 border-b pb-2">Item Details</h4></div>
-            
+
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Item Name *</label>
               <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. Paracetamol" />
@@ -333,44 +371,44 @@ export default function StockManagement() {
               <input type="text" name="dosage_form" value={formData.dosage_form} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. tablet, syrup, injection" />
             </div>
             <div>
-               <label className="block text-sm font-medium text-slate-700 mb-1">Size / Strength</label>
-               <input type="text" name="size" value={formData.size} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 500mg" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Size / Strength</label>
+              <input type="text" name="size" value={formData.size} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 500mg" />
             </div>
 
             <div className="md:col-span-2"><h4 className="text-sm font-semibold text-slate-900 border-b pb-2 mt-2">Initial Stock Configuration</h4></div>
 
             <div>
-               <label className="block text-sm font-medium text-slate-700 mb-1">Quantity In Stock *</label>
-               <input required type="number" min="0" name="initial_stock" value={formData.initial_stock} onChange={handleChange} disabled={!!editingId} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm disabled:opacity-50 disabled:bg-slate-50" placeholder="e.g. 500" />
-               {editingId && <p className="text-xs text-slate-500 mt-1">Quantity adjust/restock in separate flow.</p>}
+              <label className="block text-sm font-medium text-slate-700 mb-1">Quantity In Stock *</label>
+              <input required type="number" min="0" name="initial_stock" value={formData.initial_stock} onChange={handleChange} disabled={!!editingId} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm disabled:opacity-50 disabled:bg-slate-50" placeholder="e.g. 500" />
+              {editingId && <p className="text-xs text-slate-500 mt-1">Quantity adjust/restock in separate flow.</p>}
             </div>
             <div className="flex gap-4">
               <div className="flex-1">
-                 <label className="block text-sm font-medium text-slate-700 mb-1">Tracking Unit</label>
-                 <input type="text" name="unit" value={formData.unit} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. tablets, boxes, bottles" />
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tracking Unit</label>
+                <input type="text" name="unit" value={formData.unit} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. tablets, boxes, bottles" />
               </div>
               <div className="flex-1">
-                 <label className="block text-sm font-medium text-slate-700 mb-1">Unit Price ($)</label>
-                 <input type="number" step="0.01" name="unit_price" value={formData.unit_price} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="0.00" />
+                <label className="block text-sm font-medium text-slate-700 mb-1">Unit Price ($)</label>
+                <input type="number" step="0.01" name="unit_price" value={formData.unit_price} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="0.00" />
               </div>
             </div>
 
             <div>
-               <label className="block text-sm font-medium text-slate-700 mb-1">Reorder Level</label>
-               <input required type="number" min="0" name="reorder_level" value={formData.reorder_level} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 100" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Reorder Level</label>
+              <input required type="number" min="0" name="reorder_level" value={formData.reorder_level} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 100" />
             </div>
             <div>
-               <label className="block text-sm font-medium text-slate-700 mb-1">Min. Safe Stock</label>
-               <input required type="number" min="0" name="minimum_stock" value={formData.minimum_stock} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 50" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Min. Safe Stock</label>
+              <input required type="number" min="0" name="minimum_stock" value={formData.minimum_stock} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 50" />
             </div>
 
             <div>
-               <label className="block text-sm font-medium text-slate-700 mb-1">Batch Number</label>
-               <input type="text" name="batch_number" value={formData.batch_number} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Optional" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Batch Number</label>
+              <input type="text" name="batch_number" value={formData.batch_number} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Optional" />
             </div>
             <div>
-               <label className="block text-sm font-medium text-slate-700 mb-1">Expiry Date</label>
-               <input type="date" name="expiry_date" value={formData.expiry_date} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Expiry Date</label>
+              <input type="date" name="expiry_date" value={formData.expiry_date} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
             </div>
 
             <div className="md:col-span-2">
@@ -382,7 +420,7 @@ export default function StockManagement() {
           <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-100">
             <button type="button" onClick={() => { setIsAddItemModalOpen(false); setEditingId(null); }} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
             <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> {editingId ? "Saving..." : "Adding..."}</> : editingId ? "Save Changes" : "Add to Inventory"}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {editingId ? "Saving..." : "Adding..."}</> : editingId ? "Save Changes" : "Add to Inventory"}
             </button>
           </div>
         </form>

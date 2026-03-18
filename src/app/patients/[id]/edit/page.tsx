@@ -64,8 +64,8 @@ export default function EditPatientPage({ params }: { params: Promise<{ id: stri
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
-    // Only allow digits for phone numbers and ID number
-    if (name === "phone" || name === "next_of_kin_phone" || name === "id_number") {
+    // Only allow digits for phone numbers
+    if (name === "phone" || name === "next_of_kin_phone") {
       const digitsOnly = value.replace(/\D/g, "");
       setFormData(prev => ({ ...prev, [name]: digitsOnly }));
       return;

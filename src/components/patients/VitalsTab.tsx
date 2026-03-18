@@ -74,7 +74,7 @@ export default function VitalsTab({ patientId }: { patientId: number }) {
   const handleRecord = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
       if (editingId) {
         const vitalToEdit = vitals.find(v => v.id === editingId);
@@ -153,6 +153,7 @@ export default function VitalsTab({ patientId }: { patientId: number }) {
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">BP / HR</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Temp / SpO2 / RR</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Wt / Ht / BMI</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Clinical Notes</th>
                       <th scope="col" className="relative px-6 py-3"><span className="sr-only">Edit</span></th>
                     </tr>
                   </thead>
@@ -175,8 +176,11 @@ export default function VitalsTab({ patientId }: { patientId: number }) {
                           {row.weight ? row.weight + 'kg' : '-'} &bull; {row.height ? row.height + 'cm' : '-'} <br />
                           <span className="text-xs text-slate-500">BMI: {row.bmi || '-'}</span>
                         </td>
+                        <td className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate" title={row.notes}>
+                          {row.notes || '-'}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button 
+                          <button
                             onClick={() => handleEdit(row)}
                             className="text-slate-400 hover:text-primary-600 transition-colors p-1"
                           >

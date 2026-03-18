@@ -128,6 +128,18 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                 </div>
               )}
             </div>
+
+            <div className="border-t md:border-t-0 md:border-l border-slate-200 pt-4 md:pt-0 md:pl-6 space-y-3">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Emergency Contact</h3>
+              <div className="flex items-center text-sm text-slate-600">
+                <UserIcon className="h-4 w-4 mr-2 text-slate-400" />
+                <span className="font-medium text-slate-700">{patient.next_of_kin || "Not listed"}</span>
+              </div>
+              <div className="flex items-center text-sm text-slate-600">
+                <Phone className="h-4 w-4 mr-2 text-slate-400" />
+                <span>{patient.next_of_kin_phone || "No contact"}</span>
+              </div>
+            </div>
           </div>
 
           {patient.allergies && (
