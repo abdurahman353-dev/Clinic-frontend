@@ -128,10 +128,6 @@ export default function VitalsTab({ patientId }: { patientId: number }) {
               { label: "SpO2 (Oxygen)", value: latestVital.oxygen_saturation || "-", unit: "%", icon: Activity, color: "text-sky-500", bg: "bg-sky-50" },
             ].map((vital, i) => (
               <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-                <div className={`w-8 h-8 rounded-lg ${vital.bg} flex items-center justify-center mb-3`}>
-                  <vital.icon className={`h-4 w-4 ${vital.color}`} />
-                </div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{vital.label}</p>
                 <div className="mt-1 flex items-baseline gap-1 break-all">
                   <span className="text-2xl font-bold text-slate-900">{vital.value}</span>
                   <span className="text-sm font-medium text-slate-500">{vital.unit}</span>
