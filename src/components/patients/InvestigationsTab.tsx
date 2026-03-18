@@ -1,20 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-<<<<<<< Updated upstream
-import { Plus, CheckCircle2, Clock, Loader2, FileText, Edit2 } from "lucide-react";
+import { Plus, CheckCircle2, Clock, Loader2, FileText, Edit2, X } from "lucide-react";
 import { useInvestigations } from "@/hooks/useInvestigations";
-import toast from "react-hot-toast";
-=======
-import { Plus, CheckCircle2, Clock, Loader2, FileText } from "lucide-react";
-import { useInvestigations } from "@/hooks/useInvestigations";
-import { Modal } from "@/components/ui/Modal";
-import { toast } from "sonner";
->>>>>>> Stashed changes
 import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
 
-export function InvestigationsTab({ patientId }: { patientId?: number }) {
+export default function InvestigationsTab({ patientId }: { patientId?: number }): React.JSX.Element {
   const { investigations, isLoading, fetchInvestigations, addInvestigation, updateInvestigation } = useInvestigations(patientId);
 
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
@@ -41,33 +33,18 @@ export function InvestigationsTab({ patientId }: { patientId?: number }) {
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const dataToSave = { ...requestForm };
-    const currentEditingId = editingId;
-
-    // Optimistic close
-    setIsRequestModalOpen(false);
-    setEditingId(null);
-    setRequestForm({ name: "", type: "lab", notes: "" });
 
     try {
-<<<<<<< Updated upstream
-      if (currentEditingId) {
-        await updateInvestigation(currentEditingId, dataToSave);
+      if (editingId) {
+        await updateInvestigation(editingId, requestForm);
         toast.success("Investigation updated successfully");
       } else {
-        await addInvestigation(dataToSave);
+        await addInvestigation(requestForm);
         toast.success("Investigation requested successfully");
       }
-    } catch (err: any) {
-      alert(err.message || "Failed to process request");
-      setIsRequestModalOpen(true); // Re-open on failure
-      if (currentEditingId) setEditingId(currentEditingId);
-      setRequestForm(dataToSave);
-=======
-      await addInvestigation(requestForm);
       setIsRequestModalOpen(false);
+      setEditingId(null);
       setRequestForm({ name: "", type: "lab", notes: "" });
-      toast.success("Investigation requested successfully");
     } catch (err: any) {
       // toast.error is handled by api.js interceptor
     } finally {
@@ -79,30 +56,13 @@ export function InvestigationsTab({ patientId }: { patientId?: number }) {
     e.preventDefault();
     if (!selectedInvId) return;
     setIsSubmitting(true);
-    const dataToSave = { ...resultForm };
-    const invId = selectedInvId;
-
-    // Optimistic close
-    setIsResultModalOpen(false);
-    setSelectedInvId(null);
-    setResultForm({ result: "", status: "completed" });
 
     try {
-<<<<<<< Updated upstream
-      await updateInvestigation(invId, dataToSave);
+      await updateInvestigation(selectedInvId, resultForm);
       toast.success("Test result uploaded successfully");
-    } catch (err: any) {
-      alert(err.message || "Failed to update test result");
-      // Recovery
-      setSelectedInvId(invId);
-      setResultForm(dataToSave);
-      setIsResultModalOpen(true);
-=======
-      await updateInvestigationResult(selectedInvId, resultForm);
       setIsResultModalOpen(false);
       setSelectedInvId(null);
       setResultForm({ result: "", status: "completed" });
-      toast.success("Investigation result updated successfully");
     } catch (err: any) {
       // toast.error is handled by api.js interceptor
     } finally {
@@ -223,8 +183,9 @@ export function InvestigationsTab({ patientId }: { patientId?: number }) {
       {/* Request Test Modal */}
       <Modal
         isOpen={isRequestModalOpen}
-        onClose={() => setIsRequestModalOpen(false)}
-        title="Request Investigation"
+        onClose={() => { setIsRequestModalOpen(false); setEditingId(null); }}
+        title={editingId ? "Edit Investigation Request" : "Request Investigation"}
+        description={editingId ? "Update test request details" : "Add a new test request for this patient"}
       >
         <form onSubmit={handleRequestSubmit} className="space-y-4">
           <div>
@@ -244,9 +205,9 @@ export function InvestigationsTab({ patientId }: { patientId?: number }) {
             <textarea value={requestForm.notes} onChange={e => setRequestForm({...requestForm, notes: e.target.value})} rows={3} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Why is this test being requested..."></textarea>
           </div>
           <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
-            <button type="button" onClick={() => setIsRequestModalOpen(false)} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
+            <button type="button" onClick={() => { setIsRequestModalOpen(false); setEditingId(null); }} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
             <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Requesting...</> : "Request Test"}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> {editingId ? "Saving..." : "Requesting..."}</> : editingId ? "Save Changes" : "Request Test"}
             </button>
           </div>
         </form>
@@ -257,6 +218,7 @@ export function InvestigationsTab({ patientId }: { patientId?: number }) {
         isOpen={isResultModalOpen}
         onClose={() => setIsResultModalOpen(false)}
         title="Upload Test Results"
+        description="Enter diagnostic findings for this investigation"
       >
         <form onSubmit={handleResultSubmit} className="space-y-4">
           <div>

@@ -1,20 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-<<<<<<< Updated upstream
-import { Plus, Pill, Loader2, Edit2 } from "lucide-react";
+import { Plus, Pill, Loader2, Edit2, X } from "lucide-react";
 import { usePrescriptions } from "@/hooks/usePrescriptions";
-import toast from "react-hot-toast";
-=======
-import { Plus, Pill, Loader2 } from "lucide-react";
-import { usePrescriptions } from "@/hooks/usePrescriptions";
-import { Modal } from "@/components/ui/Modal";
-import { toast } from "sonner";
->>>>>>> Stashed changes
 import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
 
-export function PrescriptionsTab({ patientId }: { patientId?: number }) {
+export default function PrescriptionsTab({ patientId }: { patientId?: number }): React.JSX.Element {
   const { prescriptions, medicines, isLoading, fetchPrescriptions, fetchMedicines, addPrescription, updatePrescription } = usePrescriptions(patientId);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,33 +46,17 @@ export function PrescriptionsTab({ patientId }: { patientId?: number }) {
       }]
     };
 
-    const currentEditingId = editingId;
-
-    // Optimistic close
-    setIsModalOpen(false);
-    setEditingId(null);
-    setFormData({ medicine_id: "", dosage: "", frequency: "", duration: "", quantity: "1", notes: "" });
-
     try {
-<<<<<<< Updated upstream
-      if (currentEditingId) {
-        await updatePrescription(currentEditingId, dataToSave);
+      if (editingId) {
+        await updatePrescription(editingId, dataToSave);
         toast.success("Prescription updated successfully");
       } else {
         await addPrescription(dataToSave);
         toast.success("Prescription added successfully");
       }
-    } catch (err: any) {
-      alert(err.message || "Failed to save prescription");
-      setIsModalOpen(true);
-      if (currentEditingId) setEditingId(currentEditingId);
-      setFormData(formData); // Use original flat formData
-=======
-      await addPrescription(formData);
       setIsModalOpen(false);
-      setFormData({ medicine_id: "", dosage: "", frequency: "", duration: "", notes: "" });
-      toast.success("Prescription added successfully");
-      toast.success("Prescription added successfully");
+      setEditingId(null);
+      setFormData({ medicine_id: "", dosage: "", frequency: "", duration: "", quantity: "1", notes: "" });
     } catch (err: any) {
       // toast.error is handled by api.js interceptor
     } finally {
@@ -214,8 +190,9 @@ export function PrescriptionsTab({ patientId }: { patientId?: number }) {
       {/* New Prescription Modal */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Add Prescription"
+        onClose={() => { setIsModalOpen(false); setEditingId(null); }}
+        title={editingId ? "Edit Prescription" : "Add Prescription"}
+        description={editingId ? "Update prescription details" : "Add a new medication for this patient"}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -244,15 +221,15 @@ export function PrescriptionsTab({ patientId }: { patientId?: number }) {
             </div>
           </div>
 
-              <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Duration *</label>
               <input required type="text" name="duration" value={formData.duration} onChange={handleChange} placeholder="e.g. 7 days, 1 month" className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Quantity to Dispense *</label>
-                  <input required type="number" min="1" name="quantity" value={formData.quantity} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-                </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Quantity to Dispense *</label>
+              <input required type="number" min="1" name="quantity" value={formData.quantity} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+            </div>
           </div>
 
           <div>
@@ -261,9 +238,9 @@ export function PrescriptionsTab({ patientId }: { patientId?: number }) {
           </div>
 
           <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
-            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
+            <button type="button" onClick={() => { setIsModalOpen(false); setEditingId(null); }} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
             <button type="submit" disabled={isSubmitting || !formData.medicine_id} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : "Add Prescription"}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : editingId ? "Save Changes" : "Add Prescription"}
             </button>
           </div>
         </form>

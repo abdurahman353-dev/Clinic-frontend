@@ -22,45 +22,30 @@ export function useVitals(patientId?: number) {
   }, [patientId]);
 
   const addVital = async (vitalsData: any) => {
+    if (!patientId) throw new Error("Patient ID is required");
     let visitId = activeVisitId;
+    
     try {
-<<<<<<< Updated upstream
-      // Find or create visit if not cached
+      // Find or create visit
       if (!visitId) {
         const visitsResponse = await visitAPI.list({ 
           'filter[patient_id]': patientId,
-          'sort': '-created_at',
-          'page[size]': 1
-=======
-      // Find or create visit
-      const visitsResponse = await visitAPI.list({ 
-        'filter[patient_id]': patientId,
-        'sort': '-created_at'
-      });
-      const recentVisit = visitsResponse.data?.[0];
-      
-      if (recentVisit) {
-        visitId = recentVisit.id;
-      } else {
-        const userStr = typeof window !== 'undefined' ? sessionStorage.getItem("admin_user") : null;
-        const user = userStr ? JSON.parse(userStr) : null;
-        
-        const newVisit = await visitAPI.store({ 
-          patient_id: patientId, 
-          doctor_id: user?.id,
-          reason: "routine vitals check" 
->>>>>>> Stashed changes
+          'sort': '-created_at'
         });
         const recentVisit = visitsResponse.data?.[0];
         
         if (recentVisit) {
           visitId = recentVisit.id;
         } else {
-          const newVisit = await visitAPI.store({ 
+          const userStr = typeof window !== 'undefined' ? sessionStorage.getItem("admin_user") : null;
+          const user = userStr ? JSON.parse(userStr) : null;
+          
+          const newVisitResponse = await visitAPI.store({ 
             patient_id: patientId, 
+            doctor_id: user?.id,
             reason: "routine vitals check" 
           });
-          visitId = newVisit.data.id;
+          visitId = newVisitResponse.data.id;
         }
         setActiveVisitId(visitId);
       }

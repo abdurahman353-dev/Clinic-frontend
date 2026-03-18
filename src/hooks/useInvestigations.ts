@@ -22,45 +22,30 @@ export function useInvestigations(patientId?: number) {
   }, [patientId]);
 
   const addInvestigation = async (invData: any) => {
+    if (!patientId) throw new Error("Patient ID is required");
     let visitId = activeVisitId;
+    
     try {
-<<<<<<< Updated upstream
-      // Find or create visit if not cached
+      // Find or create visit
       if (!visitId) {
         const visitsResponse = await visitAPI.list({ 
           'filter[patient_id]': patientId,
-          'sort': '-created_at',
-          'page[size]': 1
-=======
-      // Find or create visit
-      const visitsResponse = await visitAPI.list({ 
-        'filter[patient_id]': patientId,
-        'sort': '-created_at'
-      });
-      const recentVisit = visitsResponse.data?.[0];
-      
-      if (recentVisit) {
-        visitId = recentVisit.id;
-      } else {
-        const userStr = typeof window !== 'undefined' ? sessionStorage.getItem("admin_user") : null;
-        const user = userStr ? JSON.parse(userStr) : null;
-
-        const newVisit = await visitAPI.store({ 
-          patient_id: patientId, 
-          doctor_id: user?.id,
-          reason: "routine lab work" 
->>>>>>> Stashed changes
+          'sort': '-created_at'
         });
         const recentVisit = visitsResponse.data?.[0];
         
         if (recentVisit) {
           visitId = recentVisit.id;
         } else {
-          const newVisit = await visitAPI.store({ 
+          const userStr = typeof window !== 'undefined' ? sessionStorage.getItem("admin_user") : null;
+          const user = userStr ? JSON.parse(userStr) : null;
+
+          const newVisitResponse = await visitAPI.store({ 
             patient_id: patientId, 
+            doctor_id: user?.id,
             reason: "routine lab work" 
           });
-          visitId = newVisit.data.id;
+          visitId = newVisitResponse.data.id;
         }
         setActiveVisitId(visitId);
       }
@@ -84,10 +69,6 @@ export function useInvestigations(patientId?: number) {
       const existing = investigations.find(i => i.id === invId);
       if (!existing?.visit_id) throw new Error("Visit ID not found for investigation");
 
-      // Optimistic update
-      const prev = [...investigations];
-      setInvestigations(p => p.map(item => item.id === invId ? { ...item, ...updateData } : item));
-
       const res = await investigationAPI.update(existing.visit_id, invId, updateData);
       
       if (res.data) {
@@ -96,9 +77,6 @@ export function useInvestigations(patientId?: number) {
       
       return res.data;
     } catch (err: any) {
-      // Re-fetch or let error bubble up, we didn't save rollback state robustly, 
-      // but let's assume it throws and caller handles it.
-      // To strictly rollback:
       fetchInvestigations(); // Refetch to be safe since we don't have prev state fully isolated here if it threw late
       throw err;
     }

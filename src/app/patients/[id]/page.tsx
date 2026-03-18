@@ -6,8 +6,8 @@ import { ArrowLeft, User as UserIcon, Calendar, Phone, Mail, Droplet, AlertTrian
 import Link from "next/link";
 import { patientAPI } from "@/lib/api";
 import VitalsTab from "@/components/patients/VitalsTab";
-import { InvestigationsTab } from "@/components/patients/InvestigationsTab";
-import { PrescriptionsTab } from "@/components/patients/PrescriptionsTab";
+import InvestigationsTab from "@/components/patients/InvestigationsTab";
+import PrescriptionsTab from "@/components/patients/PrescriptionsTab";
 
 export default function PatientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
