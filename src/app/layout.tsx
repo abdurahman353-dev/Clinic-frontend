@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description: "Compassionate Care with Excellence",
 };
 
+import { Toaster } from "sonner";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,6 +30,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased text-slate-900 bg-slate-50`}
       >
         <ClientLayout>{children}</ClientLayout>
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   );

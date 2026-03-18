@@ -1,9 +1,20 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Package, AlertTriangle, Plus, Search, ArrowUpRight, ArrowDownRight, Loader2, X, Edit2 } from "lucide-react";
+import { 
+  Package, 
+  AlertTriangle, 
+  Plus, 
+  Search, 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  Loader2, 
+  X,
+  Edit2
+} from "lucide-react";
 import { useStock } from "@/hooks/useStock";
-import toast from "react-hot-toast";
+import { Modal } from "@/components/ui/Modal";
+import { toast } from "sonner";
 
 export default function StockManagement() {
   const { medicines, isLoading, fetchMedicines, addMedicine, updateMedicine, addStock } = useStock();
@@ -38,38 +49,31 @@ export default function StockManagement() {
   const handleAddItemSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const dataToSave = { ...formData };
-    const currentEditingId = editingId;
     
-    // Optimistic UI
-    setIsAddItemModalOpen(false);
-    setEditingId(null);
-    setFormData({
-      name: "", category: "Antibiotics", unit_price: "", description: "", size: "", unit: "tablets",
-      dosage_form: "tablet", initial_stock: "", minimum_stock: "50", reorder_level: "100", batch_number: "", expiry_date: ""
-    });
+    const payload = {
+      ...formData,
+      unit_price: formData.unit_price ? parseFloat(formData.unit_price) : 0,
+      initial_stock: formData.initial_stock ? parseInt(formData.initial_stock, 10) : 0,
+      minimum_stock: formData.minimum_stock ? parseInt(formData.minimum_stock, 10) : 0,
+      reorder_level: formData.reorder_level ? parseInt(formData.reorder_level, 10) : 0,
+    };
 
     try {
-      const payload = {
-        ...dataToSave,
-        unit_price: dataToSave.unit_price ? parseFloat(dataToSave.unit_price) : 0,
-        initial_stock: dataToSave.initial_stock ? parseInt(dataToSave.initial_stock, 10) : 0,
-        minimum_stock: dataToSave.minimum_stock ? parseInt(dataToSave.minimum_stock, 10) : 0,
-        reorder_level: dataToSave.reorder_level ? parseInt(dataToSave.reorder_level, 10) : 0,
-      };
-      if (currentEditingId) {
-        await updateMedicine(currentEditingId, payload);
+      if (editingId) {
+        await updateMedicine(editingId, payload);
         toast.success("Item updated successfully");
       } else {
         await addMedicine(payload);
-        toast.success("Item added successfully");
+        toast.success("Item added to inventory successfully!");
       }
+      setIsAddItemModalOpen(false);
+      setEditingId(null);
+      setFormData({
+        name: "", category: "Antibiotics", unit_price: "", description: "", size: "", unit: "tablets",
+        dosage_form: "tablet", initial_stock: "", minimum_stock: "50", reorder_level: "100", batch_number: "", expiry_date: ""
+      });
     } catch (err: any) {
-      alert(err.message || "Failed to save item");
-      // Recovery
-      setIsAddItemModalOpen(true);
-      if (currentEditingId) setEditingId(currentEditingId);
-      setFormData(dataToSave);
+      // Global errorHandler in api.js handles this
     } finally {
       setIsSubmitting(false);
     }
@@ -89,7 +93,6 @@ export default function StockManagement() {
       minimum_stock: item.stock?.minimum_stock?.toString() || "50",
       reorder_level: item.stock?.reorder_level?.toString() || "100",
       batch_number: item.stock?.batch_number || "",
-      // Need a YYYY-MM-DD for date inputs
       expiry_date: item.stock?.expiry_date ? new Date(item.stock.expiry_date).toISOString().split('T')[0] : ""
     });
     setIsAddItemModalOpen(true);
@@ -282,10 +285,10 @@ export default function StockManagement() {
                           <button onClick={() => handleEdit(item)} className="text-slate-400 hover:text-primary-600 transition-colors p-1" title="Edit Item">
                             <Edit2 className="h-5 w-5" />
                           </button>
-                          <button onClick={() => alert("Restock flow coming soon")} className="text-slate-400 hover:text-green-600 transition-colors p-1" title="Restock">
+                          <button onClick={() => toast.info("Restock flow coming soon")} className="text-slate-400 hover:text-green-600 transition-colors p-1" title="Restock">
                             <ArrowUpRight className="h-5 w-5" />
                           </button>
-                          <button onClick={() => alert("Dispense flow coming soon")} className="text-slate-400 hover:text-red-600 transition-colors p-1" title="Dispense/Adjust">
+                          <button onClick={() => toast.info("Dispense flow coming soon")} className="text-slate-400 hover:text-red-600 transition-colors p-1" title="Dispense/Adjust">
                             <ArrowDownRight className="h-5 w-5" />
                           </button>
                         </div>
@@ -299,97 +302,91 @@ export default function StockManagement() {
         </div>
       </div>
 
-      {/* Add Item Modal */}
-      {isAddItemModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white w-full max-w-2xl rounded-xl shadow-xl overflow-hidden mt-10 md:mt-0">
-             <div className="flex items-center justify-between p-6 border-b border-slate-200">
-              <h3 className="text-lg font-bold text-slate-900">{editingId ? "Edit Inventory Item" : "Add New Item to Inventory"}</h3>
-              <button onClick={() => setIsAddItemModalOpen(false)} className="text-slate-400 hover:text-slate-600 rounded-full p-1 hover:bg-slate-100">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      <Modal
+        isOpen={isAddItemModalOpen}
+        onClose={() => { setIsAddItemModalOpen(false); setEditingId(null); }}
+        title={editingId ? "Edit Inventory Item" : "Add New Item to Inventory"}
+        description={editingId ? "Update existing stock details" : "Add a new medication or supply to the clinic inventory"}
+        maxWidth="max-w-2xl"
+      >
+        <form onSubmit={handleAddItemSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2"><h4 className="text-sm font-semibold text-slate-900 border-b pb-2">Item Details</h4></div>
             
-            <form onSubmit={handleAddItemSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2"><h4 className="text-sm font-semibold text-slate-900 border-b pb-2">Item Details</h4></div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Item Name *</label>
-                  <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. Paracetamol" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Category *</label>
-                  <select required name="category" value={formData.category} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
-                    <option value="Antibiotics">Antibiotics</option>
-                    <option value="Analgesics">Analgesics</option>
-                    <option value="Consumables">Consumables</option>
-                    <option value="Cardiovascular">Cardiovascular</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Item Name *</label>
+              <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. Paracetamol" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Category *</label>
+              <select required name="category" value={formData.category} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                <option value="Antibiotics">Antibiotics</option>
+                <option value="Analgesics">Analgesics</option>
+                <option value="Consumables">Consumables</option>
+                <option value="Cardiovascular">Cardiovascular</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Dosage Form</label>
-                  <input type="text" name="dosage_form" value={formData.dosage_form} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. tablet, syrup, injection" />
-                </div>
-                <div>
-                   <label className="block text-sm font-medium text-slate-700 mb-1">Size / Strength</label>
-                   <input type="text" name="size" value={formData.size} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 500mg" />
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Dosage Form</label>
+              <input type="text" name="dosage_form" value={formData.dosage_form} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. tablet, syrup, injection" />
+            </div>
+            <div>
+               <label className="block text-sm font-medium text-slate-700 mb-1">Size / Strength</label>
+               <input type="text" name="size" value={formData.size} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 500mg" />
+            </div>
 
-                <div className="md:col-span-2"><h4 className="text-sm font-semibold text-slate-900 border-b pb-2 mt-2">Initial Stock Configuration</h4></div>
+            <div className="md:col-span-2"><h4 className="text-sm font-semibold text-slate-900 border-b pb-2 mt-2">Initial Stock Configuration</h4></div>
 
-                <div>
-                   <label className="block text-sm font-medium text-slate-700 mb-1">Initial Quantity In Stock *</label>
-                   <input required type="number" min="0" name="initial_stock" value={formData.initial_stock} onChange={handleChange} disabled={!!editingId} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm disabled:opacity-50 disabled:bg-slate-50" placeholder="e.g. 500" />
-                   {editingId && <p className="text-xs text-slate-500 mt-1">Quantity adjust/restock in separate flow.</p>}
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                     <label className="block text-sm font-medium text-slate-700 mb-1">Tracking Unit</label>
-                     <input type="text" name="unit" value={formData.unit} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. tablets, boxes, bottles" />
-                  </div>
-                  <div className="flex-1">
-                     <label className="block text-sm font-medium text-slate-700 mb-1">Unit Price ($)</label>
-                     <input type="number" step="0.01" name="unit_price" value={formData.unit_price} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="0.00" />
-                  </div>
-                </div>
-
-                <div>
-                   <label className="block text-sm font-medium text-slate-700 mb-1">Reorder Level (Alert when below)</label>
-                   <input required type="number" min="0" name="reorder_level" value={formData.reorder_level} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 100" />
-                </div>
-                <div>
-                   <label className="block text-sm font-medium text-slate-700 mb-1">Minimum Safe Stock (Critical)</label>
-                   <input required type="number" min="0" name="minimum_stock" value={formData.minimum_stock} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 50" />
-                </div>
-
-                <div>
-                   <label className="block text-sm font-medium text-slate-700 mb-1">Batch Number</label>
-                   <input type="text" name="batch_number" value={formData.batch_number} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Optional" />
-                </div>
-                <div>
-                   <label className="block text-sm font-medium text-slate-700 mb-1">Expiry Date</label>
-                   <input type="date" name="expiry_date" value={formData.expiry_date} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-                  <textarea name="description" value={formData.description} onChange={handleChange} rows={2} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Any additional notes..." />
-                </div>
+            <div>
+               <label className="block text-sm font-medium text-slate-700 mb-1">Quantity In Stock *</label>
+               <input required type="number" min="0" name="initial_stock" value={formData.initial_stock} onChange={handleChange} disabled={!!editingId} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm disabled:opacity-50 disabled:bg-slate-50" placeholder="e.g. 500" />
+               {editingId && <p className="text-xs text-slate-500 mt-1">Quantity adjust/restock in separate flow.</p>}
+            </div>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                 <label className="block text-sm font-medium text-slate-700 mb-1">Tracking Unit</label>
+                 <input type="text" name="unit" value={formData.unit} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. tablets, boxes, bottles" />
               </div>
-
-              <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setIsAddItemModalOpen(false)} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
-                <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
-                  {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : editingId ? "Save Changes" : "Add to Inventory"}
-                </button>
+              <div className="flex-1">
+                 <label className="block text-sm font-medium text-slate-700 mb-1">Unit Price ($)</label>
+                 <input type="number" step="0.01" name="unit_price" value={formData.unit_price} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="0.00" />
               </div>
-            </form>
+            </div>
+
+            <div>
+               <label className="block text-sm font-medium text-slate-700 mb-1">Reorder Level</label>
+               <input required type="number" min="0" name="reorder_level" value={formData.reorder_level} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 100" />
+            </div>
+            <div>
+               <label className="block text-sm font-medium text-slate-700 mb-1">Min. Safe Stock</label>
+               <input required type="number" min="0" name="minimum_stock" value={formData.minimum_stock} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 50" />
+            </div>
+
+            <div>
+               <label className="block text-sm font-medium text-slate-700 mb-1">Batch Number</label>
+               <input type="text" name="batch_number" value={formData.batch_number} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Optional" />
+            </div>
+            <div>
+               <label className="block text-sm font-medium text-slate-700 mb-1">Expiry Date</label>
+               <input type="date" name="expiry_date" value={formData.expiry_date} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+              <textarea name="description" value={formData.description} onChange={handleChange} rows={2} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Any additional notes..." />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <button type="button" onClick={() => { setIsAddItemModalOpen(false); setEditingId(null); }} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
+            <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> {editingId ? "Saving..." : "Adding..."}</> : editingId ? "Save Changes" : "Add to Inventory"}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -1,9 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Pill, Loader2, X, Edit2 } from "lucide-react";
+<<<<<<< Updated upstream
+import { Plus, Pill, Loader2, Edit2 } from "lucide-react";
 import { usePrescriptions } from "@/hooks/usePrescriptions";
 import toast from "react-hot-toast";
+=======
+import { Plus, Pill, Loader2 } from "lucide-react";
+import { usePrescriptions } from "@/hooks/usePrescriptions";
+import { Modal } from "@/components/ui/Modal";
+import { toast } from "sonner";
+>>>>>>> Stashed changes
+import { Modal } from "@/components/ui/Modal";
+import { toast } from "sonner";
 
 export function PrescriptionsTab({ patientId }: { patientId?: number }) {
   const { prescriptions, medicines, isLoading, fetchPrescriptions, fetchMedicines, addPrescription, updatePrescription } = usePrescriptions(patientId);
@@ -33,7 +42,7 @@ export function PrescriptionsTab({ patientId }: { patientId?: number }) {
     e.preventDefault();
     setIsSubmitting(true);
     const selectedMed = medicines.find(m => m.id == formData.medicine_id);
-    const dataToSave = { 
+    const dataToSave = {
       notes: formData.notes,
       items: [{
         medicine_id: formData.medicine_id,
@@ -44,15 +53,16 @@ export function PrescriptionsTab({ patientId }: { patientId?: number }) {
         quantity: parseInt(formData.quantity, 10) || 1
       }]
     };
-    
+
     const currentEditingId = editingId;
-    
+
     // Optimistic close
     setIsModalOpen(false);
     setEditingId(null);
     setFormData({ medicine_id: "", dosage: "", frequency: "", duration: "", quantity: "1", notes: "" });
 
     try {
+<<<<<<< Updated upstream
       if (currentEditingId) {
         await updatePrescription(currentEditingId, dataToSave);
         toast.success("Prescription updated successfully");
@@ -65,6 +75,14 @@ export function PrescriptionsTab({ patientId }: { patientId?: number }) {
       setIsModalOpen(true);
       if (currentEditingId) setEditingId(currentEditingId);
       setFormData(formData); // Use original flat formData
+=======
+      await addPrescription(formData);
+      setIsModalOpen(false);
+      setFormData({ medicine_id: "", dosage: "", frequency: "", duration: "", notes: "" });
+      toast.success("Prescription added successfully");
+      toast.success("Prescription added successfully");
+    } catch (err: any) {
+      // toast.error is handled by api.js interceptor
     } finally {
       setIsSubmitting(false);
     }
@@ -108,7 +126,7 @@ export function PrescriptionsTab({ patientId }: { patientId?: number }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-slate-900">Prescriptions</h2>
-        <button 
+        <button
           onClick={handleAdd}
           className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-primary-600 text-white hover:bg-primary-700 h-9 px-4 shadow-sm"
         >
@@ -131,7 +149,7 @@ export function PrescriptionsTab({ patientId }: { patientId?: number }) {
             const active = isActive(rx);
             // The backend returns an 'items' array for each prescription
             const items = rx.items || [];
-            
+
             return (
               <div key={rx.id} className={`bg-white border rounded-xl p-5 shadow-sm relative overflow-hidden flex flex-col h-full ${active ? 'border-primary-100' : 'border-slate-200'}`}>
                 {active && (
@@ -139,12 +157,12 @@ export function PrescriptionsTab({ patientId }: { patientId?: number }) {
                     <div className="bg-green-500 text-white text-[10px] uppercase font-bold tracking-wider py-1 px-3 rounded-bl-lg">Active</div>
                   </div>
                 )}
-                
+
                 <div className="mb-4 pb-3 border-b border-slate-100 flex justify-between items-start">
                   <div>
                      <div className="flex items-center gap-3">
                        <p className="text-sm text-slate-500 font-medium">Prescription #{rx.id}</p>
-                       <button 
+                       <button
                          onClick={() => handleEdit(rx)}
                          className="text-primary-600 hover:text-primary-800 bg-primary-50 hover:bg-primary-100 p-1 rounded-md transition-colors"
                          title="Edit Prescription"
@@ -168,7 +186,7 @@ export function PrescriptionsTab({ patientId }: { patientId?: number }) {
                              <h3 className={`text-sm font-bold ${active ? 'text-slate-900' : 'text-slate-600'}`}>{item.medicine || 'Unknown Medicine'}</h3>
                              <span className="text-xs font-medium text-slate-500 bg-white px-2 py-1 rounded border shadow-sm">Qty: {item.quantity}</span>
                           </div>
-                          
+
                           <div className="mt-2 grid grid-cols-3 gap-2 divide-x divide-slate-200">
                             <div className="text-left">
                               <span className="block text-[9px] uppercase tracking-wider text-slate-400 mb-0.5">Dosage</span>
@@ -194,69 +212,62 @@ export function PrescriptionsTab({ patientId }: { patientId?: number }) {
       )}
 
       {/* New Prescription Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-lg rounded-xl shadow-xl overflow-hidden">
-             <div className="flex items-center justify-between p-6 border-b border-slate-200">
-              <h3 className="text-lg font-bold text-slate-900">{editingId ? "Edit Prescription" : "Add Prescription"}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 rounded-full p-1 hover:bg-slate-100">
-                <X className="h-5 w-5" />
-              </button>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Add Prescription"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Medicine *</label>
+            <select required name="medicine_id" value={formData.medicine_id} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+              <option value="">Select a medicine...</option>
+              {medicines.map((m: any) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} {m.size ? `(${m.size})` : ''} - {m.stock?.quantity > 0 ? `In Stock: ${m.stock.quantity}` : 'Out of Stock'}
+                </option>
+              ))}
+            </select>
+            {formData.medicine_id && medicines.find(m => m.id == formData.medicine_id)?.stock?.quantity === 0 && (
+               <p className="mt-1 text-xs text-red-600 font-medium">Warning: Selected medicine is out of stock.</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Dosage *</label>
+              <input required type="text" name="dosage" value={formData.dosage} onChange={handleChange} placeholder="e.g. 1 Tablet, 5ml" className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
             </div>
-            
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Medicine *</label>
-                <select required name="medicine_id" value={formData.medicine_id} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
-                  <option value="">Select a medicine...</option>
-                  {medicines.map((m: any) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} {m.size ? `(${m.size})` : ''} - {m.stock?.quantity > 0 ? `In Stock: ${m.stock.quantity}` : 'Out of Stock'}
-                    </option>
-                  ))}
-                </select>
-                {formData.medicine_id && medicines.find(m => m.id == formData.medicine_id)?.stock?.quantity === 0 && (
-                   <p className="mt-1 text-xs text-red-600 font-medium">Warning: Selected medicine is out of stock.</p>
-                )}
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Dosage *</label>
-                  <input required type="text" name="dosage" value={formData.dosage} onChange={handleChange} placeholder="e.g. 1 Tablet, 5ml" className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Frequency *</label>
-                  <input required type="text" name="frequency" value={formData.frequency} onChange={handleChange} placeholder="e.g. 3 times a day" className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-                </div>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Frequency *</label>
+              <input required type="text" name="frequency" value={formData.frequency} onChange={handleChange} placeholder="e.g. 3 times a day" className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+            </div>
+          </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Duration *</label>
-                  <input required type="text" name="duration" value={formData.duration} onChange={handleChange} placeholder="e.g. 7 days, 1 month" className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Duration *</label>
+              <input required type="text" name="duration" value={formData.duration} onChange={handleChange} placeholder="e.g. 7 days, 1 month" className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Quantity to Dispense *</label>
                   <input required type="number" min="1" name="quantity" value={formData.quantity} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Additional Instructions</label>
-                <textarea name="notes" value={formData.notes} onChange={handleChange} rows={2} placeholder="e.g. Take after meals" className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-              </div>
-
-              <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
-                <button type="submit" disabled={isSubmitting || !formData.medicine_id} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
-                  {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : editingId ? "Save Changes" : "Add Prescription"}
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Additional Instructions</label>
+            <textarea name="notes" value={formData.notes} onChange={handleChange} rows={2} placeholder="e.g. Take after meals" className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
+            <button type="submit" disabled={isSubmitting || !formData.medicine_id} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : "Add Prescription"}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

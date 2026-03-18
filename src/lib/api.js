@@ -27,20 +27,42 @@ apiClient.interceptors.request.use(
     }
 );
 
+import { toast } from "sonner";
+
 // Response interceptor for error handling
 apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
+        const status = error.response?.status;
+        const message = error.response?.data?.message || error.message || "An unexpected error occurred";
+
+        if (status === 401) {
             // Token expired or invalid
             Cookies.remove('admin_token');
             if (typeof window !== 'undefined') {
                 sessionStorage.removeItem('admin_user');
                 if (!window.location.pathname.includes('/login')) {
+                    toast.error("Session expired. Please login again.");
                     window.location.href = '/login';
                 }
             }
+        } else if (status === 422) {
+            // Validation errors
+            const errors = error.response.data.errors;
+            if (errors) {
+                const firstError = Object.values(errors)[0][0];
+                toast.error(firstError);
+            } else {
+                toast.error(message);
+            }
+        } else if (status >= 500) {
+            toast.error("Server error. Please try again later.");
+        } else if (error.code === 'ERR_NETWORK') {
+            toast.error("Network error. Please check your connection.");
+        } else {
+            toast.error(message);
         }
+
         return Promise.reject(error);
     }
 );
