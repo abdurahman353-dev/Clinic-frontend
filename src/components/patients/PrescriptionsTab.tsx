@@ -6,8 +6,20 @@ import { usePrescriptions } from "@/hooks/usePrescriptions";
 import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
 
-export default function PrescriptionsTab({ patientId }: { patientId?: number }): React.JSX.Element {
-  const { prescriptions, medicines, isLoading, fetchPrescriptions, fetchMedicines, addPrescription, updatePrescription } = usePrescriptions(patientId);
+export default function PrescriptionsTab({ 
+  patientId, 
+  initialData, 
+  onDataChange, 
+  isInitialLoaded, 
+  onLoadComplete 
+}: { 
+  patientId?: number;
+  initialData: any[];
+  onDataChange: (data: any[]) => void;
+  isInitialLoaded: boolean;
+  onLoadComplete: () => void;
+}): React.JSX.Element {
+  const { prescriptions, medicines, isLoading, fetchPrescriptions, fetchMedicines, addPrescription, updatePrescription, setPrescriptions } = usePrescriptions(patientId);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -22,9 +34,24 @@ export default function PrescriptionsTab({ patientId }: { patientId?: number }):
   });
 
   useEffect(() => {
-    fetchPrescriptions();
-    fetchMedicines();
-  }, [fetchPrescriptions, fetchMedicines]);
+    if (!isInitialLoaded) {
+      Promise.all([fetchPrescriptions(), fetchMedicines()]).then(() => onLoadComplete());
+    }
+  }, [fetchPrescriptions, fetchMedicines, isInitialLoaded, onLoadComplete]);
+
+  // Sync internal prescriptions with lifted state
+  useEffect(() => {
+    if (isInitialLoaded && prescriptions.length === 0 && initialData.length > 0) {
+      setPrescriptions(initialData);
+    }
+  }, [initialData, isInitialLoaded, setPrescriptions, prescriptions.length]);
+
+  // Update lifted state when internal prescriptions change
+  useEffect(() => {
+    if (prescriptions.length > 0) {
+      onDataChange(prescriptions);
+    }
+  }, [prescriptions, onDataChange]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -46,6 +73,12 @@ export default function PrescriptionsTab({ patientId }: { patientId?: number }):
       }]
     };
 
+    // Optimistic Closure
+    setIsModalOpen(false);
+    setEditingId(null);
+    const originalForm = { ...formData };
+    setFormData({ medicine_id: "", dosage: "", frequency: "", duration: "", quantity: "1", notes: "" });
+
     try {
       if (editingId) {
         await updatePrescription(editingId, dataToSave);
@@ -54,9 +87,6 @@ export default function PrescriptionsTab({ patientId }: { patientId?: number }):
         await addPrescription(dataToSave);
         toast.success("Prescription added successfully");
       }
-      setIsModalOpen(false);
-      setEditingId(null);
-      setFormData({ medicine_id: "", dosage: "", frequency: "", duration: "", quantity: "1", notes: "" });
     } catch (err: any) {
       // toast.error is handled by api.js interceptor
     } finally {

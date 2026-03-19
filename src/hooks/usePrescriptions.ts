@@ -107,6 +107,7 @@ export function usePrescriptions(patientId?: number) {
     fetchPrescriptions, 
     fetchMedicines, 
     addPrescription,
-    updatePrescription
+    updatePrescription,
+    setPrescriptions
   };
 }

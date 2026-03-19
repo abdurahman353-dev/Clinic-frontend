@@ -64,5 +64,5 @@ export function useStock() {
      }
   };
 
-  return { medicines, isLoading, errorMsg, fetchMedicines, addMedicine, updateMedicine, addStock };
+  return { medicines, isLoading, errorMsg, fetchMedicines, addMedicine, updateMedicine, addStock, setMedicines };
 }

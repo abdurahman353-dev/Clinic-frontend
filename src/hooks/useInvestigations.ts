@@ -82,5 +82,5 @@ export function useInvestigations(patientId?: number) {
     }
   };
 
-  return { investigations, isLoading, errorMsg, fetchInvestigations, addInvestigation, updateInvestigation };
+  return { investigations, isLoading, errorMsg, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations };
 }

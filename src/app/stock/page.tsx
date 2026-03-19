@@ -59,6 +59,15 @@ export default function StockManagement() {
       reorder_level: formData.reorder_level ? parseInt(formData.reorder_level, 10) : 0,
     };
 
+    // Optimistic UI: Close modal immediately to feel lightning fast
+    setIsAddItemModalOpen(false);
+    setEditingId(null);
+    const originalFormData = { ...formData };
+    setFormData({
+      name: "", category: "Antibiotics", unit_price: "", description: "", size: "", unit: "tablets",
+      dosage_form: "tablet", initial_stock: "", minimum_stock: "50", reorder_level: "100", batch_number: "", expiry_date: ""
+    });
+
     try {
       if (editingId) {
         await updateMedicine(editingId, payload);
@@ -67,12 +76,6 @@ export default function StockManagement() {
         await addMedicine(payload);
         toast.success("Item added to inventory successfully!");
       }
-      setIsAddItemModalOpen(false);
-      setEditingId(null);
-      setFormData({
-        name: "", category: "Antibiotics", unit_price: "", description: "", size: "", unit: "tablets",
-        dosage_form: "tablet", initial_stock: "", minimum_stock: "50", reorder_level: "100", batch_number: "", expiry_date: ""
-      });
     } catch (err: any) {
       // Global errorHandler in api.js handles this
     } finally {

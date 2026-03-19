@@ -83,5 +83,5 @@ export function useVitals(patientId?: number) {
     }
   };
 
-  return { vitals, isLoading, errorMsg, fetchVitals, addVital, updateVital };
+  return { vitals, isLoading, errorMsg, fetchVitals, addVital, updateVital, setVitals };
 }

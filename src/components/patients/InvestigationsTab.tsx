@@ -6,8 +6,20 @@ import { useInvestigations } from "@/hooks/useInvestigations";
 import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
 
-export default function InvestigationsTab({ patientId }: { patientId?: number }): React.JSX.Element {
-  const { investigations, isLoading, fetchInvestigations, addInvestigation, updateInvestigation } = useInvestigations(patientId);
+export default function InvestigationsTab({ 
+  patientId, 
+  initialData, 
+  onDataChange, 
+  isInitialLoaded, 
+  onLoadComplete 
+}: { 
+  patientId?: number;
+  initialData: any[];
+  onDataChange: (data: any[]) => void;
+  isInitialLoaded: boolean;
+  onLoadComplete: () => void;
+}): React.JSX.Element {
+  const { investigations, isLoading, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations } = useInvestigations(patientId);
 
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
@@ -27,24 +39,43 @@ export default function InvestigationsTab({ patientId }: { patientId?: number })
   });
 
   useEffect(() => {
-    fetchInvestigations();
-  }, [fetchInvestigations]);
+    if (!isInitialLoaded) {
+      fetchInvestigations().then(() => onLoadComplete());
+    }
+  }, [fetchInvestigations, isInitialLoaded, onLoadComplete]);
+
+  // Sync internal investigations with lifted state
+  useEffect(() => {
+    if (isInitialLoaded && investigations.length === 0 && initialData.length > 0) {
+      setInvestigations(initialData);
+    }
+  }, [initialData, isInitialLoaded, setInvestigations, investigations.length]);
+
+  // Update lifted state when internal investigations change
+  useEffect(() => {
+    if (investigations.length > 0) {
+      onDataChange(investigations);
+    }
+  }, [investigations, onDataChange]);
 
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    // Optimistic Closure
+    setIsRequestModalOpen(false);
+    setEditingId(null);
+    const originalForm = { ...requestForm };
+    setRequestForm({ name: "", type: "lab", notes: "" });
+
     try {
       if (editingId) {
-        await updateInvestigation(editingId, requestForm);
+        await updateInvestigation(editingId, originalForm);
         toast.success("Investigation updated successfully");
       } else {
-        await addInvestigation(requestForm);
+        await addInvestigation(originalForm);
         toast.success("Investigation requested successfully");
       }
-      setIsRequestModalOpen(false);
-      setEditingId(null);
-      setRequestForm({ name: "", type: "lab", notes: "" });
     } catch (err: any) {
       // toast.error is handled by api.js interceptor
     } finally {
@@ -57,12 +88,15 @@ export default function InvestigationsTab({ patientId }: { patientId?: number })
     if (!selectedInvId) return;
     setIsSubmitting(true);
 
+    // Optimistic Closure
+    setIsResultModalOpen(false);
+    setSelectedInvId(null);
+    const originalResult = { ...resultForm };
+    setResultForm({ result: "", status: "completed" });
+
     try {
-      await updateInvestigation(selectedInvId, resultForm);
+      await updateInvestigation(selectedInvId, originalResult);
       toast.success("Test result uploaded successfully");
-      setIsResultModalOpen(false);
-      setSelectedInvId(null);
-      setResultForm({ result: "", status: "completed" });
     } catch (err: any) {
       // toast.error is handled by api.js interceptor
     } finally {

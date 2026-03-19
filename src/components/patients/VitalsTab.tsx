@@ -6,8 +6,20 @@ import { useVitals } from "@/hooks/useVitals";
 import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
 
-export default function VitalsTab({ patientId }: { patientId: number }) {
-  const { vitals, isLoading, addVital, updateVital, fetchVitals } = useVitals(patientId);
+export default function VitalsTab({ 
+  patientId, 
+  initialData, 
+  onDataChange, 
+  isInitialLoaded, 
+  onLoadComplete 
+}: { 
+  patientId: number;
+  initialData: any[];
+  onDataChange: (data: any[]) => void;
+  isInitialLoaded: boolean;
+  onLoadComplete: () => void;
+}) {
+  const { vitals, isLoading, addVital, updateVital, fetchVitals, setVitals } = useVitals(patientId);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -26,8 +38,24 @@ export default function VitalsTab({ patientId }: { patientId: number }) {
   });
 
   useEffect(() => {
-    fetchVitals();
-  }, [fetchVitals]);
+    if (!isInitialLoaded) {
+      fetchVitals().then(() => onLoadComplete());
+    }
+  }, [fetchVitals, isInitialLoaded, onLoadComplete]);
+
+  // Sync internal vitals with lifted state
+  useEffect(() => {
+    if (isInitialLoaded && vitals.length === 0 && initialData.length > 0) {
+      setVitals(initialData);
+    }
+  }, [initialData, isInitialLoaded, setVitals, vitals.length]);
+
+  // Update lifted state when internal vitals change
+  useEffect(() => {
+    if (vitals.length > 0) {
+      onDataChange(vitals);
+    }
+  }, [vitals, onDataChange]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -75,22 +103,25 @@ export default function VitalsTab({ patientId }: { patientId: number }) {
     e.preventDefault();
     setIsSubmitting(true);
 
+    // Optimistic Closure: Close modal immediately to feel "lightning fast"
+    setIsModalOpen(false);
+    setEditingId(null);
+    const originalFormData = { ...formData };
+    setFormData({
+      vital_type: "routine", blood_pressure: "", pulse_rate: "", temperature: "",
+      respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: ""
+    });
+
     try {
       if (editingId) {
         const vitalToEdit = vitals.find(v => v.id === editingId);
         if (!vitalToEdit) throw new Error("Vital record not found");
-        await updateVital(vitalToEdit.visit_id, editingId, formData);
+        await updateVital(vitalToEdit.visit_id, editingId, originalFormData);
         toast.success("Vitals updated successfully");
       } else {
-        await addVital(formData);
+        await addVital(originalFormData);
         toast.success("Vitals recorded successfully");
       }
-      setIsModalOpen(false);
-      setEditingId(null);
-      setFormData({
-        vital_type: "routine", blood_pressure: "", pulse_rate: "", temperature: "",
-        respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: ""
-      });
     } catch (err: any) {
       // toast.error is handled by api.js interceptor usually
     } finally {

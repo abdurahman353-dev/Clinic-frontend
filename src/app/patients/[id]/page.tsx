@@ -21,6 +21,14 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
   const [errorMsg, setErrorMsg] = useState("");
   const [activeTab, setActiveTab] = useState(initialTab);
 
+  // Centralized state for tabs to avoid re-fetching on switch
+  const [vitalsData, setVitalsData ] = useState<any[]>([]);
+  const [investigationsData, setInvestigationsData] = useState<any[]>([]);
+  const [prescriptionsData, setPrescriptionsData] = useState<any[]>([]);
+  const [isVitalsLoaded, setIsVitalsLoaded] = useState(false);
+  const [isInvestigationsLoaded, setIsInvestigationsLoaded] = useState(false);
+  const [isPrescriptionsLoaded, setIsPrescriptionsLoaded] = useState(false);
+
   useEffect(() => {
     const tab = searchParams.get("tab");
     if (tab && ["vitals", "investigations", "prescriptions"].includes(tab)) {
@@ -177,9 +185,33 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
 
         {/* Tab Content Placeholder */}
         <div className="p-6 bg-slate-50 min-h-[400px]">
-          {activeTab === "vitals" && <VitalsTab patientId={patient.db_id} />}
-          {activeTab === "investigations" && <InvestigationsTab patientId={patient.db_id} />}
-          {activeTab === "prescriptions" && <PrescriptionsTab patientId={patient.db_id} />}
+          {activeTab === "vitals" && (
+            <VitalsTab 
+              patientId={patient.db_id} 
+              initialData={vitalsData} 
+              onDataChange={setVitalsData} 
+              isInitialLoaded={isVitalsLoaded}
+              onLoadComplete={() => setIsVitalsLoaded(true)}
+            />
+          )}
+          {activeTab === "investigations" && (
+            <InvestigationsTab 
+              patientId={patient.db_id} 
+              initialData={investigationsData} 
+              onDataChange={setInvestigationsData} 
+              isInitialLoaded={isInvestigationsLoaded}
+              onLoadComplete={() => setIsInvestigationsLoaded(true)}
+            />
+          )}
+          {activeTab === "prescriptions" && (
+            <PrescriptionsTab 
+              patientId={patient.db_id} 
+              initialData={prescriptionsData} 
+              onDataChange={setPrescriptionsData} 
+              isInitialLoaded={isPrescriptionsLoaded}
+              onLoadComplete={() => setIsPrescriptionsLoaded(true)}
+            />
+          )}
         </div>
       </div>
     </div>
