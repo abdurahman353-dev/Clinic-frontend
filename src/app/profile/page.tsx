@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { authAPI } from "@/lib/api";
-import { Loader2, User, Save, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { Loader2, User, Save, CheckCircle2, Eye, EyeOff, ArrowLeft, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
   const { user, setUser } = useAuth();
+  const router = useRouter();
   
   const [formData, setFormData] = useState({
     name: "",
@@ -60,8 +62,13 @@ export default function ProfilePage() {
       const res = await authAPI.updateProfile(payload);
       
       setUser(res.user);
-      setMessage({ text: "Profile updated successfully!", type: "success" });
-      setFormData(prev => ({ ...prev, password: "", current_password: "", password_confirmation: "" })); // Clear password fields
+      setMessage({ text: "Profile updated successfully! Redirecting to login...", type: "success" });
+      setFormData(prev => ({ ...prev, password: "", current_password: "", password_confirmation: "" })); 
+      
+      // Redirect to login after 1.5s to let them see the success message
+      setTimeout(() => {
+        router.push("/login");
+      }, 1500);
     } catch (err: any) {
       setMessage({ text: err.message || "Failed to update profile", type: "error" });
     } finally {
@@ -71,9 +78,18 @@ export default function ProfilePage() {
 
   return (
     <div className="p-6 md:p-8 max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Your Profile</h1>
-        <p className="text-slate-500 mt-1">Manage your account credentials and details.</p>
+      <div className="flex items-center gap-4">
+        <button 
+          onClick={() => router.back()}
+          className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500 hover:text-slate-700"
+          title="Go Back"
+        >
+          <ArrowLeft className="h-6 w-6" />
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Your Profile</h1>
+          <p className="text-slate-500 mt-1">Manage your account credentials and details.</p>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -192,7 +208,14 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="flex justify-end pt-4">
+          <div className="flex justify-end items-center gap-3 pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+            >
+              <X className="-ml-1 mr-2 h-4 w-4" /> Cancel
+            </button>
             <button
               type="submit"
               disabled={isSubmitting}
