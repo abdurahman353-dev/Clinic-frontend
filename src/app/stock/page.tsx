@@ -391,7 +391,7 @@ export default function StockManagement() {
                 <input type="text" name="unit" value={formData.unit} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. tablets, boxes, bottles" />
               </div>
               <div className="flex-1">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Unit Price ($)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Unit Price (KSh)</label>
                 <input type="number" step="0.01" name="unit_price" value={formData.unit_price} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="0.00" />
               </div>
             </div>

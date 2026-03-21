@@ -66,7 +66,7 @@ export function Sidebar() {
             alt="Wafaa Medical Clinic"
             width={180}
             height={60}
-            className="h-25 w-auto object-fit justify-center align-center"
+            className="h-15 w-auto object-fit justify-center align-center"
             priority
           />
         </Link>

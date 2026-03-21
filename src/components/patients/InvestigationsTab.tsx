@@ -176,7 +176,7 @@ export default function InvestigationsTab({
 
                       {test.cost && (
                         <p className="text-sm font-bold text-slate-900 mt-2">
-                          Price: KSh {test.cost}
+                          Test Fee: KSh {test.cost}
                         </p>
                       )}
 
@@ -248,7 +248,7 @@ export default function InvestigationsTab({
             <textarea value={requestForm.notes} onChange={e => setRequestForm({ ...requestForm, notes: e.target.value })} rows={3} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Why is this test being requested..."></textarea>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Test Price (KES)</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Test Fee (KES)</label>
             <div className="relative mt-1 rounded-md shadow-sm">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                 <span className="text-slate-500 sm:text-sm">KSh</span>

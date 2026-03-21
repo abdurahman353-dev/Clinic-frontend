@@ -28,6 +28,7 @@ import { toast } from "sonner";
 export default function CashierPage() {
   const [activeTab, setActiveTab] = useState<'pending' | 'unbilled' | 'history'>('pending');
   const [bills, setBills] = useState<any[]>([]);
+  const [historyBills, setHistoryBills] = useState<any[]>([]);
   const [visits, setVisits] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,13 +56,22 @@ export default function CashierPage() {
     }
   }, []);
 
+  const fetchHistory = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await billingAPI.list({ status: 'paid' });
+      setHistoryBills(response.data || []);
+    } catch (err) {
+      console.error("Failed to fetch history", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const fetchUnbilledVisits = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Fetch visits that are open or completed but not yet billed
       const response = await visitAPI.list({ 'filter[status]': 'open,completed' });
-      // In a real app, the backend should probably have a more specific scope for "unbilled"
-      // For now, we'll just filter them in the frontend if needed, though 'billed' status was added in Service
       setVisits(response.data || []);
     } catch (err) {
       console.error("Failed to fetch visits", err);
@@ -73,8 +83,8 @@ export default function CashierPage() {
   useEffect(() => {
     if (activeTab === 'pending') fetchBills();
     if (activeTab === 'unbilled') fetchUnbilledVisits();
-    // history tab logic can be added later
-  }, [activeTab, fetchBills, fetchUnbilledVisits]);
+    if (activeTab === 'history') fetchHistory();
+  }, [activeTab, fetchBills, fetchUnbilledVisits, fetchHistory]);
 
   const filteredBills = bills.filter(bill => 
     bill.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -84,6 +94,11 @@ export default function CashierPage() {
   const filteredVisits = visits.filter(visit => 
     visit.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     visit.id.toString().includes(searchTerm)
+  );
+
+  const filteredHistory = historyBills.filter(bill => 
+    bill.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    bill.id.toString().includes(searchTerm)
   );
 
   const handleOpenPayment = (bill: any) => {
@@ -160,7 +175,7 @@ export default function CashierPage() {
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'pending' ? 'bg-white text-primary-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
         >
           <Clock className="h-4 w-4" />
-          Pending Payments
+          Unpaid Invoices
           {bills.length > 0 && <span className="ml-1 px-1.5 py-0.5 bg-primary-100 text-primary-700 rounded-full text-[10px]">{bills.length}</span>}
         </button>
         <button 
@@ -321,6 +336,57 @@ export default function CashierPage() {
               </table>
             </div>
           )}
+
+          {activeTab === 'history' && (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Patient / Invoice History</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Total Amount</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Settled On</th>
+                    <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-200">
+                  {filteredHistory.length === 0 ? (
+                    <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">No paid invoices found.</td></tr>
+                  ) : filteredHistory.map((bill) => (
+                    <tr key={bill.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 rounded-full bg-green-50 flex items-center justify-center mr-3 border border-green-100 text-green-600">
+                            <User className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-bold text-slate-900">{bill.patient_name || 'Walking Patient'}</div>
+                            <div className="text-xs text-slate-400 font-medium font-mono uppercase">Inv #{bill.id} &bull; Generated: {new Date(bill.created_at).toLocaleDateString()}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-base font-black text-slate-900 font-mono">KSh {parseFloat(bill.grand_total).toLocaleString()}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide bg-green-100 text-green-800">
+                           {bill.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                        {bill.updated_at ? new Date(bill.updated_at).toLocaleDateString() : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onClick={() => viewBillDetails(bill)} className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all" title="View Details">
+                          <FileText className="h-5 w-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -350,11 +416,29 @@ export default function CashierPage() {
           </div>
           
           <div className="flex gap-3">
-            <button onClick={() => { setIsBillDetailOpen(false); handleOpenPayment(selectedBill); }} className="flex-1 bg-primary-600 text-white font-black py-4 rounded-xl shadow-lg shadow-primary-200 hover:bg-primary-700 transition-all active:scale-95">
-              Proceed to Payment
-            </button>
-            <button onClick={() => window.print()} className="px-6 border-2 border-slate-100 rounded-xl hover:bg-slate-50 transition-colors">
-              <History className="h-5 w-5 text-slate-400" />
+            {selectedBill?.status !== 'paid' ? (
+              <button 
+                onClick={() => { setIsBillDetailOpen(false); handleOpenPayment(selectedBill); }} 
+                className="flex-1 bg-primary-600 text-white font-black py-4 rounded-xl shadow-lg shadow-primary-200 hover:bg-primary-700 transition-all active:scale-95"
+              >
+                Proceed to Payment
+              </button>
+            ) : (
+              <div className="flex-1 bg-green-50 border border-green-100 rounded-xl p-4 flex items-center justify-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <span className="text-green-700 font-bold uppercase tracking-wide">Invoice Settled</span>
+              </div>
+            )}
+            <button 
+              onClick={() => {
+                // Future: Implement proper print view
+                window.print();
+              }} 
+              className="px-6 border-2 border-slate-100 rounded-xl hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
+              title="Print Invoice"
+            >
+              <Receipt className="h-5 w-5 text-slate-400" />
+              <span className="text-xs font-bold text-slate-500">Print</span>
             </button>
           </div>
         </div>
