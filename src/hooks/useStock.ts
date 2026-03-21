@@ -64,5 +64,37 @@ export function useStock() {
      }
   };
 
-  return { medicines, isLoading, errorMsg, fetchMedicines, addMedicine, updateMedicine, addStock, setMedicines };
+  const adjustStock = async (stockId: number, adjustment: number) => {
+    // Optimistic local update
+    setMedicines(prev => prev.map(m => {
+      if (m.stock && m.stock.id === stockId) {
+        return { 
+          ...m, 
+          stock: { 
+            ...m.stock, 
+            quantity: (m.stock.quantity ?? 0) + adjustment 
+          } 
+        };
+      }
+      return m;
+    }));
+
+    try {
+      const res = await stockAPI.adjust(stockId, adjustment);
+      if (res.data) {
+        setMedicines(prev => prev.map(m => {
+          if (m.stock && m.stock.id === stockId) {
+            return { ...m, stock: res.data };
+          }
+          return m;
+        }));
+      }
+      return res.data;
+    } catch (err: any) {
+      // Caller should re-fetch medicines to restore correct state on error
+      throw err;
+    }
+  };
+
+  return { medicines, isLoading, errorMsg, fetchMedicines, addMedicine, updateMedicine, addStock, adjustStock, setMedicines };
 }

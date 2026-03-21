@@ -231,6 +231,10 @@ export const stockAPI = {
     store: async (data) => {
         const response = await apiClient.post('/stocks', data);
         return response.data;
+    },
+    adjust: async (id, adjustment) => {
+        const response = await apiClient.patch(`/stocks/${id}/adjust`, { adjustment });
+        return response.data;
     }
 };
 

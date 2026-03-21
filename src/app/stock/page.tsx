@@ -17,12 +17,18 @@ import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
 
 export default function StockManagement() {
-  const { medicines, isLoading, fetchMedicines, addMedicine, updateMedicine, addStock } = useStock();
+  const { medicines, isLoading, fetchMedicines, addMedicine, updateMedicine, addStock, adjustStock } = useStock();
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  // Adjustment Modal State
+  const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+  const [adjustType, setAdjustType] = useState<"restock" | "dispense">("restock");
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [adjustQty, setAdjustQty] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -109,6 +115,35 @@ export default function StockManagement() {
       dosage_form: "tablet", initial_stock: "", minimum_stock: "50", reorder_level: "100", batch_number: "", expiry_date: ""
     });
     setIsAddItemModalOpen(true);
+  };
+
+  const handleOpenAdjust = (item: any, type: "restock" | "dispense") => {
+    setSelectedItem(item);
+    setAdjustType(type);
+    setAdjustQty("");
+    setIsAdjustModalOpen(true);
+  };
+
+  const handleAdjustSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedItem?.stock?.id || !adjustQty) return;
+
+    const adjustment = parseInt(adjustQty, 10);
+    const finalAdjustment = adjustType === "restock" ? adjustment : -adjustment;
+
+    // Optimistic UI: Close modal and show success immediately
+    setIsAdjustModalOpen(false);
+    toast.success(adjustType === "restock" ? "Stock replenished successfully!" : "Stock dispensed successfully!");
+    
+    setIsSubmitting(true);
+    try {
+      await adjustStock(selectedItem.stock.id, finalAdjustment);
+    } catch (err) {
+      // Re-fetch or handle error (api.js interceptor handles visual error)
+      fetchMedicines(); 
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const filteredInventory = useMemo(() => {
@@ -326,10 +361,10 @@ export default function StockManagement() {
                           <button onClick={() => handleEdit(item)} className="text-slate-400 hover:text-primary-600 transition-colors p-1" title="Edit Item">
                             <Edit2 className="h-5 w-5" />
                           </button>
-                          <button onClick={() => toast.info("Restock flow coming soon")} className="text-slate-400 hover:text-green-600 transition-colors p-1" title="Restock">
+                          <button onClick={() => handleOpenAdjust(item, "restock")} className="text-slate-400 hover:text-green-600 transition-colors p-1" title="Restock">
                             <ArrowUpRight className="h-5 w-5" />
                           </button>
-                          <button onClick={() => toast.info("Dispense flow coming soon")} className="text-slate-400 hover:text-red-600 transition-colors p-1" title="Dispense/Adjust">
+                          <button onClick={() => handleOpenAdjust(item, "dispense")} className="text-slate-400 hover:text-red-600 transition-colors p-1" title="Dispense/Adjust">
                             <ArrowDownRight className="h-5 w-5" />
                           </button>
                         </div>
@@ -424,6 +459,88 @@ export default function StockManagement() {
             <button type="button" onClick={() => { setIsAddItemModalOpen(false); setEditingId(null); }} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
             <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {editingId ? "Saving..." : "Adding..."}</> : editingId ? "Save Changes" : "Add to Inventory"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Adjustment Modal */}
+      <Modal
+        isOpen={isAdjustModalOpen}
+        onClose={() => setIsAdjustModalOpen(false)}
+        title={adjustType === "restock" ? "Restock Item" : "Dispense / Adjust Stock"}
+        description={adjustType === "restock" ? `Registering incoming supply for ${selectedItem?.name}` : `Reducing inventory level or dispensing ${selectedItem?.name}`}
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleAdjustSubmit} className="space-y-6">
+          <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100/50 space-y-4">
+            <div className="flex justify-between items-center text-sm font-bold text-slate-500">
+              <span className="uppercase tracking-widest text-[10px]">Current Level</span>
+              <span className="text-slate-900">{selectedItem?.stock?.quantity ?? 0} {selectedItem?.unit ?? 'units'}</span>
+            </div>
+            <div className="pt-2">
+              <label className="block text-sm font-black text-slate-700 mb-2 uppercase tracking-wide">
+                {adjustType === "restock" ? "Quantity to Add *" : "Quantity to Remove *"}
+              </label>
+              <div className="relative">
+                <input 
+                  required 
+                  type="number" 
+                  min="1"
+                  max={adjustType === "dispense" ? selectedItem?.stock?.quantity : undefined}
+                  value={adjustQty}
+                  onChange={(e) => setAdjustQty(e.target.value)}
+                  className={`w-full px-4 py-4 border-2 rounded-2xl focus:ring-4 font-bold text-xl transition-all outline-none ${
+                    adjustType === "restock" 
+                      ? "border-green-100 focus:ring-green-500/10 focus:border-green-500" 
+                      : "border-red-100 focus:ring-red-500/10 focus:border-red-500"
+                  }`} 
+                  placeholder="0"
+                />
+              </div>
+              {adjustType === "dispense" && selectedItem?.stock?.quantity > 0 && (
+                <div className="mt-2 flex justify-between text-[11px] font-bold">
+                  <span className="text-slate-400 uppercase tracking-tighter">Projected Balance</span>
+                  <span className="text-red-600 font-mono">
+                    {Math.max(0, (selectedItem?.stock?.quantity || 0) - (parseInt(adjustQty, 10) || 0))} {selectedItem?.unit}
+                  </span>
+                </div>
+              )}
+              {adjustType === "restock" && (
+                <div className="mt-2 flex justify-between text-[11px] font-bold">
+                  <span className="text-slate-400 uppercase tracking-tighter">New Total Level</span>
+                  <span className="text-green-600 font-mono">
+                    {(selectedItem?.stock?.quantity || 0) + (parseInt(adjustQty, 10) || 0)} {selectedItem?.unit}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <button 
+              type="submit" 
+              disabled={isSubmitting || !adjustQty} 
+              className={`w-full inline-flex items-center justify-center px-4 py-5 shadow-xl text-lg font-black rounded-2xl text-white transition-all active:scale-[0.98] disabled:opacity-50 ${
+                adjustType === "restock" 
+                  ? "bg-green-600 hover:bg-green-700 shadow-green-100" 
+                  : "bg-red-600 hover:bg-red-700 shadow-red-100"
+              }`}
+            >
+               {isSubmitting ? (
+                 <><Loader2 className="mr-2 h-6 w-6 animate-spin"/> Processing...</>
+               ) : adjustType === "restock" ? (
+                 <><ArrowUpRight className="mr-2 h-6 w-6" /> Confirm Restock</>
+               ) : (
+                 <><ArrowDownRight className="mr-2 h-6 w-6" /> Confirm Dispense</>
+               )}
+            </button>
+            <button 
+              type="button" 
+              onClick={() => setIsAdjustModalOpen(false)}
+              className="w-full py-4 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              Cancel
             </button>
           </div>
         </form>
