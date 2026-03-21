@@ -16,11 +16,11 @@ export function Sidebar() {
       try {
         const response = await stockAPI.list();
         const stocks = response.data || [];
-        
+
         let hasCritical = false;
         let hasLow = false;
 
-         stocks.forEach((m: any) => {
+        stocks.forEach((m: any) => {
           const qty = m.quantity || 0;
           const min = m.minimum_stock || 0;
           const reorder = m.reorder_level || 0;
@@ -49,9 +49,9 @@ export function Sidebar() {
     { name: "Investigations", href: "/investigations", icon: NotepadText },
     { name: "Prescriptions", href: "/prescriptions", icon: FileText },
     { name: "Cashier", href: "/cashier", icon: CreditCard },
-    { 
-      name: "Stock", 
-      href: "/stock", 
+    {
+      name: "Stock",
+      href: "/stock",
       icon: Package,
       className: stockStatus === 'critical' ? 'animate-blink-red' : stockStatus === 'low' ? 'animate-blink-yellow' : ''
     },
@@ -62,11 +62,11 @@ export function Sidebar() {
       <div className="h-16 flex items-center justify-center px-4 border-b border-slate-200">
         <Link href="/" className="flex items-center justify-center">
           <Image
-            src="/wafaa clinic logo.svg"
+            src="/wafaa_logo.jpeg"
             alt="Wafaa Medical Clinic"
             width={180}
             height={60}
-            className="h-14 w-auto object-contain justify-center align-center"
+            className="h-25 w-auto object-fit justify-center align-center"
             priority
           />
         </Link>

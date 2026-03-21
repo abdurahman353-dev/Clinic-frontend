@@ -39,11 +39,11 @@ export default function LoginPage() {
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <Image 
-            src="/wafaa clinic logo.svg" 
-            alt="Wafaa Medical Clinic" 
-            width={240} 
-            height={80} 
+          <Image
+            src="/wafaa_logo.jpeg"
+            alt="Wafaa Medical Clinic"
+            width={240}
+            height={80}
             className="h-20 w-auto object-contain"
             priority
           />

@@ -6,13 +6,13 @@ import { useVitals } from "@/hooks/useVitals";
 import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
 
-export default function VitalsTab({ 
-  patientId, 
-  initialData, 
-  onDataChange, 
-  isInitialLoaded, 
-  onLoadComplete 
-}: { 
+export default function VitalsTab({
+  patientId,
+  initialData,
+  onDataChange,
+  isInitialLoaded,
+  onLoadComplete
+}: {
   patientId: number;
   initialData: any[];
   onDataChange: (data: any[]) => void;
@@ -34,7 +34,8 @@ export default function VitalsTab({
     weight: "",
     height: "",
     bmi: "",
-    notes: ""
+    notes: "",
+    cost: ""
   });
 
   useEffect(() => {
@@ -77,7 +78,7 @@ export default function VitalsTab({
     setEditingId(null);
     setFormData({
       vital_type: "routine", blood_pressure: "", pulse_rate: "", temperature: "",
-      respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: ""
+      respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: "", cost: ""
     });
     setIsModalOpen(true);
   };
@@ -94,7 +95,8 @@ export default function VitalsTab({
       weight: vital.weight || "",
       height: vital.height || "",
       bmi: vital.bmi || "",
-      notes: vital.notes || ""
+      notes: vital.notes || "",
+      cost: vital.cost || ""
     });
     setIsModalOpen(true);
   };
@@ -109,7 +111,7 @@ export default function VitalsTab({
     const originalFormData = { ...formData };
     setFormData({
       vital_type: "routine", blood_pressure: "", pulse_rate: "", temperature: "",
-      respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: ""
+      respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: "", cost: ""
     });
 
     try {
@@ -122,6 +124,12 @@ export default function VitalsTab({
         await addVital(originalFormData);
         toast.success("Vitals recorded successfully");
       }
+      setIsModalOpen(false);
+      setEditingId(null);
+      setFormData({
+        vital_type: "routine", blood_pressure: "", pulse_rate: "", temperature: "",
+        respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: "", cost: ""
+      });
     } catch (err: any) {
       // toast.error is handled by api.js interceptor usually
     } finally {
@@ -180,6 +188,7 @@ export default function VitalsTab({
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">BP / HR</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Temp / SpO2 / RR</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Wt / Ht / BMI</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Charge (KES)</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Clinical Notes</th>
                       <th scope="col" className="relative px-6 py-3"><span className="sr-only">Edit</span></th>
                     </tr>
@@ -202,6 +211,9 @@ export default function VitalsTab({
                         <td className="px-6 py-4 whitespace-nowrap text-slate-600">
                           {row.weight ? row.weight + 'kg' : '-'} &bull; {row.height ? row.height + 'cm' : '-'} <br />
                           <span className="text-xs text-slate-500">BMI: {row.bmi || '-'}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-slate-900 font-bold">
+                          {row.cost ? `KSh ${row.cost}` : '-'}
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate" title={row.notes}>
                           {row.notes || '-'}
@@ -283,6 +295,24 @@ export default function VitalsTab({
             <div className="md:col-span-2 mt-2">
               <label className="block text-sm font-medium text-slate-700 mb-1">Clinical Notes</label>
               <textarea name="notes" rows={2} value={formData.notes} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Any additional observations..."></textarea>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-900 mb-1">Service Charge (KES)</label>
+              <div className="relative mt-1 rounded-md shadow-sm">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <span className="text-slate-500 sm:text-sm">KSh</span>
+                </div>
+                <input
+                  type="number"
+                  name="cost"
+                  value={formData.cost}
+                  onChange={handleChange}
+                  className="block w-full rounded-md border-slate-300 pl-12 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  placeholder="0.00"
+                />
+              </div>
+              <p className="mt-1 text-xs text-slate-500 italic">Enter the fee to be billed for this vitals session.</p>
             </div>
           </div>
 

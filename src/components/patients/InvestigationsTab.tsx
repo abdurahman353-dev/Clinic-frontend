@@ -6,13 +6,13 @@ import { useInvestigations } from "@/hooks/useInvestigations";
 import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
 
-export default function InvestigationsTab({ 
-  patientId, 
-  initialData, 
-  onDataChange, 
-  isInitialLoaded, 
-  onLoadComplete 
-}: { 
+export default function InvestigationsTab({
+  patientId,
+  initialData,
+  onDataChange,
+  isInitialLoaded,
+  onLoadComplete
+}: {
   patientId?: number;
   initialData: any[];
   onDataChange: (data: any[]) => void;
@@ -30,7 +30,8 @@ export default function InvestigationsTab({
   const [requestForm, setRequestForm] = useState({
     name: "",
     type: "lab",
-    notes: ""
+    notes: "",
+    cost: ""
   });
 
   const [resultForm, setResultForm] = useState({
@@ -66,7 +67,7 @@ export default function InvestigationsTab({
     setIsRequestModalOpen(false);
     setEditingId(null);
     const originalForm = { ...requestForm };
-    setRequestForm({ name: "", type: "lab", notes: "" });
+    setRequestForm({ name: "", type: "lab", notes: "", cost: "" });
 
     try {
       if (editingId) {
@@ -76,6 +77,9 @@ export default function InvestigationsTab({
         await addInvestigation(originalForm);
         toast.success("Investigation requested successfully");
       }
+      setIsRequestModalOpen(false);
+      setEditingId(null);
+      setRequestForm({ name: "", type: "lab", notes: "", cost: "" });
     } catch (err: any) {
       // toast.error is handled by api.js interceptor
     } finally {
@@ -113,16 +117,17 @@ export default function InvestigationsTab({
   const handleEditRequest = (test: any) => {
     setEditingId(test.id);
     setRequestForm({
-       name: test.name || "",
-       type: test.type || "lab",
-       notes: test.notes || ""
+      name: test.name || "",
+      type: test.type || "lab",
+      notes: test.notes || "",
+      cost: test.cost || ""
     });
     setIsRequestModalOpen(true);
   };
 
   const handleAddRequest = () => {
     setEditingId(null);
-    setRequestForm({ name: "", type: "lab", notes: "" });
+    setRequestForm({ name: "", type: "lab", notes: "", cost: "" });
     setIsRequestModalOpen(true);
   };
 
@@ -162,13 +167,18 @@ export default function InvestigationsTab({
                     <div>
                       <h4 className="text-sm font-bold text-slate-900">{test.name}</h4>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider ${
-                          test.type === 'radiology' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider ${test.type === 'radiology' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
                           {test.type}
                         </span>
                         <p className="text-xs text-slate-500">Requested on {new Date(test.created_at).toLocaleDateString()}</p>
                       </div>
+
+                      {test.cost && (
+                        <p className="text-sm font-bold text-slate-900 mt-2">
+                          Price: KSh {test.cost}
+                        </p>
+                      )}
 
                       {test.status === 'completed' && test.result && (
                         <div className="mt-3 bg-slate-50 p-3 rounded-lg border border-slate-100 text-sm text-slate-700">
@@ -177,14 +187,13 @@ export default function InvestigationsTab({
                         </div>
                       )}
                       {test.notes && !test.result && (
-                         <p className="text-sm text-slate-500 italic mt-2">Notes: {test.notes}</p>
+                        <p className="text-sm text-slate-500 italic mt-2">Notes: {test.notes}</p>
                       )}
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2 text-sm ml-auto sm:ml-0">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize mb-2 ${
-                      test.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                    }`}>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize mb-2 ${test.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
                       {test.status}
                     </span>
                     <div className="flex items-center justify-end gap-2 text-xs">
@@ -224,11 +233,11 @@ export default function InvestigationsTab({
         <form onSubmit={handleRequestSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Investigation Name *</label>
-            <input required type="text" value={requestForm.name} onChange={e => setRequestForm({...requestForm, name: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. Complete Blood Count" />
+            <input required type="text" value={requestForm.name} onChange={e => setRequestForm({ ...requestForm, name: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. Complete Blood Count" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
-            <select value={requestForm.type} onChange={e => setRequestForm({...requestForm, type: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+            <select value={requestForm.type} onChange={e => setRequestForm({ ...requestForm, type: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
               <option value="lab">Laboratory (Blood, Urine, etc.)</option>
               <option value="radiology">Radiology (X-Ray, MRI, Ultrasound)</option>
               <option value="procedure">Clinical Procedure</option>
@@ -236,12 +245,27 @@ export default function InvestigationsTab({
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Clinical Notes</label>
-            <textarea value={requestForm.notes} onChange={e => setRequestForm({...requestForm, notes: e.target.value})} rows={3} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Why is this test being requested..."></textarea>
+            <textarea value={requestForm.notes} onChange={e => setRequestForm({ ...requestForm, notes: e.target.value })} rows={3} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Why is this test being requested..."></textarea>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Test Price (KES)</label>
+            <div className="relative mt-1 rounded-md shadow-sm">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <span className="text-slate-500 sm:text-sm">KSh</span>
+              </div>
+              <input
+                type="number"
+                value={requestForm.cost}
+                onChange={e => setRequestForm({ ...requestForm, cost: e.target.value })}
+                className="block w-full rounded-md border-slate-300 pl-12 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                placeholder="0.00"
+              />
+            </div>
           </div>
           <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
             <button type="button" onClick={() => { setIsRequestModalOpen(false); setEditingId(null); }} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
             <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> {editingId ? "Saving..." : "Requesting..."}</> : editingId ? "Save Changes" : "Request Test"}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {editingId ? "Saving..." : "Requesting..."}</> : editingId ? "Save Changes" : "Request Test"}
             </button>
           </div>
         </form>
@@ -257,19 +281,19 @@ export default function InvestigationsTab({
         <form onSubmit={handleResultSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-            <select value={resultForm.status} onChange={e => setResultForm({...resultForm, status: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+            <select value={resultForm.status} onChange={e => setResultForm({ ...resultForm, status: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
               <option value="pending">Pending</option>
               <option value="completed">Completed</option>
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Result Details *</label>
-            <textarea required value={resultForm.result} onChange={e => setResultForm({...resultForm, result: e.target.value})} rows={6} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Enter findings, measurements, or diagnostic results..."></textarea>
+            <textarea required value={resultForm.result} onChange={e => setResultForm({ ...resultForm, result: e.target.value })} rows={6} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Enter findings, measurements, or diagnostic results..."></textarea>
           </div>
           <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
             <button type="button" onClick={() => setIsResultModalOpen(false)} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
             <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : "Save Results"}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Save Results"}
             </button>
           </div>
         </form>
