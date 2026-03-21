@@ -41,7 +41,9 @@ export default function CashierPage() {
   const [paymentData, setPaymentData] = useState({
     amount: "",
     payment_method: "cash",
-    transaction_reference: ""
+    transaction_reference: "",
+    discount_amount: "0",
+    discount_type: "fixed" as "fixed" | "percentage"
   });
 
   const fetchBills = useCallback(async () => {
@@ -71,7 +73,10 @@ export default function CashierPage() {
   const fetchUnbilledVisits = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await visitAPI.list({ 'filter[status]': 'open,completed' });
+      const response = await visitAPI.list({ 
+        'filter[status]': 'open,completed',
+        include: 'patient,vitalSigns,investigations,prescriptions' 
+      });
       setVisits(response.data || []);
     } catch (err) {
       console.error("Failed to fetch visits", err);
@@ -104,9 +109,11 @@ export default function CashierPage() {
   const handleOpenPayment = (bill: any) => {
     setSelectedBill(bill);
     setPaymentData({
-      amount: bill.grand_total,
+      amount: bill.balance_amount,
       payment_method: "cash",
-      transaction_reference: ""
+      transaction_reference: "",
+      discount_amount: "0",
+      discount_type: "fixed"
     });
     setIsModalOpen(true);
   };
@@ -211,7 +218,9 @@ export default function CashierPage() {
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Patient / Bill ID</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Breakdown</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Total Amount</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Total</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Paid</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Balance</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
                   </tr>
@@ -241,7 +250,13 @@ export default function CashierPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-base font-black text-slate-900">KSh {parseFloat(bill.grand_total).toLocaleString()}</div>
+                        <div className="text-sm font-bold text-slate-900">KSh {parseFloat(bill.grand_total).toLocaleString()}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-xs font-medium text-green-600">
+                        {parseFloat(bill.paid_amount) > 0 ? `KSh ${parseFloat(bill.paid_amount).toLocaleString()}` : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-black text-primary-700">KSh {parseFloat(bill.balance_amount).toLocaleString()}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide ${
@@ -301,13 +316,15 @@ export default function CashierPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                           {/* These indicators could be more refined by checking vitals/tests counts in API response if provided */}
+                        <div className="flex flex-col gap-1.5">
                            <div className="flex -space-x-1 overflow-hidden" title="Active items">
-                             <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-blue-100 flex items-center justify-center"><Activity className="h-3 w-3 text-blue-600" /></div>
-                             <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-purple-100 flex items-center justify-center"><FileText className="h-3 w-3 text-purple-600" /></div>
+                             {visit.vitals_count > 0 && <div title="Vitals recorded" className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-blue-100 flex items-center justify-center"><Activity className="h-3 w-3 text-blue-600" /></div>}
+                             {visit.investigations_count > 0 && <div title="Lab tests" className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-purple-100 flex items-center justify-center"><Activity className="h-3 w-3 text-purple-600" /></div>}
+                             {visit.prescriptions_count > 0 && <div title="Prescriptions" className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-green-100 flex items-center justify-center"><FileText className="h-3 w-3 text-green-600" /></div>}
                            </div>
-                           <span className="text-xs font-medium text-slate-500">Record ready</span>
+                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                             {visit.vitals_count || visit.investigations_count || visit.prescriptions_count ? 'Items to bill' : 'Consultation only'}
+                           </span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -343,7 +360,9 @@ export default function CashierPage() {
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Patient / Invoice History</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Total Amount</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Original Total</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Discount</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Settled Amount</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Settled On</th>
                     <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
@@ -366,7 +385,15 @@ export default function CashierPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-base font-black text-slate-900 font-mono">KSh {parseFloat(bill.grand_total).toLocaleString()}</div>
+                        <div className="text-sm font-bold text-slate-900 font-mono text-center">KSh {parseFloat(bill.grand_total).toLocaleString()}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-xs font-medium text-amber-600 text-center">
+                          {parseFloat(bill.discount_amount) > 0 ? `- KSh ${parseFloat(bill.discount_amount).toLocaleString()}` : '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-base font-black text-green-700 font-mono text-center">KSh {(parseFloat(bill.grand_total) - parseFloat(bill.discount_amount)).toLocaleString()}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide bg-green-100 text-green-800">
@@ -409,9 +436,26 @@ export default function CashierPage() {
                 </div>
               ))}
               <div className="pt-4 mt-4 border-t border-slate-200 flex justify-between items-center">
-                <span className="text-base font-black text-slate-900">Total Amount Due</span>
-                <span className="text-xl font-black text-primary-700 underline decoration-primary-200 underline-offset-4">KSh {parseFloat(selectedBill?.grand_total || "0").toLocaleString()}</span>
+                <span className="text-base font-black text-slate-900">{parseFloat(selectedBill?.discount_amount) > 0 ? 'Original Invoice' : 'Total Amount Due'}</span>
+                <span className={`text-xl font-black ${parseFloat(selectedBill?.discount_amount) > 0 ? 'text-slate-400 line-through' : 'text-primary-700 underline decoration-primary-200 underline-offset-4'}`}>
+                  KSh {parseFloat(selectedBill?.grand_total || "0").toLocaleString()}
+                </span>
               </div>
+              
+              {parseFloat(selectedBill?.discount_amount) > 0 && (
+                <>
+                  <div className="flex justify-between items-center text-sm py-1">
+                    <span className="text-amber-600 font-bold uppercase tracking-tighter text-[10px]">Discount Applied</span>
+                    <span className="text-amber-600 font-bold">- KSh {parseFloat(selectedBill?.discount_amount).toLocaleString()}</span>
+                  </div>
+                  <div className="pt-2 mt-2 border-t-2 border-emerald-100 flex justify-between items-center">
+                    <span className="text-base font-black text-emerald-800">Final Settled Amount</span>
+                    <span className="text-2xl font-black text-emerald-600 underline decoration-emerald-200 underline-offset-4">
+                      KSh {(parseFloat(selectedBill?.grand_total) - parseFloat(selectedBill?.discount_amount)).toLocaleString()}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
           
@@ -453,12 +497,32 @@ export default function CashierPage() {
         maxWidth="max-w-md"
       >
         <form onSubmit={handlePaymentSubmit} className="space-y-6">
-          <div className="bg-slate-900 p-6 rounded-2xl text-white flex justify-between items-center shadow-xl shadow-slate-200">
-            <div className="flex flex-col">
-              <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400 mb-1">Total Outstanding</span>
-              <span className="text-3xl font-black">KSh {parseFloat(selectedBill?.grand_total || "0").toLocaleString()}</span>
+          <div className="grid grid-cols-2 gap-4 mb-2">
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Original Invoice</span>
+              <span className="text-sm font-bold text-slate-700">KSh {parseFloat(selectedBill?.grand_total || "0").toLocaleString()}</span>
             </div>
-            <Receipt className="h-10 w-10 text-slate-700" />
+            <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+              <span className="text-[10px] uppercase font-bold text-emerald-600 block mb-1">Already Paid</span>
+              <span className="text-sm font-bold text-emerald-700">KSh {parseFloat(selectedBill?.paid_amount || "0").toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-emerald-600 to-green-700 p-6 rounded-2xl text-white flex justify-between items-center shadow-xl shadow-emerald-100">
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-100 mb-1">New Balance Due</span>
+              <span className="text-3xl font-black">
+                KSh {(() => {
+                  const originalBalance = parseFloat(selectedBill?.balance_amount || "0");
+                  let disc = parseFloat(paymentData.discount_amount || "0");
+                  if (paymentData.discount_type === 'percentage') {
+                    disc = (parseFloat(selectedBill?.grand_total || "0") * disc) / 100;
+                  }
+                  return Math.max(0, originalBalance - disc).toLocaleString();
+                })()}
+              </span>
+            </div>
+            <Receipt className="h-10 w-10 text-white/20" />
           </div>
 
           <div>
@@ -474,6 +538,66 @@ export default function CashierPage() {
                 value={paymentData.amount}
                 onChange={(e) => setPaymentData({...paymentData, amount: e.target.value})}
                 className="w-full pl-16 pr-4 py-4 border-2 border-slate-100 rounded-2xl focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 font-bold text-xl transition-all outline-none" 
+              />
+            </div>
+          </div>
+
+          <div className="bg-amber-50/50 p-6 rounded-2xl border-2 border-amber-100/50 space-y-4">
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-black text-amber-900 uppercase tracking-wide">Apply Discount</label>
+              <div className="flex bg-white p-1 rounded-lg border border-amber-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentData(prev => {
+                      const next = {...prev, discount_type: 'fixed' as const};
+                      const originalBalance = parseFloat(selectedBill?.balance_amount || "0");
+                      const disc = parseFloat(next.discount_amount || "0");
+                      next.amount = Math.max(0, originalBalance - disc).toString();
+                      return next;
+                    });
+                  }}
+                  className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${paymentData.discount_type === 'fixed' ? 'bg-amber-600 text-white' : 'text-amber-600'}`}
+                >
+                  KSh
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentData(prev => {
+                      const next = {...prev, discount_type: 'percentage' as const};
+                      const originalBalance = parseFloat(selectedBill?.balance_amount || "0");
+                      const disc = (parseFloat(selectedBill?.grand_total || "0") * parseFloat(next.discount_amount || "0")) / 100;
+                      next.amount = Math.max(0, originalBalance - disc).toString();
+                      return next;
+                    });
+                  }}
+                  className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${paymentData.discount_type === 'percentage' ? 'bg-amber-600 text-white' : 'text-amber-600'}`}
+                >
+                  %
+                </button>
+              </div>
+            </div>
+            <div className="relative">
+              <input 
+                type="number" 
+                placeholder={paymentData.discount_type === 'fixed' ? 'Amount' : 'Percentage'}
+                value={paymentData.discount_amount}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPaymentData(prev => {
+                    const next = { ...prev, discount_amount: val };
+                    // Recalculate basic suggested amount
+                    const originalBalance = parseFloat(selectedBill?.balance_amount || "0");
+                    let disc = parseFloat(val || "0");
+                    if (prev.discount_type === 'percentage') {
+                      disc = (parseFloat(selectedBill?.grand_total || "0") * disc) / 100;
+                    }
+                    next.amount = Math.max(0, originalBalance - disc).toString();
+                    return next;
+                  });
+                }}
+                className="w-full px-4 py-3 border-2 border-white rounded-xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 text-sm font-bold transition-all outline-none" 
               />
             </div>
           </div>
