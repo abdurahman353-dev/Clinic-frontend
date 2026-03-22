@@ -134,13 +134,38 @@ export default function CashierPage() {
 
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedBill) return;
+
+    const amountPaid = parseFloat(paymentData.amount);
+    const isFullPayment = amountPaid >= parseFloat(selectedBill.balance_amount);
+
+    // Optimistic UI: Close modal and show success immediately
+    setIsModalOpen(false);
+    toast.success("Payment processed successfully!");
+
+    // Optimistic state update
+    if (isFullPayment) {
+      setBills((prev: any[]) => prev.filter((b: any) => b.id !== selectedBill.id));
+    } else {
+      setBills((prev: any[]) => prev.map((b: any) => 
+        b.id === selectedBill.id 
+          ? { 
+              ...b, 
+              paid_amount: parseFloat(b.paid_amount) + amountPaid, 
+              balance_amount: parseFloat(b.balance_amount) - amountPaid,
+              status: 'partial'
+            } 
+          : b
+      ));
+    }
+
     setIsSubmitting(true);
     try {
       await paymentAPI.store(selectedBill.id, paymentData);
-      setIsModalOpen(false);
-      fetchBills();
-      toast.success("Payment processed successfully!");
+      fetchBills(); // Refresh in background for consistency
     } catch (err: any) {
+      // API interceptor handles visual error, we refresh to restore correct state
+      fetchBills();
     } finally {
       setIsSubmitting(false);
     }
