@@ -43,7 +43,8 @@ export function useVitals(patientId?: number) {
           const newVisitResponse = await visitAPI.store({ 
             patient_id: patientId, 
             doctor_id: user?.id,
-            reason: "routine vitals check" 
+            reason: "routine vitals check",
+            consultation_fee: vitalsData.consultation_fee || 0
           });
           visitId = newVisitResponse.data.id;
         }

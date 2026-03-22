@@ -75,7 +75,7 @@ export default function CashierPage() {
     try {
       const response = await visitAPI.list({ 
         'filter[status]': 'open,completed',
-        include: 'patient,vitalSigns,investigations,prescriptions' 
+        include: 'patient,vitalSigns,investigations,prescriptions.items' 
       });
       setVisits(response.data || []);
     } catch (err) {
@@ -320,13 +320,14 @@ export default function CashierPage() {
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Patient / Visit ID</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Clinical Progress</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Visit Status</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Approx. Amount</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
                     <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-200">
                   {filteredVisits.length === 0 ? (
-                    <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">No visits ready for invoicing.</td></tr>
+                    <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">No visits ready for invoicing.</td></tr>
                   ) : filteredVisits.map((visit) => (
                     <tr key={visit.id} className="hover:bg-slate-50/50 transition-colors group">
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -358,6 +359,10 @@ export default function CashierPage() {
                         }`}>
                           {visit.status}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-black text-primary-700">KSh {parseFloat(visit.estimated_total || 0).toLocaleString()}</div>
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Projected Total</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
                         {new Date(visit.created_at).toLocaleDateString()}
