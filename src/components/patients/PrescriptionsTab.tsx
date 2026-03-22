@@ -150,7 +150,7 @@ export default function PrescriptionsTab({
            No prescriptions recorded yet.
          </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 max-w-4xl">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {prescriptions.map((rx) => {
             const active = isActive(rx);
             // The backend returns an 'items' array for each prescription
