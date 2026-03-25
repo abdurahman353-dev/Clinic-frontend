@@ -6,18 +6,20 @@ import { DashboardLayout } from "./DashboardLayout";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { Toaster } from "react-hot-toast";
 
+const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"];
+
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { token, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!isLoading && !token && pathname !== "/login") {
+    if (!isLoading && !token && !PUBLIC_PATHS.includes(pathname)) {
       router.push("/login");
     }
   }, [isLoading, token, pathname, router]);
 
-  if (pathname === "/login") {
+  if (PUBLIC_PATHS.includes(pathname)) {
     return <>{children}</>;
   }
 
