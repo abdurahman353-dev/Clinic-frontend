@@ -4,10 +4,12 @@ declare module "@/lib/api" {
   const apiClient: AxiosInstance;
 
   export interface AuthAPI {
-    login: (email: string, password: string) => Promise<{ token: string, user: any }>;
+    login: (email: string, password: string, remember?: boolean) => Promise<{ token: string, user: any }>;
     logout: () => Promise<void>;
     me: () => Promise<any>;
     updateProfile: (data: any) => Promise<any>;
+    forgotPassword: (email: string) => Promise<any>;
+    resetPassword: (data: any) => Promise<any>;
   }
 
   export interface PatientAPI {

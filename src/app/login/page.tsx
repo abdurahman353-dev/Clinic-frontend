@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const { setUser, setToken } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -21,7 +22,7 @@ export default function LoginPage() {
     setErrorMsg("");
 
     try {
-      const { user, token } = await authAPI.login(email, password);
+      const { user, token } = await authAPI.login(email, password, rememberMe);
       toast.success("Login successfully");
 
       setToken(token);
@@ -134,6 +135,8 @@ export default function LoginPage() {
                     id="remember-me"
                     name="remember-me"
                     type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
                     className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-slate-300 rounded"
                   />
                   <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-900">
@@ -142,7 +145,7 @@ export default function LoginPage() {
                 </div>
 
                 <div className="text-sm">
-                  <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
+                  <a href="/forgot-password" onClick={(e) => { e.preventDefault(); window.location.href = '/forgot-password'; }} className="font-medium text-primary-600 hover:text-primary-500">
                     Forgot password?
                   </a>
                 </div>

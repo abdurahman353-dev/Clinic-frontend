@@ -29,7 +29,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const storedToken = Cookies.get("admin_token");
-    const userStr = sessionStorage.getItem("admin_user");
+    const isRemembered = localStorage.getItem("admin_remember") === "true";
+    const userStr = isRemembered 
+      ? localStorage.getItem("admin_user") 
+      : sessionStorage.getItem("admin_user");
 
     if (storedToken) {
       setToken(storedToken);
@@ -39,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         setUser(JSON.parse(userStr));
       } catch (e) {
-        console.error("Failed to parse user from session storage", e);
+        console.error("Failed to parse user from storage", e);
       }
     }
     
@@ -49,9 +52,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const handleSetUser = (newUser: User | null) => {
     setUser(newUser);
     if (newUser) {
-      sessionStorage.setItem("admin_user", JSON.stringify(newUser));
+      const isRemembered = localStorage.getItem("admin_remember") === "true";
+      if (isRemembered) {
+        localStorage.setItem("admin_user", JSON.stringify(newUser));
+      } else {
+        sessionStorage.setItem("admin_user", JSON.stringify(newUser));
+      }
     } else {
       sessionStorage.removeItem("admin_user");
+      localStorage.removeItem("admin_user");
     }
   };
 
@@ -59,7 +68,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(newToken);
     if (newToken) {
        const isSecure = process.env.NODE_ENV === 'production';
-       Cookies.set('admin_token', newToken, { expires: 7, secure: isSecure, sameSite: 'lax' });
+       const isRemembered = localStorage.getItem("admin_remember") === "true";
+       const options: any = { secure: isSecure, sameSite: 'lax' };
+       if (isRemembered) {
+         options.expires = 14;
+       }
+       Cookies.set('admin_token', newToken, options);
     } else {
       Cookies.remove('admin_token');
     }

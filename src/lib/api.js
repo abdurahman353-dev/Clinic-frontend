@@ -72,14 +72,24 @@ apiClient.interceptors.response.use(
 // ============================================================================
 
 export const authAPI = {
-    login: async (email, password) => {
+    login: async (email, password, remember = false) => {
         const response = await apiClient.post('/auth/login', { email, password });
         const { token, user } = response.data;
 
         // Store token and user data
         const isSecure = process.env.NODE_ENV === 'production';
-        Cookies.set('admin_token', token, { expires: 7, secure: isSecure, sameSite: 'lax' });
-        sessionStorage.setItem('admin_user', JSON.stringify(user));
+        const cookieOptions = { secure: isSecure, sameSite: 'lax' };
+        
+        if (remember) {
+            cookieOptions.expires = 14; // 14 days
+            localStorage.setItem('admin_user', JSON.stringify(user));
+            localStorage.setItem('admin_remember', 'true');
+        } else {
+            sessionStorage.setItem('admin_user', JSON.stringify(user));
+            localStorage.removeItem('admin_remember');
+        }
+        
+        Cookies.set('admin_token', token, cookieOptions);
 
         return { token, user };
     },
@@ -92,6 +102,8 @@ export const authAPI = {
         } finally {
             Cookies.remove('admin_token');
             sessionStorage.removeItem('admin_user');
+            localStorage.removeItem('admin_user');
+            localStorage.removeItem('admin_remember');
         }
     },
 
@@ -103,8 +115,23 @@ export const authAPI = {
     updateProfile: async (data) => {
         const response = await apiClient.put('/auth/profile', data);
         if (response.data.user) {
-            sessionStorage.setItem('admin_user', JSON.stringify(response.data.user));
+            const isRemembered = localStorage.getItem('admin_remember') === 'true';
+            if (isRemembered) {
+                localStorage.setItem('admin_user', JSON.stringify(response.data.user));
+            } else {
+                sessionStorage.setItem('admin_user', JSON.stringify(response.data.user));
+            }
         }
+        return response.data;
+    },
+
+    forgotPassword: async (email) => {
+        const response = await apiClient.post('/auth/forgot-password', { email });
+        return response.data;
+    },
+
+    resetPassword: async (data) => {
+        const response = await apiClient.post('/auth/reset-password', data);
         return response.data;
     }
 };
