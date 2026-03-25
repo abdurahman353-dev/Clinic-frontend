@@ -50,9 +50,26 @@ export default function Home() {
           <p className="text-slate-500 mt-1">Here is what is happening at your clinic today.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 h-10 px-4 py-2 shadow-sm">
+          <button 
+            onClick={() => {
+              setIsLoading(true);
+              const fetchDashboardData = async () => {
+                try {
+                  const response = await dashboardAPI.get();
+                  setData(response);
+                } catch (error) {
+                  console.error("Failed to fetch dashboard data:", error);
+                } finally {
+                  setIsLoading(false);
+                }
+              };
+              fetchDashboardData();
+            }}
+            title="Refresh Dashboard"
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 h-10 px-4 py-2 shadow-sm"
+          >
             <Calendar className="mr-2 h-4 w-4" />
-            Today
+            {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </button>
           <Link
             href="/patients/new"

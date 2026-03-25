@@ -75,7 +75,7 @@ export default function CashierPage() {
     try {
       const response = await visitAPI.list({
         'filter[status]': 'open,completed',
-        include: 'patient,vitalSigns,investigations,prescriptions'
+        include: 'patient,vitalSigns,investigations,prescriptions.items'
       });
       setVisits(response.data || []);
     } catch (err) {
@@ -134,13 +134,38 @@ export default function CashierPage() {
 
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedBill) return;
+
+    const amountPaid = parseFloat(paymentData.amount);
+    const isFullPayment = amountPaid >= parseFloat(selectedBill.balance_amount);
+
+    // Optimistic UI: Close modal and show success immediately
+    setIsModalOpen(false);
+    toast.success("Payment processed successfully!");
+
+    // Optimistic state update
+    if (isFullPayment) {
+      setBills((prev: any[]) => prev.filter((b: any) => b.id !== selectedBill.id));
+    } else {
+      setBills((prev: any[]) => prev.map((b: any) =>
+        b.id === selectedBill.id
+          ? {
+            ...b,
+            paid_amount: parseFloat(b.paid_amount) + amountPaid,
+            balance_amount: parseFloat(b.balance_amount) - amountPaid,
+            status: 'partial'
+          }
+          : b
+      ));
+    }
+
     setIsSubmitting(true);
     try {
       await paymentAPI.store(selectedBill.id, paymentData);
-      setIsModalOpen(false);
-      fetchBills();
-      toast.success("Payment processed successfully!");
+      fetchBills(); // Refresh in background for consistency
     } catch (err: any) {
+      // API interceptor handles visual error, we refresh to restore correct state
+      fetchBills();
     } finally {
       setIsSubmitting(false);
     }
@@ -260,8 +285,8 @@ export default function CashierPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide ${bill.status === 'paid' ? 'bg-green-100 text-green-800' :
-                            bill.status === 'partial' ? 'bg-blue-100 text-blue-800' :
-                              'bg-amber-100 text-amber-800'
+                          bill.status === 'partial' ? 'bg-blue-100 text-blue-800' :
+                            'bg-amber-100 text-amber-800'
                           }`}>
                           {bill.status}
                         </span>
@@ -294,13 +319,14 @@ export default function CashierPage() {
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Patient / Visit ID</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Clinical Progress</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Visit Status</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Approx. Amount</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
                     <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-200">
                   {filteredVisits.length === 0 ? (
-                    <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">No visits ready for invoicing.</td></tr>
+                    <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">No visits ready for invoicing.</td></tr>
                   ) : filteredVisits.map((visit) => (
                     <tr key={visit.id} className="hover:bg-slate-50/50 transition-colors group">
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -331,6 +357,10 @@ export default function CashierPage() {
                           }`}>
                           {visit.status}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-black text-primary-700">KSh {parseFloat(visit.estimated_total || 0).toLocaleString()}</div>
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Projected Total</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
                         {new Date(visit.created_at).toLocaleDateString()}
@@ -613,8 +643,8 @@ export default function CashierPage() {
                   type="button"
                   onClick={() => setPaymentData({ ...paymentData, payment_method: method.id })}
                   className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-300 ${paymentData.payment_method === method.id
-                      ? 'border-primary-600 bg-primary-50 text-primary-700 ring-4 ring-primary-500/5 shadow-sm'
-                      : 'border-slate-50 bg-slate-50/50 text-slate-400 hover:border-slate-100 hover:bg-slate-100/50'
+                    ? 'border-primary-600 bg-primary-50 text-primary-700 ring-4 ring-primary-500/5 shadow-sm'
+                    : 'border-slate-50 bg-slate-50/50 text-slate-400 hover:border-slate-100 hover:bg-slate-100/50'
                     }`}
                 >
                   <method.icon className={`h-7 w-7 mb-2 ${paymentData.payment_method === method.id ? 'text-primary-600' : 'text-slate-300'}`} />
