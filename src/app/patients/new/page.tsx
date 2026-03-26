@@ -132,11 +132,10 @@ export default function NewPatientPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">ID Number *</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">ID Number</label>
             <input
               type="text"
               name="id_number"
-              required
               value={formData.id_number}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"

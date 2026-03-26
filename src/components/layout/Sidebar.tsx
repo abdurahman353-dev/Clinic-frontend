@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Activity, NotepadText, FileText, Package, CreditCard } from "lucide-react";
+import { LayoutDashboard, Users, Activity, NotepadText, FileText, Package, CreditCard, BarChart3 } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { stockAPI } from "@/lib/api";
@@ -55,6 +55,7 @@ export function Sidebar() {
       icon: Package,
       className: stockStatus === 'critical' ? 'animate-blink-red' : stockStatus === 'low' ? 'animate-blink-yellow' : ''
     },
+    { name: "Sales", href: "/sales", icon: BarChart3 },
   ];
 
   return (

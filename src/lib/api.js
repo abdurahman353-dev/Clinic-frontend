@@ -227,6 +227,17 @@ export const labTestAPI = {
     }
 };
 
+export const salesAPI = {
+    report: async (params) => {
+        const response = await apiClient.get('/sales/report', { params });
+        return response.data;
+    },
+    dailyDetails: async (date) => {
+        const response = await apiClient.get('/sales/daily-details', { params: { date } });
+        return response.data;
+    }
+};
+
 export const prescriptionAPI = {
     list: async (visitId) => {
         const response = await apiClient.get(`/visits/${visitId}/prescriptions`);

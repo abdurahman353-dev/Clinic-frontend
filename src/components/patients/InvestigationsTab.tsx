@@ -33,6 +33,7 @@ export default function InvestigationsTab({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTests, setSelectedTests] = useState<any[]>([]);
 
   const [requestForm, setRequestForm] = useState({
     name: "",
@@ -76,30 +77,83 @@ export default function InvestigationsTab({
 
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate: if not editing, must have at least one test selected
+    if (!editingId && selectedTests.length === 0 && !requestForm.name) {
+      toast.error("Please select at least one investigation");
+      return;
+    }
+
     setIsSubmitting(true);
+
+    const commonNotes = requestForm.notes;
 
     // Optimistic Closure
     setIsRequestModalOpen(false);
-    setEditingId(null);
-    const originalForm = { ...requestForm };
+    const originalSelectedTests = [...selectedTests];
+    const originalRequestForm = { ...requestForm };
+    
+    // Clear state
+    setSelectedTests([]);
     setRequestForm({ name: "", type: "lab", notes: "", cost: "" });
+    setSearchTerm("");
 
     try {
       if (editingId) {
-        await updateInvestigation(editingId, originalForm);
+        // Edit single request
+        await updateInvestigation(editingId, {
+          name: originalRequestForm.name,
+          type: originalRequestForm.type,
+          notes: originalRequestForm.notes,
+          cost: originalRequestForm.cost
+        });
         toast.success("Investigation updated successfully");
       } else {
-        await addInvestigation(originalForm);
-        toast.success("Investigation requested successfully");
+        // Bulk Add
+        const testsToRequest = selectedTests.length > 0 
+          ? selectedTests 
+          : [{ name: originalRequestForm.name, type: originalRequestForm.type, cost: originalRequestForm.cost }];
+
+        await Promise.all(testsToRequest.map(test => 
+          addInvestigation({
+            name: test.name,
+            type: test.type,
+            notes: commonNotes,
+            cost: test.cost || test.default_cost
+          })
+        ));
+        toast.success(`${testsToRequest.length} investigation(s) requested successfully`);
       }
-      setIsRequestModalOpen(false);
-      setEditingId(null);
-      setRequestForm({ name: "", type: "lab", notes: "", cost: "" });
     } catch (err: any) {
-      // toast.error is handled by api.js interceptor
+      // Error handled by api.js
     } finally {
       setIsSubmitting(false);
+      setEditingId(null);
     }
+  };
+
+  const selectLabTest = (test: any) => {
+    if (editingId) {
+      // When editing, we just update the form
+      setRequestForm({
+        ...requestForm,
+        name: test.name,
+        type: test.type,
+        cost: test.default_cost.toString()
+      });
+      setSearchTerm(test.name);
+    } else {
+      // When adding new, we add to bulk selection
+      if (!selectedTests.find(t => t.id === test.id)) {
+        setSelectedTests(prev => [...prev, test]);
+      }
+      setSearchTerm("");
+    }
+    setIsDropdownOpen(false);
+  };
+
+  const removeSelectedTest = (testId: number) => {
+    setSelectedTests(prev => prev.filter(t => t.id !== testId));
   };
 
   const handleResultSubmit = async (e: React.FormEvent) => {
@@ -212,16 +266,6 @@ export default function InvestigationsTab({
     test.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const selectLabTest = (test: any) => {
-    setRequestForm({
-      ...requestForm,
-      name: test.name,
-      type: test.type,
-      cost: test.default_cost.toString()
-    });
-    setSearchTerm(test.name);
-    setIsDropdownOpen(false);
-  };
 
   return (
     <div className="space-y-6">
@@ -346,19 +390,42 @@ export default function InvestigationsTab({
                 <Search className="h-4 w-4 text-slate-400" />
               </div>
               <input
-                required
+                required={!editingId && selectedTests.length === 0}
                 type="text"
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
-                  setRequestForm({ ...requestForm, name: e.target.value });
+                  if (editingId) {
+                    setRequestForm({ ...requestForm, name: e.target.value });
+                  }
                   setIsDropdownOpen(true);
                 }}
                 onFocus={() => setIsDropdownOpen(true)}
                 className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                placeholder="Search or type investigation name..."
+                placeholder={editingId ? "Investigation name..." : "Search or type investigation name... (Bulk allowed)"}
                 autoComplete="off"
               />
+              
+              {/* Selected Tests Tags for Bulk */}
+              {!editingId && selectedTests.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {selectedTests.map(test => (
+                    <span 
+                      key={test.id} 
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-primary-50 text-primary-700 text-xs font-medium border border-primary-100 animate-in fade-in zoom-in duration-200"
+                    >
+                      {test.name}
+                      <button 
+                        type="button" 
+                        onClick={() => removeSelectedTest(test.id)}
+                        className="p-0.5 hover:bg-primary-100 rounded-full transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
               
               {isDropdownOpen && (
                 <div className="absolute z-50 mt-1 w-full bg-white shadow-lg max-h-40 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm border border-slate-200">

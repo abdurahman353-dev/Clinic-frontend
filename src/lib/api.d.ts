@@ -68,14 +68,19 @@ declare module "@/lib/api" {
     adjust: (id: string | number, adjustment: number) => Promise<any>;
   }
 
-  export interface DashboardAPI {
-    get: () => Promise<any>;
-  }
-
   export interface LabTestAPI {
     list: (params?: any) => Promise<any>;
     store: (data: any) => Promise<any>;
     update: (id: string | number, data: any) => Promise<any>;
+  }
+
+  export interface SalesAPI {
+    report: (params?: any) => Promise<any>;
+    dailyDetails: (date: string) => Promise<any>;
+  }
+
+  export interface DashboardAPI {
+    get: () => Promise<any>;
   }
 
   export const authAPI: AuthAPI;
@@ -90,6 +95,7 @@ declare module "@/lib/api" {
   export const paymentAPI: PaymentAPI;
   export const dashboardAPI: DashboardAPI;
   export const labTestAPI: LabTestAPI;
+  export const salesAPI: SalesAPI;
 
   export default apiClient;
 }
