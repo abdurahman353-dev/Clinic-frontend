@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, CheckCircle2, Clock, Loader2, FileText, Edit2, X } from "lucide-react";
+import { Plus, CheckCircle2, Clock, Loader2, FileText, Edit2, X, Search } from "lucide-react";
 import { useInvestigations } from "@/hooks/useInvestigations";
+import { useLabTests } from "@/hooks/useLabTests";
 import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
 
@@ -20,18 +21,30 @@ export default function InvestigationsTab({
   onLoadComplete: () => void;
 }): React.JSX.Element {
   const { investigations, isLoading, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations } = useInvestigations(patientId);
+  const { labTests, isLoadingLabTests, fetchLabTests, addLabTest, updateLabTest } = useLabTests();
 
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  const [isNewLabTestModalOpen, setIsNewLabTestModalOpen] = useState(false);
+  const [isEditLabTestModalOpen, setIsEditLabTestModalOpen] = useState(false);
+  const [editingLabTest, setEditingLabTest] = useState<any>(null);
   const [selectedInvId, setSelectedInvId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [requestForm, setRequestForm] = useState({
     name: "",
     type: "lab",
     notes: "",
     cost: ""
+  });
+
+  const [newLabTestForm, setNewLabTestForm] = useState({
+    name: "",
+    type: "lab",
+    default_cost: ""
   });
 
   const [resultForm, setResultForm] = useState({
@@ -41,9 +54,11 @@ export default function InvestigationsTab({
 
   useEffect(() => {
     if (!isInitialLoaded) {
-      fetchInvestigations().then(() => onLoadComplete());
+      Promise.all([fetchInvestigations(), fetchLabTests()]).then(() => onLoadComplete());
+    } else {
+      fetchLabTests();
     }
-  }, [fetchInvestigations, isInitialLoaded, onLoadComplete]);
+  }, [fetchInvestigations, fetchLabTests, isInitialLoaded, onLoadComplete]);
 
   // Sync internal investigations with lifted state
   useEffect(() => {
@@ -128,7 +143,84 @@ export default function InvestigationsTab({
   const handleAddRequest = () => {
     setEditingId(null);
     setRequestForm({ name: "", type: "lab", notes: "", cost: "" });
+    setSearchTerm("");
+    setIsDropdownOpen(false);
     setIsRequestModalOpen(true);
+  };
+
+  const handleNewLabTestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const data = {
+      name: newLabTestForm.name,
+      type: newLabTestForm.type,
+      default_cost: parseFloat(newLabTestForm.default_cost) || 0
+    };
+    
+    // Close modal and reset immediately for instant feedback
+    setIsNewLabTestModalOpen(false);
+    setNewLabTestForm({ name: "", type: "lab", default_cost: "" });
+    
+    // Auto-select (optimistically)
+    setRequestForm({
+      ...requestForm,
+      name: data.name,
+      type: data.type,
+      cost: data.default_cost.toString()
+    });
+    setSearchTerm(data.name);
+
+    try {
+      await addLabTest(data);
+      toast.success("New investigation type added to library");
+    } catch (err: any) {
+      // Error is handled by api.js toast, but we should reset search if it failed?
+      // For now, api.js will show error toast.
+    }
+  };
+
+  const handleEditLabTestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLabTest) return;
+    
+    const data = {
+      name: editingLabTest.name,
+      type: editingLabTest.type,
+      default_cost: parseFloat(editingLabTest.default_cost) || 0
+    };
+    const id = editingLabTest.id;
+
+    // Close modal and reset immediately
+    setIsEditLabTestModalOpen(false);
+    setEditingLabTest(null);
+
+    // Update current form if it matches
+    if (requestForm.name === data.name || searchTerm === data.name) {
+      setRequestForm(prev => ({ ...prev, name: data.name, type: data.type, cost: data.default_cost.toString() }));
+      setSearchTerm(data.name);
+    }
+
+    try {
+      await updateLabTest(id, data);
+      toast.success("Investigation type updated in library");
+    } catch (err: any) {
+      // Error handled by api.js
+    }
+  };
+
+  const filteredLabTests = labTests.filter(test => 
+    test.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const selectLabTest = (test: any) => {
+    setRequestForm({
+      ...requestForm,
+      name: test.name,
+      type: test.type,
+      cost: test.default_cost.toString()
+    });
+    setSearchTerm(test.name);
+    setIsDropdownOpen(false);
   };
 
   return (
@@ -237,9 +329,73 @@ export default function InvestigationsTab({
         description={editingId ? "Update test request details" : "Add a new test request for this patient"}
       >
         <form onSubmit={handleRequestSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Investigation Name *</label>
-            <input required type="text" value={requestForm.name} onChange={e => setRequestForm({ ...requestForm, name: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. Complete Blood Count" />
+          <div className="relative">
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-slate-700">Investigation Name *</label>
+              <button
+                type="button"
+                onClick={() => setIsNewLabTestModalOpen(true)}
+                className="text-xs text-primary-600 hover:text-primary-700 font-medium inline-flex items-center"
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Add New Type
+              </button>
+            </div>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-slate-400" />
+              </div>
+              <input
+                required
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setRequestForm({ ...requestForm, name: e.target.value });
+                  setIsDropdownOpen(true);
+                }}
+                onFocus={() => setIsDropdownOpen(true)}
+                className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                placeholder="Search or type investigation name..."
+                autoComplete="off"
+              />
+              
+              {isDropdownOpen && (
+                <div className="absolute z-50 mt-1 w-full bg-white shadow-lg max-h-40 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm border border-slate-200">
+                  {filteredLabTests.length > 0 ? (
+                    filteredLabTests.map((test) => (
+                      <div
+                        key={test.id}
+                        className="cursor-pointer select-none relative py-2 pl-3 pr-2 hover:bg-slate-50 transition-colors flex items-center justify-between group"
+                        onClick={() => selectLabTest(test)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="block truncate font-medium text-slate-900">{test.name}</span>
+                            <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded ml-2 whitespace-nowrap">KSh {test.default_cost}</span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 uppercase tracking-tight">{test.type}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingLabTest({ ...test });
+                            setIsEditLabTestModalOpen(true);
+                          }}
+                          className="ml-2 p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-md opacity-0 group-hover:opacity-100 transition-all"
+                          title="Edit Library Item"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-2 px-3 text-slate-500 text-sm">No matches found. You can still type the name manually.</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
@@ -303,6 +459,117 @@ export default function InvestigationsTab({
             </button>
           </div>
         </form>
+      </Modal>
+      {/* Add New Lab Test Type Modal */}
+      <Modal
+        isOpen={isNewLabTestModalOpen}
+        onClose={() => setIsNewLabTestModalOpen(false)}
+        title="Add New Investigation Type"
+        description="Register a new type of test to the master library"
+      >
+        <form onSubmit={handleNewLabTestSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Investigation Name *</label>
+            <input 
+              required 
+              type="text" 
+              value={newLabTestForm.name} 
+              onChange={e => setNewLabTestForm({ ...newLabTestForm, name: e.target.value })} 
+              className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" 
+              placeholder="e.g. Thyroid Profile" 
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+            <select 
+              value={newLabTestForm.type} 
+              onChange={e => setNewLabTestForm({ ...newLabTestForm, type: e.target.value })} 
+              className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            >
+              <option value="lab">Laboratory (Blood, Urine, etc.)</option>
+              <option value="radiology">Radiology (X-Ray, MRI, Ultrasound)</option>
+              <option value="procedure">Clinical Procedure</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Default Price (KES) *</label>
+            <div className="relative mt-1 rounded-md shadow-sm">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <span className="text-slate-500 sm:text-sm">KSh</span>
+              </div>
+              <input
+                required
+                type="number"
+                value={newLabTestForm.default_cost}
+                onChange={e => setNewLabTestForm({ ...newLabTestForm, default_cost: e.target.value })}
+                className="block w-full rounded-md border-slate-300 pl-12 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+          <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <button type="button" onClick={() => setIsNewLabTestModalOpen(false)} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
+            <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Add to Library"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Lab Test Type Modal */}
+      <Modal
+        isOpen={isEditLabTestModalOpen}
+        onClose={() => { setIsEditLabTestModalOpen(false); setEditingLabTest(null); }}
+        title="Edit Investigation Type"
+        description="Update master investigation details in the library"
+      >
+        {editingLabTest && (
+          <form onSubmit={handleEditLabTestSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Investigation Name *</label>
+              <input 
+                required 
+                type="text" 
+                value={editingLabTest.name} 
+                onChange={e => setEditingLabTest({ ...editingLabTest, name: e.target.value })} 
+                className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+              <select 
+                value={editingLabTest.type} 
+                onChange={e => setEditingLabTest({ ...editingLabTest, type: e.target.value })} 
+                className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              >
+                <option value="lab">Laboratory (Blood, Urine, etc.)</option>
+                <option value="radiology">Radiology (X-Ray, MRI, Ultrasound)</option>
+                <option value="procedure">Clinical Procedure</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Default Price (KES) *</label>
+              <div className="relative mt-1 rounded-md shadow-sm">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <span className="text-slate-500 sm:text-sm">KSh</span>
+                </div>
+                <input
+                  required
+                  type="number"
+                  value={editingLabTest.default_cost}
+                  onChange={e => setEditingLabTest({ ...editingLabTest, default_cost: e.target.value })}
+                  className="block w-full rounded-md border-slate-300 pl-12 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <button type="button" onClick={() => { setIsEditLabTestModalOpen(false); setEditingLabTest(null); }} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
+              <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
+                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Save Changes"}
+              </button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );

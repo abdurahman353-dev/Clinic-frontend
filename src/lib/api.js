@@ -212,6 +212,21 @@ export const investigationAPI = {
     }
 };
 
+export const labTestAPI = {
+    list: async (params = {}) => {
+        const response = await apiClient.get('/lab-tests', { params });
+        return response.data;
+    },
+    store: async (data) => {
+        const response = await apiClient.post('/lab-tests', data);
+        return response.data;
+    },
+    update: async (id, data) => {
+        const response = await apiClient.put(`/lab-tests/${id}`, data);
+        return response.data;
+    }
+};
+
 export const prescriptionAPI = {
     list: async (visitId) => {
         const response = await apiClient.get(`/visits/${visitId}/prescriptions`);

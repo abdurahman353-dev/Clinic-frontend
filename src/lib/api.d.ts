@@ -72,6 +72,12 @@ declare module "@/lib/api" {
     get: () => Promise<any>;
   }
 
+  export interface LabTestAPI {
+    list: (params?: any) => Promise<any>;
+    store: (data: any) => Promise<any>;
+    update: (id: string | number, data: any) => Promise<any>;
+  }
+
   export const authAPI: AuthAPI;
   export const patientAPI: PatientAPI;
   export const visitAPI: VisitAPI;
@@ -83,6 +89,7 @@ declare module "@/lib/api" {
   export const billingAPI: BillingAPI;
   export const paymentAPI: PaymentAPI;
   export const dashboardAPI: DashboardAPI;
+  export const labTestAPI: LabTestAPI;
 
   export default apiClient;
 }
