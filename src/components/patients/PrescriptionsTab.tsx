@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Pill, Loader2, Edit2, X } from "lucide-react";
+import { Plus, Pill, Loader2, Edit2, X, CheckCircle2 } from "lucide-react";
 import { usePrescriptions } from "@/hooks/usePrescriptions";
 import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
@@ -168,13 +168,20 @@ export default function PrescriptionsTab({
                   <div>
                      <div className="flex items-center gap-3">
                        <p className="text-sm text-slate-500 font-medium">Prescription #{rx.id}</p>
-                       <button
-                         onClick={() => handleEdit(rx)}
-                         className="text-primary-600 hover:text-primary-800 bg-primary-50 hover:bg-primary-100 p-1 rounded-md transition-colors"
-                         title="Edit Prescription"
-                       >
-                         <Edit2 className="h-3 w-3" />
-                       </button>
+                       {!rx.is_cleared ? (
+                         <button
+                           onClick={() => handleEdit(rx)}
+                           className="text-primary-600 hover:text-primary-800 bg-primary-50 hover:bg-primary-100 p-1 rounded-md transition-colors"
+                           title="Edit Prescription"
+                         >
+                           <Edit2 className="h-3 w-3" />
+                         </button>
+                       ) : (
+                         <div className="flex items-center text-slate-400 gap-1 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                           <CheckCircle2 className="h-2.5 w-2.5" />
+                           <span className="text-[8px] font-bold uppercase">Locked</span>
+                         </div>
+                       )}
                      </div>
                      <p className="text-xs text-slate-400 mt-0.5">{new Date(rx.created_at).toLocaleDateString()}</p>
                   </div>

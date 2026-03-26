@@ -197,7 +197,7 @@ export default function InvestigationsTab({
                       {test.status}
                     </span>
                     <div className="flex items-center justify-end gap-2 text-xs">
-                      {test.status !== 'completed' && (
+                      {test.status !== 'completed' && !test.is_cleared && (
                         <>
                           <button
                             onClick={() => handleEditRequest(test)}
@@ -213,6 +213,12 @@ export default function InvestigationsTab({
                             Upload Result
                           </button>
                         </>
+                      )}
+                      {test.is_cleared && (
+                        <div className="flex items-center text-slate-400 gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                          <CheckCircle2 className="h-3 w-3 text-slate-400" />
+                          <span className="font-medium">Cleared & Locked</span>
+                        </div>
                       )}
                     </div>
                   </div>

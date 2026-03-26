@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Activity, Plus, TrendingUp, Loader2, Edit2, X } from "lucide-react";
+import { Activity, Plus, TrendingUp, Loader2, Edit2, X, CheckCircle2 } from "lucide-react";
 import { useVitals } from "@/hooks/useVitals";
 import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
@@ -225,12 +225,19 @@ export default function VitalsTab({
                           {row.notes || '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() => handleEdit(row)}
-                            className="text-slate-400 hover:text-primary-600 transition-colors p-1"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
+                          {!row.is_cleared ? (
+                            <button
+                              onClick={() => handleEdit(row)}
+                              className="text-slate-400 hover:text-primary-600 transition-colors p-1"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                          ) : (
+                            <div className="flex items-center justify-end text-slate-400 gap-1 opacity-60 pointer-events-none px-2 py-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              <span className="text-[10px] font-bold uppercase">Locked</span>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
