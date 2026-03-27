@@ -26,6 +26,7 @@ export default function NewPatientPage() {
     allergies: "",
     next_of_kin: "",
     next_of_kin_phone: "",
+    consultation_fee: "1500",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -116,6 +117,22 @@ export default function NewPatientPage() {
               <option value="outpatient">Outpatient</option>
               <option value="inpatient">Inpatient</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
+              Consultation Fee (KSh)
+              <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 uppercase font-bold tracking-wider">Auto-Billed</span>
+            </label>
+            <input
+              type="number"
+              name="consultation_fee"
+              min="0"
+              required
+              value={formData.consultation_fee}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm font-bold text-slate-900"
+            />
           </div>
 
           <div>

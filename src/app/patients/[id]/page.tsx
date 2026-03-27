@@ -8,6 +8,7 @@ import { patientAPI } from "@/lib/api";
 import VitalsTab from "@/components/patients/VitalsTab";
 import InvestigationsTab from "@/components/patients/InvestigationsTab";
 import PrescriptionsTab from "@/components/patients/PrescriptionsTab";
+import BillingTab from "@/components/patients/BillingTab";
 
 export default function PatientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -77,6 +78,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
     { id: "vitals", label: "Vitals", icon: Activity },
     { id: "investigations", label: "Investigations", icon: FileText },
     { id: "prescriptions", label: "Prescriptions", icon: Droplet },
+    { id: "billing", label: "Billing & Invoices", icon: FileText },
   ];
 
   return (
@@ -211,6 +213,9 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
               isInitialLoaded={isPrescriptionsLoaded}
               onLoadComplete={() => setIsPrescriptionsLoaded(true)}
             />
+          )}
+          {activeTab === "billing" && (
+            <BillingTab patientId={patient.db_id} />
           )}
         </div>
       </div>

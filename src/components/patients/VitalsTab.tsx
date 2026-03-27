@@ -312,7 +312,7 @@ export default function VitalsTab({
 
             <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">Vitals Service Charge (KES)</label>
+                <label className="block text-md font-medium text-slate-900 mb-1">Vitals Service Charge (KES)</label>
                 <div className="relative mt-1 rounded-md shadow-sm">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                     <span className="text-slate-500 sm:text-sm">KSh</span>
@@ -322,13 +322,13 @@ export default function VitalsTab({
                     name="cost"
                     value={formData.cost}
                     onChange={handleChange}
-                    className="block w-full rounded-md border-slate-300 pl-12 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    className="block w-full rounded-sm p-2 border-slate-300 pl-12 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                     placeholder="0.00"
                   />
                 </div>
               </div>
 
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-slate-900 mb-1">Consultation Fee (KES)</label>
                 <div className="relative mt-1 rounded-md shadow-sm">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -343,7 +343,7 @@ export default function VitalsTab({
                     placeholder="0.00"
                   />
                 </div>
-              </div>
+              </div> */}
               <p className="md:col-span-2 mt-1 text-xs text-slate-500 italic">Enter the fees to be billed for this patient encounter.</p>
             </div>
           </div>
