@@ -25,8 +25,108 @@ import { billingAPI, paymentAPI, visitAPI } from "@/lib/api";
 import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
 
+const ThermalReceipt = ({ bill }: { bill: any }) => {
+  if (!bill) return null;
+  return (
+    <div className="bg-white p-6 md:p-8 font-mono text-sm border-2 border-slate-100 shadow-inner max-w-[340px] mx-auto my-4 text-slate-800 leading-tight">
+      <div className="text-center mb-6">
+        <h2 className="text-xl font-bold uppercase tracking-tight mb-1">WAFAA MEDICAL</h2>
+        <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Quality Healthcare Services</p>
+        <p className="text-xs">Nairobi, Kenya</p>
+        <p className="text-xs">Tel: +254 700 000 000</p>
+      </div>
+
+      <div className="border-t border-dashed border-slate-300 my-4" />
+
+      <div className="space-y-1 text-[11px] mb-4">
+        <div className="flex justify-between">
+          <span>DATE:</span>
+          <span>{new Date(bill.created_at).toLocaleDateString()} {new Date(bill.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>INV NO:</span>
+          <span className="font-bold">#INV-{bill.id}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>CASHIER:</span>
+          <span>ADMIN-1</span>
+        </div>
+        <div className="flex justify-between">
+          <span>PATIENT:</span>
+          <span className="truncate max-w-[120px] font-bold">{bill.patient_name || 'WALK-IN'}</span>
+        </div>
+      </div>
+
+      <div className="border-t border-dashed border-slate-300 my-4" />
+
+      <div className="flex justify-between font-bold text-[10px] uppercase tracking-wider mb-2 border-b border-slate-100 pb-1">
+        <span>ITEM</span>
+        <div className="flex gap-6">
+          <span>QTY</span>
+          <span>PRICE</span>
+        </div>
+      </div>
+
+      <div className="space-y-3 text-[11px]">
+        {bill.items?.map((item: any, i: number) => (
+          <div key={i} className="flex justify-between items-start">
+            <span className="flex-1 pr-2 uppercase">{item.name}</span>
+            <div className="flex gap-6 flex-shrink-0">
+              <span>1</span>
+              <span className="font-bold">{parseFloat(item.amount).toLocaleString()}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="border-t border-dashed border-slate-300 my-4" />
+
+      <div className="space-y-1.5">
+        <div className="flex justify-between font-bold text-sm">
+          <span>SUB TOTAL</span>
+          <span>KSh {parseFloat(bill.grand_total).toLocaleString()}</span>
+        </div>
+        {parseFloat(bill.discount_amount) > 0 && (
+          <div className="flex justify-between text-[11px] font-medium text-slate-500 italic">
+            <span>DISCOUNT</span>
+            <span>- {parseFloat(bill.discount_amount).toLocaleString()}</span>
+          </div>
+        )}
+        <div className="flex justify-between font-black text-lg pt-2 border-t border-slate-900 mt-2">
+          <span>TOTAL</span>
+          <span>KSh {(parseFloat(bill.grand_total) - parseFloat(bill.discount_amount)).toLocaleString()}</span>
+        </div>
+      </div>
+
+      <div className="border-t border-dashed border-slate-300 my-4" />
+
+      <div className="space-y-1 text-[11px]">
+        <div className="flex justify-between">
+          <span>TENDERED (CASH):</span>
+          <span>{parseFloat(bill.paid_amount).toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between font-bold border-t border-slate-100 pt-1 mt-1 text-red-600">
+          <span>BALANCE DUE:</span>
+          <span>{parseFloat(bill.balance_amount).toLocaleString()}</span>
+        </div>
+      </div>
+
+      <div className="border-t border-dashed border-slate-300 my-6" />
+
+      <div className="text-center space-y-2">
+        <p className="font-bold text-xs uppercase tracking-widest">THANK YOU!</p>
+        <p className="text-[10px]">WISH YOU A QUICK RECOVERY</p>
+        <div className="mt-4 flex justify-center opacity-70">
+          <div className="h-8 w-48 bg-[repeating-linear-gradient(90deg,black,black_2px,transparent_2px,transparent_4px)]"></div>
+        </div>
+        <p className="text-[9px] text-slate-400 mt-3 font-mono uppercase tracking-tighter">** CUSTOMER COPY **</p>
+      </div>
+    </div>
+  );
+};
+
 export default function CashierPage() {
-  const [activeTab, setActiveTab] = useState<'pending' | 'unbilled' | 'history'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'unbilled' | 'history'>('history');
   const [bills, setBills] = useState<any[]>([]);
   const [historyBills, setHistoryBills] = useState<any[]>([]);
   const [visits, setVisits] = useState<any[]>([]);
@@ -203,24 +303,24 @@ export default function CashierPage() {
       {/* Tabs */}
       <div className="flex gap-4 border-b border-slate-200">
         <button
-          onClick={() => setActiveTab('pending')}
-          className={`flex items-center gap-2 px-1 py-4 text-sm font-medium border-b-2 transition-all ${activeTab === 'pending' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          onClick={() => setActiveTab('history')}
+          className={`flex items-center gap-2 px-1 py-4 text-sm font-medium border-b-2 transition-all ${activeTab === 'history' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
         >
-          Unpaid Invoices
-          {bills.length > 0 && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] border border-slate-200">{bills.length}</span>}
+          Payment History
         </button>
         <button
           onClick={() => setActiveTab('unbilled')}
           className={`flex items-center gap-2 px-1 py-4 text-sm font-medium border-b-2 transition-all ${activeTab === 'unbilled' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
         >
           Ready for Invoicing
-          {visits.length > 0 && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] border border-slate-200">{visits.length}</span>}
+          {visits.length > 0 && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-xs border border-slate-200">{visits.length}</span>}
         </button>
         <button
-          onClick={() => setActiveTab('history')}
-          className={`flex items-center gap-2 px-1 py-4 text-sm font-medium border-b-2 transition-all ${activeTab === 'history' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          onClick={() => setActiveTab('pending')}
+          className={`flex items-center gap-2 px-1 py-4 text-sm font-medium border-b-2 transition-all ${activeTab === 'pending' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
         >
-          Payment History
+          Unpaid Invoices
+          {bills.length > 0 && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-xs border border-slate-200">{bills.length}</span>}
         </button>
       </div>
 
@@ -238,13 +338,13 @@ export default function CashierPage() {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Patient / Bill</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Services</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Paid</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Balance</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Patient / Bill</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Services</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Total</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Paid</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Balance</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
@@ -254,14 +354,14 @@ export default function CashierPage() {
                     <tr key={bill.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-slate-900">{bill.patient_name || 'Walking Patient'}</div>
-                        <div className="text-[11px] text-slate-400 font-mono">#{bill.id} &bull; {new Date(bill.created_at).toLocaleDateString()}</div>
+                        <div className="text-xs text-slate-500 font-mono">#{bill.id} &bull; {new Date(bill.created_at).toLocaleDateString()}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-1">
-                          {bill.consultation_fee > 0 && <span className="px-1.5 py-0.5 border border-slate-200 text-slate-600 rounded text-[9px] font-medium">Consult</span>}
-                          {bill.vitals_total > 0 && <span className="px-1.5 py-0.5 border border-slate-200 text-slate-600 rounded text-[9px] font-medium">Vitals</span>}
-                          {bill.investigation_total > 0 && <span className="px-1.5 py-0.5 border border-slate-200 text-slate-600 rounded text-[9px] font-medium">Labs</span>}
-                          {bill.medicine_total > 0 && <span className="px-1.5 py-0.5 border border-slate-200 text-slate-600 rounded text-[9px] font-medium">Pharmacy</span>}
+                          {bill.consultation_fee > 0 && <span className="px-1.5 py-0.5 border border-slate-200 text-slate-600 rounded text-xs font-medium">Consult</span>}
+                          {bill.vitals_total > 0 && <span className="px-1.5 py-0.5 border border-slate-200 text-slate-600 rounded text-xs font-medium">Vitals</span>}
+                          {bill.investigation_total > 0 && <span className="px-1.5 py-0.5 border border-slate-200 text-slate-600 rounded text-xs font-medium">Labs</span>}
+                          {bill.medicine_total > 0 && <span className="px-1.5 py-0.5 border border-slate-200 text-slate-600 rounded text-xs font-medium">Pharmacy</span>}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">KSh {parseFloat(bill.grand_total).toLocaleString()}</td>
@@ -270,7 +370,7 @@ export default function CashierPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">KSh {parseFloat(bill.balance_amount).toLocaleString()}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border ${bill.status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
+                        <span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium border ${bill.status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
                           bill.status === 'partial' ? 'bg-blue-50 text-blue-700 border-blue-100' :
                             'bg-slate-50 text-slate-700 border-slate-200'
                           }`}>
@@ -302,12 +402,12 @@ export default function CashierPage() {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Patient / Visit</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Details</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Est. Amount</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Patient / Visit</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Details</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Est. Amount</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
@@ -317,7 +417,7 @@ export default function CashierPage() {
                     <tr key={visit.id} className="hover:bg-slate-50/50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-slate-900">{visit.patient?.name || 'Unknown Patient'}</div>
-                        <div className="text-[11px] text-slate-400">Visit #{visit.id}</div>
+                        <div className="text-xs text-slate-400">Visit #{visit.id}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2 text-slate-400">
@@ -327,12 +427,12 @@ export default function CashierPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-600 border border-slate-200 uppercase">
+                        <span className="inline-flex px-1.5 py-0.5 rounded text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200 uppercase">
                           {visit.status}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">KSh {parseFloat(visit.estimated_total || 0).toLocaleString()}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-[11px] text-slate-500">{new Date(visit.created_at).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">{new Date(visit.created_at).toLocaleDateString()}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <button
                           onClick={() => handleGenerateBill(visit)}
@@ -355,13 +455,13 @@ export default function CashierPage() {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Patient / Invoice</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Discount</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Final Amount</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Date Settled</th>
-                    <th className="px-6 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Patient / Invoice</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Total</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Discount</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Final Amount</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date Settled</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
@@ -371,7 +471,7 @@ export default function CashierPage() {
                     <tr key={bill.id} className="hover:bg-slate-50/50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-slate-900">{bill.patient_name || 'Walking Patient'}</div>
-                        <div className="text-[11px] text-slate-400">Inv #{bill.id}</div>
+                        <div className="text-xs text-slate-400">Inv #{bill.id}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">KSh {parseFloat(bill.grand_total).toLocaleString()}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
@@ -381,9 +481,9 @@ export default function CashierPage() {
                         KSh {(parseFloat(bill.grand_total) - parseFloat(bill.discount_amount)).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-50 text-green-700 border border-green-100 uppercase">Paid</span>
+                        <span className="inline-flex px-1.5 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-100 uppercase">Paid</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-[11px] text-slate-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
                         {bill.updated_at ? new Date(bill.updated_at).toLocaleDateString() : 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -400,46 +500,16 @@ export default function CashierPage() {
         </div>
       )}
 
-      {/* Invoice Detail Modal */}
       <Modal
         isOpen={isBillDetailOpen}
         onClose={() => setIsBillDetailOpen(false)}
-        title="Invoice Details"
-        description={`Patient: ${selectedBill?.patient_name} | Bill #${selectedBill?.id}`}
-        maxWidth="max-w-lg"
+        title="Invoice Review"
+        description="Official medical bill summary"
+        maxWidth="max-w-md"
       >
-        <div className="space-y-6 pt-2">
-          <div className="border border-slate-200 rounded-md overflow-hidden">
-            <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Itemized Breakdown</span>
-            </div>
-            <div className="p-4 space-y-3">
-              {selectedBill?.items?.map((item: any, idx: number) => (
-                <div key={idx} className="flex justify-between items-center text-sm">
-                  <span className="text-slate-600">{item.name}</span>
-                  <span className="text-slate-900 font-medium font-mono">KSh {parseFloat(item.amount).toLocaleString()}</span>
-                </div>
-              ))}
-              <div className="pt-3 mt-3 border-t border-slate-100 flex justify-between items-center font-semibold">
-                <span className="text-slate-700">Subtotal</span>
-                <span className={parseFloat(selectedBill?.discount_amount) > 0 ? 'text-slate-400 line-through' : 'text-slate-900'}>
-                  KSh {parseFloat(selectedBill?.grand_total || "0").toLocaleString()}
-                </span>
-              </div>
-
-              {parseFloat(selectedBill?.discount_amount) > 0 && (
-                <>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500">Discount Applied</span>
-                    <span className="text-slate-600 font-mono">- KSh {parseFloat(selectedBill?.discount_amount).toLocaleString()}</span>
-                  </div>
-                  <div className="pt-2 mt-2 border-t border-slate-900 flex justify-between items-center text-lg font-bold">
-                    <span>Total Settled</span>
-                    <span>KSh {(parseFloat(selectedBill?.grand_total) - parseFloat(selectedBill?.discount_amount)).toLocaleString()}</span>
-                  </div>
-                </>
-              )}
-            </div>
+        <div className="space-y-4 pt-2">
+          <div className="max-h-[60vh] overflow-y-auto pr-1">
+            <ThermalReceipt bill={selectedBill} />
           </div>
 
           <div className="flex gap-3">
@@ -489,7 +559,7 @@ export default function CashierPage() {
 
           <div className="bg-slate-900 p-4 rounded text-white flex justify-between items-center">
             <div>
-              <span className="text-[10px] uppercase font-medium text-slate-400 block mb-0.5">Amount Outstanding</span>
+              <span className="text-xs uppercase font-medium text-slate-400 block mb-0.5">Amount Outstanding</span>
               <span className="text-2xl font-bold font-mono">
                 KSh {(() => {
                   const originalBalance = parseFloat(selectedBill?.balance_amount || "0");
@@ -525,14 +595,14 @@ export default function CashierPage() {
                 <button
                   type="button"
                   onClick={() => setPaymentData(prev => ({ ...prev, discount_type: 'fixed' }))}
-                  className={`px-3 text-[10px] font-bold transition-colors ${paymentData.discount_type === 'fixed' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600'}`}
+                  className={`px-3 text-xs font-bold transition-colors ${paymentData.discount_type === 'fixed' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600'}`}
                 >
                   KSh
                 </button>
                 <button
                   type="button"
                   onClick={() => setPaymentData(prev => ({ ...prev, discount_type: 'percentage' }))}
-                  className={`px-3 text-[10px] font-bold transition-colors ${paymentData.discount_type === 'percentage' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600'}`}
+                  className={`px-3 text-xs font-bold transition-colors ${paymentData.discount_type === 'percentage' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600'}`}
                 >
                   %
                 </button>
@@ -577,7 +647,7 @@ export default function CashierPage() {
                     }`}
                 >
                   <method.icon className="h-5 w-5 mb-1" />
-                  <span className="text-[10px] uppercase font-semibold">{method.label}</span>
+                  <span className="text-xs uppercase font-semibold">{method.label}</span>
                 </button>
               ))}
             </div>

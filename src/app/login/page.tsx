@@ -25,6 +25,13 @@ export default function LoginPage() {
       const { user, token } = await authAPI.login(email, password, rememberMe);
       toast.success("Login successfully");
 
+      // Set remember flag before updating context so handleSetToken/User can see it
+      if (rememberMe) {
+        localStorage.setItem("admin_remember", "true");
+      } else {
+        localStorage.removeItem("admin_remember");
+      }
+
       setToken(token);
       setUser(user);
 
