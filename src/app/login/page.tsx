@@ -80,11 +80,7 @@ export default function LoginPage() {
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
           <div className="bg-white/95 backdrop-blur-sm py-8 px-4 shadow-2xl border border-white/20 sm:rounded-xl sm:px-10">
             <form className="space-y-6" onSubmit={handleLogin}>
-              {errorMsg && (
-                <div className="rounded-md bg-red-50 p-4">
-                  <div className="text-sm text-red-700">{errorMsg}</div>
-                </div>
-              )}
+              {/* Error message removed as per user request (toast is used instead) */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-slate-700">
                   Email address

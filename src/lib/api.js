@@ -238,6 +238,29 @@ export const salesAPI = {
     }
 };
 
+export const adminAPI = {
+  getAdmins: async () => {
+    const response = await apiClient.get('/admins');
+    return response.data;
+  },
+  createAdmin: async (data) => {
+    const response = await apiClient.post('/admins', data);
+    return response.data;
+  },
+  toggleStatus: async (id) => {
+    const response = await apiClient.post(`/admins/${id}/toggle-status`);
+    return response.data;
+  },
+};
+
+export const activityLogAPI = {
+  getLogs: async (params) => {
+    const searchParams = new URLSearchParams(params).toString();
+    const response = await apiClient.get(`/activity-logs?${searchParams}`);
+    return response.data;
+  },
+};
+
 export const prescriptionAPI = {
     list: async (visitId) => {
         const response = await apiClient.get(`/visits/${visitId}/prescriptions`);

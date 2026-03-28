@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Activity, NotepadText, FileText, Package, CreditCard, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Users, Activity, NotepadText, FileText, Package, CreditCard, BarChart3, Shield, ScrollText } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { stockAPI } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
   const [stockStatus, setStockStatus] = useState<'normal' | 'low' | 'critical'>('normal');
 
   useEffect(() => {
@@ -42,6 +44,8 @@ export function Sidebar() {
     return () => clearInterval(interval);
   }, []);
 
+  const isAdmin = user?.roles?.includes('super-admin');
+
   const navItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Patients", href: "/patients", icon: Users },
@@ -56,6 +60,10 @@ export function Sidebar() {
       className: stockStatus === 'critical' ? 'animate-blink-red' : stockStatus === 'low' ? 'animate-blink-yellow' : ''
     },
     { name: "Sales", href: "/sales", icon: BarChart3 },
+    ...(isAdmin ? [
+      { name: "Admin Management", href: "/admin", icon: Shield },
+      { name: "Activity Logs", href: "/logs", icon: ScrollText },
+    ] : []),
   ];
 
   return (

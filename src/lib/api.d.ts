@@ -83,6 +83,16 @@ declare module "@/lib/api" {
     get: () => Promise<any>;
   }
 
+  export interface AdminAPI {
+    getAdmins(): Promise<any>;
+    createAdmin(data: any): Promise<any>;
+    toggleStatus(id: number): Promise<any>;
+  }
+
+  export interface ActivityLogAPI {
+    getLogs(params: any): Promise<any>;
+  }
+
   export const authAPI: AuthAPI;
   export const patientAPI: PatientAPI;
   export const visitAPI: VisitAPI;
@@ -96,6 +106,8 @@ declare module "@/lib/api" {
   export const dashboardAPI: DashboardAPI;
   export const labTestAPI: LabTestAPI;
   export const salesAPI: SalesAPI;
+  export const adminAPI: AdminAPI;
+  export const activityLogAPI: ActivityLogAPI;
 
   export default apiClient;
 }

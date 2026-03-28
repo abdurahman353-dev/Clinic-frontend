@@ -9,6 +9,7 @@ interface User {
   name: string;
   email: string;
   roles: string[];
+  must_change_password?: boolean;
 }
 
 interface AuthContextType {
