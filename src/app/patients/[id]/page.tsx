@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { useSearchParams } from "next/navigation";
-import { ArrowLeft, User as UserIcon, Calendar, Phone, Mail, Droplet, AlertTriangle, FileText, Activity } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { ArrowLeft, User as UserIcon, Calendar, Phone, Mail, Droplet, AlertTriangle, FileText, Activity, ClipboardList } from "lucide-react";
 import Link from "next/link";
 import { patientAPI } from "@/lib/api";
 import VitalsTab from "@/components/patients/VitalsTab";
@@ -13,17 +13,18 @@ import BillingTab from "@/components/patients/BillingTab";
 export default function PatientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
   const unwrappedId = unwrappedParams.id;
-  
+
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialTab = searchParams.get("tab") || "vitals";
-  
+
   const [patient, setPatient] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // Centralized state for tabs to avoid re-fetching on switch
-  const [vitalsData, setVitalsData ] = useState<any[]>([]);
+  const [vitalsData, setVitalsData] = useState<any[]>([]);
   const [investigationsData, setInvestigationsData] = useState<any[]>([]);
   const [prescriptionsData, setPrescriptionsData] = useState<any[]>([]);
   const [isVitalsLoaded, setIsVitalsLoaded] = useState(false);
@@ -83,9 +84,18 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
-      <Link href="/patients" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors">
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Patients
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/patients" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Patients
+        </Link>
+        <button
+          onClick={() => router.push(`/patients/${unwrappedId}/record`)}
+          className="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none transition-all active:scale-95"
+        >
+          <ClipboardList className="h-4 w-4 mr-2 text-slate-500" />
+          Patient Record
+        </button>
+      </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         {/* Patient Header */}
@@ -98,9 +108,8 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
               <div>
                 <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
                   {patient.name}
-                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
-                    patient.patient_type === 'inpatient' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                  }`}>
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${patient.patient_type === 'inpatient' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                    }`}>
                     {patient.patient_type || 'outpatient'}
                   </span>
                 </h1>
@@ -188,28 +197,28 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
         {/* Tab Content Placeholder */}
         <div className="p-6 bg-slate-50 min-h-[400px]">
           {activeTab === "vitals" && (
-            <VitalsTab 
-              patientId={patient.db_id} 
-              initialData={vitalsData} 
-              onDataChange={setVitalsData} 
+            <VitalsTab
+              patientId={patient.db_id}
+              initialData={vitalsData}
+              onDataChange={setVitalsData}
               isInitialLoaded={isVitalsLoaded}
               onLoadComplete={() => setIsVitalsLoaded(true)}
             />
           )}
           {activeTab === "investigations" && (
-            <InvestigationsTab 
-              patientId={patient.db_id} 
-              initialData={investigationsData} 
-              onDataChange={setInvestigationsData} 
+            <InvestigationsTab
+              patientId={patient.db_id}
+              initialData={investigationsData}
+              onDataChange={setInvestigationsData}
               isInitialLoaded={isInvestigationsLoaded}
               onLoadComplete={() => setIsInvestigationsLoaded(true)}
             />
           )}
           {activeTab === "prescriptions" && (
-            <PrescriptionsTab 
-              patientId={patient.db_id} 
-              initialData={prescriptionsData} 
-              onDataChange={setPrescriptionsData} 
+            <PrescriptionsTab
+              patientId={patient.db_id}
+              initialData={prescriptionsData}
+              onDataChange={setPrescriptionsData}
               isInitialLoaded={isPrescriptionsLoaded}
               onLoadComplete={() => setIsPrescriptionsLoaded(true)}
             />

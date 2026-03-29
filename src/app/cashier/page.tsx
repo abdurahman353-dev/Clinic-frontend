@@ -59,24 +59,34 @@ const ThermalReceipt = ({ bill }: { bill: any }) => {
 
       <div className="border-t border-dashed border-slate-300 my-4" />
 
-      <div className="flex justify-between font-bold text-[10px] uppercase tracking-wider mb-2 border-b border-slate-100 pb-1">
-        <span>ITEM</span>
-        <div className="flex gap-6">
-          <span>QTY</span>
-          <span>PRICE</span>
+      <div className="flex justify-between font-bold text-[10px] uppercase tracking-wider mb-2 border-b border-slate-200 pb-1">
+        <span className="flex-1 text-slate-500">ITEM</span>
+        <div className="flex gap-4 w-24 justify-between text-slate-500">
+          <span className="w-8 text-center">QTY</span>
+          <span className="flex-1 text-right">PRICE</span>
         </div>
       </div>
-
+      
       <div className="space-y-3 text-[11px]">
-        {bill.items?.map((item: any, i: number) => (
-          <div key={i} className="flex justify-between items-start">
-            <span className="flex-1 pr-2 uppercase">{item.name}</span>
-            <div className="flex gap-6 flex-shrink-0">
-              <span>1</span>
-              <span className="font-bold">{parseFloat(item.amount).toLocaleString()}</span>
+        {bill.items?.map((item: any, i: number) => {
+          const qtyMatch = item.name.match(/\(Qty: (\d+)\)/);
+          const nameOnly = item.name.replace(/\s*\(Qty: \d+\)/, "").replace(/^Med: /, "").replace(/^Lab: /, "");
+          const qty = qtyMatch ? qtyMatch[1] : (item.quantity || 1);
+
+          return (
+            <div key={i} className="flex justify-between items-start gap-2">
+              <span className="flex-1 uppercase break-words leading-tight text-slate-900 font-medium">
+                {nameOnly}
+              </span>
+              <div className="flex gap-4 w-24 justify-between items-baseline flex-shrink-0">
+                <span className="w-8 text-center text-slate-600">{qty}</span>
+                <span className="flex-1 text-right font-bold text-slate-900">
+                  {parseFloat(item.amount).toLocaleString()}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="border-t border-dashed border-slate-300 my-4" />

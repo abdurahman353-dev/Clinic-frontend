@@ -78,7 +78,7 @@ export const authAPI = {
         // Store token and user data
         const isSecure = process.env.NODE_ENV === 'production';
         const cookieOptions = { secure: isSecure, sameSite: 'lax' };
-        
+
         if (remember) {
             cookieOptions.expires = 14; // 14 days
             localStorage.setItem('admin_user', JSON.stringify(user));
@@ -87,7 +87,7 @@ export const authAPI = {
             sessionStorage.setItem('admin_user', JSON.stringify(user));
             localStorage.removeItem('admin_remember');
         }
-        
+
         Cookies.set('admin_token', token, cookieOptions);
 
         return { token, user };
@@ -208,6 +208,18 @@ export const investigationAPI = {
     listGlobal: async (params = {}) => {
         const response = await apiClient.get('/investigations', { params });
         return response.data;
+    },
+    storeStandalone: async (data) => {
+        const response = await apiClient.post('/investigations/standalone', data);
+        return response.data;
+    },
+    updateStandalone: async (id, data) => {
+        const response = await apiClient.patch(`/investigations/standalone/${id}`, data);
+        return response.data;
+    },
+    get: async (id) => {
+        const response = await apiClient.get(`/investigations/${id}`);
+        return response.data;
     }
 };
 
@@ -242,26 +254,26 @@ export const salesAPI = {
 };
 
 export const adminAPI = {
-  getAdmins: async () => {
-    const response = await apiClient.get('/admins');
-    return response.data;
-  },
-  createAdmin: async (data) => {
-    const response = await apiClient.post('/admins', data);
-    return response.data;
-  },
-  toggleStatus: async (id) => {
-    const response = await apiClient.post(`/admins/${id}/toggle-status`);
-    return response.data;
-  },
+    getAdmins: async () => {
+        const response = await apiClient.get('/admins');
+        return response.data;
+    },
+    createAdmin: async (data) => {
+        const response = await apiClient.post('/admins', data);
+        return response.data;
+    },
+    toggleStatus: async (id) => {
+        const response = await apiClient.post(`/admins/${id}/toggle-status`);
+        return response.data;
+    },
 };
 
 export const activityLogAPI = {
-  getLogs: async (params) => {
-    const searchParams = new URLSearchParams(params).toString();
-    const response = await apiClient.get(`/activity-logs?${searchParams}`);
-    return response.data;
-  },
+    getLogs: async (params) => {
+        const searchParams = new URLSearchParams(params).toString();
+        const response = await apiClient.get(`/activity-logs?${searchParams}`);
+        return response.data;
+    },
 };
 
 export const prescriptionAPI = {
@@ -281,8 +293,16 @@ export const prescriptionAPI = {
         const response = await apiClient.get('/prescriptions', { params });
         return response.data;
     },
-    storeDirect: async (data) => {
-        const response = await apiClient.post('/prescriptions/direct', data);
+    storeStandalone: async (data) => {
+        const response = await apiClient.post('/prescriptions/standalone', data);
+        return response.data;
+    },
+    updateStandalone: async (id, data) => {
+        const response = await apiClient.patch(`/prescriptions/standalone/${id}`, data);
+        return response.data;
+    },
+    get: async (id) => {
+        const response = await apiClient.get(`/prescriptions/${id}`);
         return response.data;
     }
 };

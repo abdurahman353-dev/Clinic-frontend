@@ -1,15 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { 
-  Users, 
-  UserPlus, 
-  Shield, 
-  ShieldAlert, 
-  ShieldCheck, 
-  MoreVertical, 
-  Search, 
+import {
+  Users,
+  UserPlus,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  MoreVertical,
+  Search,
   Filter,
+  Eye,
+  EyeOff,
   UserX,
   UserCheck,
   Mail,
@@ -25,6 +27,7 @@ import { Modal } from "@/components/ui/Modal";
 export default function AdminManagementPage() {
   const [admins, setAdmins] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -90,7 +93,7 @@ export default function AdminManagementPage() {
     }
   };
 
-  const filteredAdmins = admins.filter(admin => 
+  const filteredAdmins = admins.filter(admin =>
     admin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     admin.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -98,12 +101,12 @@ export default function AdminManagementPage() {
   return (
     <>
       <div className="p-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Admin Management</h1>
             <p className="text-slate-500">Manage system administrators and their access levels</p>
           </div>
-          <button 
+          <button
             onClick={() => setIsAddModalOpen(true)}
             className="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg shadow-sm transition-all shadow-primary-200"
           >
@@ -157,19 +160,19 @@ export default function AdminManagementPage() {
           <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-4 justify-between bg-slate-50/50">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Search admins by name or email..." 
+              <input
+                type="text"
+                placeholder="Search admins by name or email..."
                 className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all outline-none text-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="flex items-center gap-2">
-               <button className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center gap-2">
-                 <Filter className="h-4 w-4" />
-                 Filters
-               </button>
+              <button className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                Filters
+              </button>
             </div>
           </div>
 
@@ -216,11 +219,10 @@ export default function AdminManagementPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                          admin.roles.includes('super-admin') 
-                            ? 'bg-purple-50 text-purple-700 border border-purple-100' 
-                            : 'bg-blue-50 text-blue-700 border border-blue-100'
-                        }`}>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${admin.roles.includes('super-admin')
+                          ? 'bg-purple-50 text-purple-700 border border-purple-100'
+                          : 'bg-blue-50 text-blue-700 border border-blue-100'
+                          }`}>
                           {admin.roles.join(', ')}
                         </span>
                       </td>
@@ -234,15 +236,15 @@ export default function AdminManagementPage() {
                       </td>
                       <td className="px-6 py-4">
                         {admin.must_change_password ? (
-                           <span className="inline-flex items-center gap-1.5 text-xs text-amber-600 font-medium bg-amber-50 px-2.5 py-1 rounded-full border border-amber-100">
-                             <ShieldAlert className="h-3.5 w-3.5" />
-                             Reset Required
-                           </span>
+                          <span className="inline-flex items-center gap-1.5 text-xs text-amber-600 font-medium bg-amber-50 px-2.5 py-1 rounded-full border border-amber-100">
+                            <ShieldAlert className="h-3.5 w-3.5" />
+                            Reset Required
+                          </span>
                         ) : (
-                           <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-medium bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
-                             <ShieldCheck className="h-3.5 w-3.5" />
-                             Verified
-                           </span>
+                          <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-medium bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            Verified
+                          </span>
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -250,7 +252,7 @@ export default function AdminManagementPage() {
                           {admin.roles.includes('super-admin') ? (
                             <span className="text-[10px] text-slate-400 font-medium italic">System Protected</span>
                           ) : (
-                            <button 
+                            <button
                               onClick={() => handleToggleStatus(admin)}
                               className={`p-2 rounded-lg transition-colors ${admin.is_active ? 'text-slate-400 hover:text-red-600 hover:bg-red-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}`}
                               title={admin.is_active ? 'Deactivate User' : 'Activate User'}
@@ -280,86 +282,100 @@ export default function AdminManagementPage() {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <div className="col-span-2">
-               <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-               <input 
-                 required 
-                 type="text" 
-                 value={formData.name}
-                 onChange={(e) => setFormData({...formData, name: e.target.value})}
-                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                 placeholder="e.g. Dr. Jane Smith"
-               />
-             </div>
-             <div className="col-span-2 md:col-span-1">
-               <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-               <input 
-                 required 
-                 type="email" 
-                 value={formData.email}
-                 onChange={(e) => setFormData({...formData, email: e.target.value})}
-                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                 placeholder="jane@clinic.com"
-               />
-             </div>
-             <div className="col-span-2 md:col-span-1">
-               <label className="block text-sm font-medium text-slate-700 mb-1">System Role</label>
-               <select 
-                 value={formData.role}
-                 onChange={(e) => setFormData({...formData, role: e.target.value})}
-                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-               >
-                 <option value="admin">Administrator</option>
-                 <option value="super-admin">Super Admin</option>
-               </select>
-             </div>
-             <div>
-               <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-               <input 
-                 required 
-                 type="password" 
-                 value={formData.password}
-                 onChange={(e) => setFormData({...formData, password: e.target.value})}
-                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                 placeholder="••••••••"
-               />
-             </div>
-             <div>
-               <label className="block text-sm font-medium text-slate-700 mb-1">Confirm Password</label>
-               <input 
-                 required 
-                 type="password" 
-                 value={formData.password_confirmation}
-                 onChange={(e) => setFormData({...formData, password_confirmation: e.target.value})}
-                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                 placeholder="••••••••"
-               />
-             </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+              <input
+                required
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                placeholder="e.g. Dr. Jane Smith"
+              />
+            </div>
+            <div className="col-span-2 md:col-span-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+              <input
+                required
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                placeholder="jane@clinic.com"
+              />
+            </div>
+            <div className="col-span-2 md:col-span-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">System Role</label>
+              <select
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              >
+                <option value="admin">Administrator</option>
+                {/* <option value="super-admin">Super Admin</option> */}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+              <input
+                required
+                type={showPassword ? "text" : "password"}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Confirm Password</label>
+              <input
+                required
+                type={showPassword ? "text" : "password_confirmation"}
+                value={formData.password_confirmation}
+                onChange={(e) => setFormData({ ...formData, password_confirmation: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
           </div>
-          
+
           <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg flex items-start gap-3 mt-4">
-             <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
-             <p className="text-xs text-blue-700 font-medium">
-               New users will be forced to change their password on their next login for security.
-             </p>
+            <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+            <p className="text-xs text-blue-700 font-medium">
+              New users will be forced to change their password on their next login for security.
+            </p>
           </div>
 
           <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-100">
-             <button 
-               type="button" 
-               onClick={() => setIsAddModalOpen(false)}
-               className="px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg text-slate-600 hover:bg-slate-50"
-             >
-               Cancel
-             </button>
-             <button 
-               type="submit" 
-               disabled={isSubmitting}
-               className="inline-flex items-center px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg shadow-sm disabled:opacity-50"
-             >
-               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
-               Create Account
-             </button>
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(false)}
+              className="px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg text-slate-600 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex items-center px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg shadow-sm disabled:opacity-50"
+            >
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
+              Create Account
+            </button>
           </div>
         </form>
       </Modal>
