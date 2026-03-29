@@ -15,9 +15,13 @@ import {
 import { useStock } from "@/hooks/useStock";
 import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
-export default function StockManagement() {
+  export default function StockManagement() {
   const { medicines, isLoading, fetchMedicines, addMedicine, updateMedicine, addStock, adjustStock } = useStock();
+  const { user } = useAuth();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
@@ -46,8 +50,13 @@ export default function StockManagement() {
   });
 
   useEffect(() => {
+    if (user && !user.roles?.includes('super-admin')) {
+      toast.error("Access denied. Only super-admins can access stock management.");
+      router.push("/");
+      return;
+    }
     fetchMedicines();
-  }, [fetchMedicines]);
+  }, [fetchMedicines, user, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Users, Activity, NotepadText, TrendingUp, Calendar, Clock, Plus, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { dashboardAPI } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 
 interface DashboardData {
@@ -14,8 +15,11 @@ interface DashboardData {
 }
 
 export default function Home() {
+  const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const isAdmin = user?.roles?.includes('super-admin');
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -83,7 +87,12 @@ export default function Home() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        {data.stats.map((stat, i) => {
+        {data.stats
+          .filter(stat => {
+            if (stat.label === 'Revenue Today') return isAdmin;
+            return true;
+          })
+          .map((stat, i) => {
           const IconMap: { [key: string]: any } = { Users, Activity, NotepadText, TrendingUp };
           const Icon = IconMap[stat.icon] || Activity;
           return (

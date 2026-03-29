@@ -30,10 +30,15 @@ import {
   Bar,
   Cell
 } from "recharts";
-import toast from "react-hot-toast";
+import { useStock } from "@/hooks/useStock";
 import { Modal } from "@/components/ui/Modal";
+import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function SalesDashboard() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [filters, setFilters] = useState({
@@ -59,8 +64,13 @@ export default function SalesDashboard() {
   }, [filters]);
 
   useEffect(() => {
+    if (user && !user.roles?.includes('super-admin')) {
+      toast.error("Access denied. Only super-admins can access the sales dashboard.");
+      router.push("/");
+      return;
+    }
     fetchReport();
-  }, [fetchReport]);
+  }, [fetchReport, user, router]);
 
   const handleViewDaily = async (date: string) => {
     setSelectedDate(date);

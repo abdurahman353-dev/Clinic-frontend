@@ -53,14 +53,14 @@ export function Sidebar() {
     { name: "Investigations", href: "/investigations", icon: NotepadText },
     { name: "Prescriptions", href: "/prescriptions", icon: FileText },
     { name: "Cashier", href: "/cashier", icon: CreditCard },
-    {
-      name: "Stock",
-      href: "/stock",
-      icon: Package,
-      className: stockStatus === 'critical' ? 'animate-blink-red' : stockStatus === 'low' ? 'animate-blink-yellow' : ''
-    },
-    { name: "Sales", href: "/sales", icon: BarChart3 },
     ...(isAdmin ? [
+      {
+        name: "Stock",
+        href: "/stock",
+        icon: Package,
+        className: stockStatus === 'critical' ? 'animate-blink-red' : stockStatus === 'low' ? 'animate-blink-yellow' : ''
+      },
+      { name: "Sales", href: "/sales", icon: BarChart3 },
       { name: "Admin Management", href: "/admin", icon: Shield },
       { name: "Activity Logs", href: "/logs", icon: ScrollText },
     ] : []),
