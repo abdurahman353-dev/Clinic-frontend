@@ -134,13 +134,13 @@ export default function StockManagement() {
     // Optimistic UI: Close modal and show success immediately
     setIsAdjustModalOpen(false);
     toast.success(adjustType === "restock" ? "Stock replenished successfully!" : "Stock dispensed successfully!");
-    
+
     setIsSubmitting(true);
     try {
       await adjustStock(selectedItem.stock.id, finalAdjustment);
     } catch (err) {
       // Re-fetch or handle error (api.js interceptor handles visual error)
-      fetchMedicines(); 
+      fetchMedicines();
     } finally {
       setIsSubmitting(false);
     }
@@ -316,7 +316,7 @@ export default function StockManagement() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="max-w-xs">
                           <div className="text-sm font-bold text-slate-900">{item.name} {item.size && `(${item.size})`}</div>
-                          <div className="text-xs text-slate-500 mt-0.5">ID: {item.id} &bull; {item.dosage_form || 'N/A'}</div>
+                          {/* <div className="text-xs text-slate-500 mt-0.5">ID: {item.id} &bull; {item.dosage_form || 'N/A'}</div> */}
                           {item.description && <div className="text-[11px] text-slate-400 mt-1 line-clamp-1" title={item.description}>{item.description}</div>}
                         </div>
                       </td>
@@ -348,7 +348,7 @@ export default function StockManagement() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         {item.stock?.expiry_date ? (
                           <div className={`text-xs font-medium ${new Date(item.stock.expiry_date) < new Date() ? 'text-red-600 font-bold' :
-                              new Date(item.stock.expiry_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) ? 'text-amber-600' : 'text-slate-600'
+                            new Date(item.stock.expiry_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) ? 'text-amber-600' : 'text-slate-600'
                             }`}>
                             {new Date(item.stock.expiry_date).toLocaleDateString()}
                           </div>
@@ -483,18 +483,17 @@ export default function StockManagement() {
                 {adjustType === "restock" ? "Quantity to Add *" : "Quantity to Remove *"}
               </label>
               <div className="relative">
-                <input 
-                  required 
-                  type="number" 
+                <input
+                  required
+                  type="number"
                   min="1"
                   max={adjustType === "dispense" ? selectedItem?.stock?.quantity : undefined}
                   value={adjustQty}
                   onChange={(e) => setAdjustQty(e.target.value)}
-                  className={`w-full px-4 py-4 border-2 rounded-2xl focus:ring-4 font-bold text-xl transition-all outline-none ${
-                    adjustType === "restock" 
-                      ? "border-green-100 focus:ring-green-500/10 focus:border-green-500" 
-                      : "border-red-100 focus:ring-red-500/10 focus:border-red-500"
-                  }`} 
+                  className={`w-full px-4 py-4 border-2 rounded-2xl focus:ring-4 font-bold text-xl transition-all outline-none ${adjustType === "restock"
+                    ? "border-green-100 focus:ring-green-500/10 focus:border-green-500"
+                    : "border-red-100 focus:ring-red-500/10 focus:border-red-500"
+                    }`}
                   placeholder="0"
                 />
               </div>
@@ -518,25 +517,24 @@ export default function StockManagement() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <button 
-              type="submit" 
-              disabled={isSubmitting || !adjustQty} 
-              className={`w-full inline-flex items-center justify-center px-4 py-5 shadow-xl text-lg font-black rounded-2xl text-white transition-all active:scale-[0.98] disabled:opacity-50 ${
-                adjustType === "restock" 
-                  ? "bg-green-600 hover:bg-green-700 shadow-green-100" 
-                  : "bg-red-600 hover:bg-red-700 shadow-red-100"
-              }`}
+            <button
+              type="submit"
+              disabled={isSubmitting || !adjustQty}
+              className={`w-full inline-flex items-center justify-center px-4 py-5 shadow-xl text-lg font-black rounded-2xl text-white transition-all active:scale-[0.98] disabled:opacity-50 ${adjustType === "restock"
+                ? "bg-green-600 hover:bg-green-700 shadow-green-100"
+                : "bg-red-600 hover:bg-red-700 shadow-red-100"
+                }`}
             >
-               {isSubmitting ? (
-                 <><Loader2 className="mr-2 h-6 w-6 animate-spin"/> Processing...</>
-               ) : adjustType === "restock" ? (
-                 <><ArrowUpRight className="mr-2 h-6 w-6" /> Confirm Restock</>
-               ) : (
-                 <><ArrowDownRight className="mr-2 h-6 w-6" /> Confirm Dispense</>
-               )}
+              {isSubmitting ? (
+                <><Loader2 className="mr-2 h-6 w-6 animate-spin" /> Processing...</>
+              ) : adjustType === "restock" ? (
+                <><ArrowUpRight className="mr-2 h-6 w-6" /> Confirm Restock</>
+              ) : (
+                <><ArrowDownRight className="mr-2 h-6 w-6" /> Confirm Dispense</>
+              )}
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => setIsAdjustModalOpen(false)}
               className="w-full py-4 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
             >

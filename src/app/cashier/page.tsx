@@ -186,11 +186,12 @@ export default function CashierPage() {
   const groupedBills = useMemo(() => {
     const groups: { [visitId: string]: any } = {};
     bills.forEach(bill => {
-      const vid = bill.visit_id;
+      const vid = bill.visit_id || `standalone-${bill.id}`;
       if (!groups[vid]) {
         groups[vid] = {
           id: vid,
-          visit_id: vid,
+          visit_id: bill.visit_id,
+          bill_id: bill.id,
           patient_name: bill.patient_name || bill.patient?.name,
           updated_at: bill.updated_at,
           created_at: bill.created_at,
@@ -223,11 +224,12 @@ export default function CashierPage() {
   const groupedHistory = useMemo(() => {
     const groups: { [visitId: string]: any } = {};
     historyBills.forEach(bill => {
-      const vid = bill.visit_id;
+      const vid = bill.visit_id || `standalone-${bill.id}`;
       if (!groups[vid]) {
         groups[vid] = {
           id: vid,
-          visit_id: vid,
+          visit_id: bill.visit_id,
+          bill_id: bill.id,
           patient_name: bill.patient_name || bill.patient?.name,
           updated_at: bill.updated_at,
           created_at: bill.created_at,
@@ -294,10 +296,10 @@ export default function CashierPage() {
 
     setIsSubmitting(true);
     try {
-      if (activeTab === 'pending') {
+      if (selectedBill.visit_id) {
          await paymentAPI.payVisit(selectedBill.visit_id, paymentData);
       } else {
-         await paymentAPI.store(selectedBill.id, paymentData);
+         await paymentAPI.store(selectedBill.bill_id || selectedBill.id, paymentData);
       }
       fetchBills(); // Refresh in background for consistency
       fetchHistory();

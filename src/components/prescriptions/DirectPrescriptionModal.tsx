@@ -80,7 +80,7 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess }: 
       return;
     }
 
-    if (items.some(i => !i.medicine_id || i.quantity <= 0 || !i.dosage || !i.duration)) {
+    if (items.some(i => !i.medicine_id || i.quantity <= 0)) {
       toast.error("Please fill all medicine details");
       return;
     }
@@ -96,7 +96,7 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess }: 
 
     setIsSubmitting(true);
     try {
-      await prescriptionAPI.storeDirect({
+      await prescriptionAPI.storeStandalone({
         patient_name: patientName,
         items: items.map(i => ({
           medicine_id: parseInt(i.medicine_id),
@@ -205,7 +205,6 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess }: 
                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">Dosage</label>
                       <input
                         type="text"
-                        required
                         placeholder="e.g. 1x3"
                         value={item.dosage}
                         onChange={(e) => updateItem(index, "dosage", e.target.value)}
@@ -217,7 +216,6 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess }: 
                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">Duration</label>
                       <input
                         type="text"
-                        required
                         placeholder="5d"
                         value={item.duration}
                         onChange={(e) => updateItem(index, "duration", e.target.value)}

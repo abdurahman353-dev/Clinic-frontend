@@ -92,13 +92,13 @@ export default function ModernPatientRecord({ params }: { params: Promise<{ id: 
       <div className="max-w-[900px] mx-auto bg-white p-24 print:shadow-none print:p-0 print:rounded-none min-h-[1100px] relative flex flex-col print:w-full">
 
         {/* Clinic Header with Logo */}
-        <div className="flex flex-col items-center mb-16 space-y-4">
-          <div className="relative w-48 h-24 mb-2">
+        <div className="flex flex-col items-center mb-4 space-y-4">
+          <div className="relative w-100 h-24 mb-2 align-center justify-center">
             <Image
               src="/wafaa_logo.jpeg"
               alt="Wafaa Medical Services"
               fill
-              style={{ objectFit: 'contain' }}
+              style={{ objectFit: 'cover' }}
               priority
             />
           </div>
