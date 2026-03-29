@@ -284,8 +284,13 @@ export default function CashierPage() {
 
     setIsSubmitting(true);
     try {
-      await paymentAPI.store(selectedBill.id, paymentData);
+      if (activeTab === 'pending') {
+         await paymentAPI.payVisit(selectedBill.visit_id, paymentData);
+      } else {
+         await paymentAPI.store(selectedBill.id, paymentData);
+      }
       fetchBills(); // Refresh in background for consistency
+      fetchHistory();
     } catch (err: any) {
       // API interceptor handles visual error, we refresh to restore correct state
       fetchBills();

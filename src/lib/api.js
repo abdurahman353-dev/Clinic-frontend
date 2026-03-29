@@ -1,5 +1,6 @@
 import axios from "axios";
 import Cookies from "js-cookie";
+import { toast } from "sonner";
 
 const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 const API_BASE_URL = RAW_API_URL.endsWith('/api') ? RAW_API_URL : `${RAW_API_URL}/api`;
@@ -26,8 +27,6 @@ apiClient.interceptors.request.use(
         return Promise.reject(error);
     }
 );
-
-import { toast } from "sonner";
 
 // Response interceptor for error handling
 apiClient.interceptors.response.use(
@@ -224,6 +223,10 @@ export const labTestAPI = {
     update: async (id, data) => {
         const response = await apiClient.put(`/lab-tests/${id}`, data);
         return response.data;
+    },
+    bulkStore: async (data) => {
+        const response = await apiClient.post('/lab-tests/bulk', data);
+        return response.data;
     }
 };
 
@@ -270,12 +273,16 @@ export const prescriptionAPI = {
         const response = await apiClient.post(`/visits/${visitId}/prescriptions`, data);
         return response.data;
     },
-    update: async (visitId, prescriptionId, data) => {
-        const response = await apiClient.patch(`/visits/${visitId}/prescriptions/${prescriptionId}`, { ...data, _method: 'PATCH' });
+    update: async (visitId, id, data) => {
+        const response = await apiClient.patch(`/visits/${visitId}/prescriptions/${id}`, data);
         return response.data;
     },
     listGlobal: async (params = {}) => {
         const response = await apiClient.get('/prescriptions', { params });
+        return response.data;
+    },
+    storeDirect: async (data) => {
+        const response = await apiClient.post('/prescriptions/direct', data);
         return response.data;
     }
 };
@@ -336,6 +343,10 @@ export const paymentAPI = {
     },
     list: async (billId) => {
         const response = await apiClient.get(`/bills/${billId}/payments`);
+        return response.data;
+    },
+    payVisit: async (visitId, data) => {
+        const response = await apiClient.post(`/visits/${visitId}/payments`, data);
         return response.data;
     }
 };

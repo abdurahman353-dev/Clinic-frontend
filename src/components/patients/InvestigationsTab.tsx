@@ -21,7 +21,7 @@ export default function InvestigationsTab({
   onLoadComplete: () => void;
 }): React.JSX.Element {
   const { investigations, isLoading, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations } = useInvestigations(patientId);
-  const { labTests, isLoadingLabTests, fetchLabTests, addLabTest, updateLabTest } = useLabTests();
+  const { labTests, isLoadingLabTests, fetchLabTests, addLabTest, updateLabTest, bulkAddLabTests } = useLabTests();
 
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
@@ -226,20 +226,17 @@ export default function InvestigationsTab({
 
     setIsSubmitting(true);
     try {
-      await Promise.all(validTests.map(test => 
-        addLabTest({
-          name: test.name,
-          type: test.type,
-          default_cost: parseFloat(test.default_cost) || 0
-        })
-      ));
+      await bulkAddLabTests(validTests.map(test => ({
+        name: test.name,
+        type: test.type,
+        default_cost: parseFloat(test.default_cost) || 0
+      })));
       
       toast.success(`${validTests.length} investigation types registered`);
       setIsNewLabTestModalOpen(false);
       setBulkNewLabTests([{ name: "", type: "lab", default_cost: "" }]);
-      fetchLabTests();
     } catch (error: any) {
-      toast.error("Failed to register some investigation types");
+      // Error toast is handled by interceptor or hook
     } finally {
       setIsSubmitting(false);
     }

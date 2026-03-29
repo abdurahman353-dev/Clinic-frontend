@@ -1,14 +1,16 @@
 "use client";
 
-import { FileText, Loader2, Search, Calendar, User, Pill } from "lucide-react";
+import { FileText, Loader2, Search, Calendar, User, Pill, Plus } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { prescriptionAPI } from "@/lib/api";
 import Link from "next/link";
+import DirectPrescriptionModal from "@/components/prescriptions/DirectPrescriptionModal";
 
 export default function PrescriptionsPage() {
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isDirectModalOpen, setIsDirectModalOpen] = useState(false);
 
   const fetchPrescriptions = useCallback(async () => {
     setIsLoading(true);
@@ -36,9 +38,17 @@ export default function PrescriptionsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Clinic Prescriptions</h1>
-          <p className="text-slate-500 mt-1">Global view of all medication prescriptions.</p>
+          <p className="text-slate-500 mt-1 text-sm">Global view of all medication prescriptions.</p>
         </div>
-        <div className="relative max-w-sm w-full">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+          <button
+            onClick={() => setIsDirectModalOpen(true)}
+            className="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white text-[13px] font-bold rounded-lg hover:bg-primary-700 transition-all flex items-center justify-center gap-2 shadow-sm shadow-primary-500/10 active:scale-[0.95]"
+          >
+            <Plus className="h-4 w-4 stroke-[3]" />
+            Direct Prescription
+          </button>
+          <div className="relative max-w-sm w-full">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-4 w-4 text-slate-400" />
           </div>
@@ -49,6 +59,7 @@ export default function PrescriptionsPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md leading-5 bg-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
           />
+          </div>
         </div>
       </div>
 
@@ -116,6 +127,12 @@ export default function PrescriptionsPage() {
           </div>
         )}
       </div>
+
+      <DirectPrescriptionModal 
+        isOpen={isDirectModalOpen}
+        onClose={() => setIsDirectModalOpen(false)}
+        onSuccess={fetchPrescriptions}
+      />
     </div>
   );
 }

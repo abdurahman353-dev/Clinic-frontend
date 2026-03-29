@@ -115,7 +115,18 @@ export default function SalesDashboard() {
   }
 
   const summary = data?.summary || {};
-  const dailyData = [...(data?.daily || [])].reverse(); // For chart
+  let dailyData = [...(data?.daily || [])].reverse(); // For chart
+
+  // If there's only one data point, add a dummy point at the beginning to show a line/curve
+  if (dailyData.length === 1) {
+    const firstDate = new Date(dailyData[0].date);
+    const prevDate = new Date(firstDate);
+    prevDate.setDate(firstDate.getDate() - 1);
+    dailyData = [
+      { date: prevDate.toISOString().split('T')[0], total: 0, consultation: 0, vitals: 0, investigations: 0, prescriptions: 0 },
+      ...dailyData
+    ];
+  }
 
   return (
     <div className="p-4 md:p-8 space-y-8 bg-slate-50 min-h-screen">

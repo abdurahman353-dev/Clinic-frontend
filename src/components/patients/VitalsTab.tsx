@@ -35,8 +35,7 @@ export default function VitalsTab({
     height: "",
     bmi: "",
     notes: "",
-    cost: "",
-    consultation_fee: ""
+    cost: ""
   });
 
   useEffect(() => {
@@ -79,7 +78,7 @@ export default function VitalsTab({
     setEditingId(null);
     setFormData({
       vital_type: "routine", blood_pressure: "", pulse_rate: "", temperature: "",
-      respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: "", cost: "", consultation_fee: ""
+      respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: "", cost: ""
     });
     setIsModalOpen(true);
   };
@@ -97,8 +96,7 @@ export default function VitalsTab({
       height: vital.height || "",
       bmi: vital.bmi || "",
       notes: vital.notes || "",
-      cost: vital.cost || "",
-      consultation_fee: vital.consultation_fee || ""
+      cost: vital.cost || ""
     });
     setIsModalOpen(true);
   };
@@ -113,7 +111,7 @@ export default function VitalsTab({
     const originalFormData = { ...formData };
     setFormData({
       vital_type: "routine", blood_pressure: "", pulse_rate: "", temperature: "",
-      respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: "", cost: "", consultation_fee: ""
+      respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: "", cost: ""
     });
 
     try {
@@ -130,7 +128,7 @@ export default function VitalsTab({
       setEditingId(null);
       setFormData({
         vital_type: "routine", blood_pressure: "", pulse_rate: "", temperature: "",
-        respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: "", cost: "", consultation_fee: ""
+        respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: "", cost: ""
       });
     } catch (err: any) {
       // toast.error is handled by api.js interceptor usually
@@ -191,7 +189,6 @@ export default function VitalsTab({
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Temp / SpO2 / RR</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Wt / Ht / BMI</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Vitals Charge (KES)</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cons. Fee (KES)</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Clinical Notes</th>
                       <th scope="col" className="relative px-6 py-3"><span className="sr-only">Edit</span></th>
                     </tr>
@@ -217,9 +214,6 @@ export default function VitalsTab({
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-slate-900 font-bold">
                           {row.cost ? `KSh ${row.cost}` : '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-slate-900 font-bold">
-                          {row.consultation_fee ? `KSh ${row.consultation_fee}` : '-'}
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate" title={row.notes}>
                           {row.notes || '-'}

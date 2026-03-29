@@ -1,10 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Pill, Loader2, Edit2, X, CheckCircle2 } from "lucide-react";
+import { Plus, Pill, Loader2, Edit2, X, CheckCircle2, Trash2 } from "lucide-react";
 import { usePrescriptions } from "@/hooks/usePrescriptions";
 import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
+
+interface PrescriptionItem {
+  medicine_id: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  quantity: string;
+}
 
 export default function PrescriptionsTab({ 
   patientId, 
@@ -24,14 +32,10 @@ export default function PrescriptionsTab({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const [formData, setFormData] = useState({
-    medicine_id: "",
-    dosage: "",
-    frequency: "",
-    duration: "",
-    quantity: "1",
-    notes: ""
-  });
+  const [notes, setNotes] = useState("");
+  const [items, setItems] = useState<PrescriptionItem[]>([
+    { medicine_id: "", dosage: "", frequency: "", duration: "", quantity: "1" }
+  ]);
 
   useEffect(() => {
     if (!isInitialLoaded) {
@@ -53,40 +57,62 @@ export default function PrescriptionsTab({
     }
   }, [prescriptions, onDataChange]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const addItem = () => {
+    setItems([...items, { medicine_id: "", dosage: "", frequency: "", duration: "", quantity: "1" }]);
+  };
+
+  const removeItem = (index: number) => {
+    if (items.length > 1) {
+      setItems(items.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateItem = (index: number, field: keyof PrescriptionItem, value: string) => {
+    const newItems = [...items];
+    newItems[index] = { ...newItems[index], [field]: value };
+    setItems(newItems);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    const selectedMed = medicines.find(m => m.id == formData.medicine_id);
-    const dataToSave = {
-      notes: formData.notes,
-      items: [{
-        medicine_id: formData.medicine_id,
-        medicine: selectedMed ? selectedMed.name : "Unknown Medicine",
-        dosage: formData.dosage,
-        frequency: formData.frequency,
-        duration: formData.duration,
-        quantity: parseInt(formData.quantity, 10) || 1
-      }]
-    };
+    
+    // Validation
+    if (items.some(item => !item.medicine_id || !item.dosage || !item.duration || !item.quantity)) {
+      toast.error("Please fill all required fields for each medicine");
+      return;
+    }
 
-    // Optimistic Closure
-    setIsModalOpen(false);
-    setEditingId(null);
-    const originalForm = { ...formData };
-    setFormData({ medicine_id: "", dosage: "", frequency: "", duration: "", quantity: "1", notes: "" });
+    setIsSubmitting(true);
+    
+    const dataToSave = {
+      notes,
+      items: items.map(item => {
+        const selectedMed = medicines.find(m => m.id == item.medicine_id);
+        return {
+          medicine_id: item.medicine_id,
+          medicine: selectedMed ? selectedMed.name : "Unknown Medicine",
+          dosage: item.dosage,
+          frequency: item.frequency,
+          duration: item.duration,
+          quantity: parseInt(item.quantity, 10) || 1
+        };
+      })
+    };
 
     try {
       if (editingId) {
+        // When editing, we currently only support single item update for simplicity 
+        // as per the existing backend delta logic concerns.
         await updatePrescription(editingId, dataToSave);
         toast.success("Prescription updated successfully");
       } else {
         await addPrescription(dataToSave);
         toast.success("Prescription added successfully");
       }
+      setIsModalOpen(false);
+      setEditingId(null);
+      setNotes("");
+      setItems([{ medicine_id: "", dosage: "", frequency: "", duration: "", quantity: "1" }]);
     } catch (err: any) {
       // toast.error is handled by api.js interceptor
     } finally {
@@ -96,28 +122,31 @@ export default function PrescriptionsTab({
 
   const handleEdit = (rx: any) => {
     setEditingId(rx.id);
-    const item = rx.items?.[0] || {};
-    setFormData({
-      medicine_id: item.medicine_id?.toString() || "",
-      dosage: item.dosage || "",
-      frequency: item.frequency || "",
-      duration: item.duration || "",
-      quantity: item.quantity?.toString() || "1",
-      notes: rx.notes || ""
-    });
+    setNotes(rx.notes || "");
+    const rxItems = rx.items || [];
+    if (rxItems.length > 0) {
+      setItems(rxItems.map((item: any) => ({
+        medicine_id: item.medicine_id?.toString() || "",
+        dosage: item.dosage || "",
+        frequency: item.frequency || "",
+        duration: item.duration || "",
+        quantity: item.quantity?.toString() || "1"
+      })));
+    } else {
+      setItems([{ medicine_id: "", dosage: "", frequency: "", duration: "", quantity: "1" }]);
+    }
     setIsModalOpen(true);
   };
 
   const handleAdd = () => {
     setEditingId(null);
-    setFormData({ medicine_id: "", dosage: "", frequency: "", duration: "", quantity: "1", notes: "" });
+    setNotes("");
+    setItems([{ medicine_id: "", dosage: "", frequency: "", duration: "", quantity: "1" }]);
     setIsModalOpen(true);
   };
 
-  // Helper to determine if prescription is still active based on duration and created_at
   const isActive = (rx: any) => {
     if (!rx.duration || !rx.created_at) return false;
-    // VERY simple heuristic: if duration contains "days", check if current date is within that range
     const daysMatch = rx.duration.match(/(\d+)\s*day/i);
     if (daysMatch) {
       const days = parseInt(daysMatch[1], 10);
@@ -125,7 +154,7 @@ export default function PrescriptionsTab({
       const expires = new Date(created.setDate(created.getDate() + days));
       return new Date() <= expires;
     }
-    return true; // Assume active if we can't parse
+    return true;
   };
 
   return (
@@ -153,7 +182,6 @@ export default function PrescriptionsTab({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {prescriptions.map((rx) => {
             const active = isActive(rx);
-            // The backend returns an 'items' array for each prescription
             const items = rx.items || [];
 
             return (
@@ -224,60 +252,123 @@ export default function PrescriptionsTab({
         </div>
       )}
 
-      {/* New Prescription Modal */}
+      {/* Bulk Prescription Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => { setIsModalOpen(false); setEditingId(null); }}
-        title={editingId ? "Edit Prescription" : "Add Prescription"}
-        description={editingId ? "Update prescription details" : "Add a new medication for this patient"}
+        title={editingId ? "Edit Prescription" : "Add Bulk Prescription"}
+        description={editingId ? "Update prescription details" : "Add one or more medications for this patient"}
+        maxWidth="max-w-xl"
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-4">
+            {items.map((item, index) => (
+              <div key={index} className="p-4 bg-slate-50 rounded-xl border border-slate-200 relative group transition-all hover:border-primary-200">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                  <div className="md:col-span-5">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">Medicine *</label>
+                    <select 
+                      required 
+                      value={item.medicine_id} 
+                      onChange={(e) => updateItem(index, "medicine_id", e.target.value)} 
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-all"
+                    >
+                      <option value="">Select medicine...</option>
+                      {medicines.map((m: any) => (
+                        <option key={m.id} value={m.id} disabled={m.stock?.quantity <= 0}>
+                          {m.name} {m.size ? `(${m.size})` : ''} ({m.stock?.quantity > 0 ? `${m.stock.quantity} left` : 'Out of Stock'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-3">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">Dosage *</label>
+                    <input 
+                      required 
+                      type="text" 
+                      value={item.dosage} 
+                      onChange={(e) => updateItem(index, "dosage", e.target.value)} 
+                      placeholder="e.g. 1 tab" 
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" 
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">Duration *</label>
+                    <input 
+                      required 
+                      type="text" 
+                      value={item.duration} 
+                      onChange={(e) => updateItem(index, "duration", e.target.value)} 
+                      placeholder="5d" 
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" 
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">Qty *</label>
+                    <input 
+                      required 
+                      type="number" 
+                      min="1" 
+                      value={item.quantity} 
+                      onChange={(e) => updateItem(index, "quantity", e.target.value)} 
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" 
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-12">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">Frequency (Optional)</label>
+                    <input 
+                      type="text" 
+                      value={item.frequency} 
+                      onChange={(e) => updateItem(index, "frequency", e.target.value)} 
+                      placeholder="e.g. 3 times a day" 
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" 
+                    />
+                  </div>
+                </div>
+
+                {items.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeItem(index)}
+                    className="absolute -top-2 -right-2 h-7 w-7 bg-white border border-red-100 text-red-500 rounded-full flex items-center justify-center shadow-sm hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={addItem}
+              className="inline-flex items-center px-3 py-1.5 border border-primary-200 text-primary-600 text-xs font-bold rounded-lg hover:bg-primary-50 transition-colors"
+            >
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Add More Medicine
+            </button>
+          </div>
+
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Medicine *</label>
-            <select required name="medicine_id" value={formData.medicine_id} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
-              <option value="">Select a medicine...</option>
-              {medicines.map((m: any) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} {m.size ? `(${m.size})` : ''} - {m.stock?.quantity > 0 ? `In Stock: ${m.stock.quantity}` : 'Out of Stock'}
-                </option>
-              ))}
-            </select>
-            {formData.medicine_id && medicines.find(m => m.id == formData.medicine_id)?.stock?.quantity === 0 && (
-               <p className="mt-1 text-xs text-red-600 font-medium">Warning: Selected medicine is out of stock.</p>
-            )}
+            <label className="block text-sm font-medium text-slate-700 mb-1">General Notes</label>
+            <textarea 
+              value={notes} 
+              onChange={(e) => setNotes(e.target.value)} 
+              rows={2} 
+              placeholder="e.g. Take after meals, watch for allergies..." 
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" 
+            />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Dosage *</label>
-              <input required type="text" name="dosage" value={formData.dosage} onChange={handleChange} placeholder="e.g. 1 Tablet, 5ml" className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Frequency *</label>
-              <input required type="text" name="frequency" value={formData.frequency} onChange={handleChange} placeholder="e.g. 3 times a day" className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Duration *</label>
-              <input required type="text" name="duration" value={formData.duration} onChange={handleChange} placeholder="e.g. 7 days, 1 month" className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Quantity to Dispense *</label>
-              <input required type="number" min="1" name="quantity" value={formData.quantity} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Additional Instructions</label>
-            <textarea name="notes" value={formData.notes} onChange={handleChange} rows={2} placeholder="e.g. Take after meals" className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-          </div>
-
-          <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
-            <button type="button" onClick={() => { setIsModalOpen(false); setEditingId(null); }} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
-            <button type="submit" disabled={isSubmitting || !formData.medicine_id} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : editingId ? "Save Changes" : "Add Prescription"}
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <button type="button" onClick={() => { setIsModalOpen(false); setEditingId(null); }} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
+            <button type="submit" disabled={isSubmitting || items.some(i => !i.medicine_id)} className="inline-flex items-center px-6 py-2 border border-transparent shadow-sm text-sm font-bold rounded-lg text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 transition-all active:scale-[0.98]">
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : editingId ? "Save Changes" : "Save All Prescriptions"}
             </button>
           </div>
         </form>

@@ -56,5 +56,18 @@ export function useLabTests() {
     }
   };
 
-  return { labTests, isLoadingLabTests, labTestsError, fetchLabTests, addLabTest, updateLabTest, setLabTests };
+  const bulkAddLabTests = async (tests: any[]) => {
+    setIsLoading(true);
+    try {
+      const res = await labTestAPI.bulkStore({ tests });
+      await fetchLabTests(); // Refresh the list
+      return res.data;
+    } catch (err: any) {
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { labTests, isLoadingLabTests, labTestsError, fetchLabTests, addLabTest, updateLabTest, bulkAddLabTests, setLabTests };
 }

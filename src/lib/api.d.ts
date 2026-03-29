@@ -43,6 +43,7 @@ declare module "@/lib/api" {
     store: (visitId: string | number, data: any) => Promise<any>;
     update: (visitId: string | number, rxId: string | number, data: any) => Promise<any>;
     listGlobal: (params?: any) => Promise<any>;
+    storeDirect: (data: any) => Promise<any>;
   }
 
   export interface BillingAPI {
@@ -54,6 +55,7 @@ declare module "@/lib/api" {
   export interface PaymentAPI {
     store: (billId: string | number, data: any) => Promise<any>;
     list: (billId: string | number) => Promise<any>;
+    payVisit: (visitId: string | number, data: any) => Promise<any>;
   }
 
   export interface MedicineAPI {
@@ -72,6 +74,7 @@ declare module "@/lib/api" {
     list: (params?: any) => Promise<any>;
     store: (data: any) => Promise<any>;
     update: (id: string | number, data: any) => Promise<any>;
+    bulkStore: (data: any) => Promise<any>;
   }
 
   export interface SalesAPI {
