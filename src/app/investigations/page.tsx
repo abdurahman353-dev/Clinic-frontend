@@ -409,12 +409,12 @@ export default function InvestigationsPage() {
                 <FileSearch className="h-4 w-4 mr-2 text-primary-500" />
                 Results & Outcome
               </h5>
-              <div className="p-5 bg-slate-900 text-slate-100 rounded-2xl border border-slate-800 shadow-xl min-h-[120px] font-mono text-sm leading-relaxed">
+              <div className="p-5 bg-slate-50 text-slate-900 rounded-2xl border border-slate-200 min-h-[120px] font-mono text-sm leading-relaxed">
                 {selectedInvestigation.result ? (
                   <div className="whitespace-pre-wrap">{selectedInvestigation.result}</div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-slate-600 italic">
-                    <Loader2 className="h-5 w-5 mb-2 opacity-20" />
+                  <div className="flex flex-col items-center justify-center h-full text-slate-400 italic">
+                    <Loader2 className="h-5 w-5 mb-2 opacity-50" />
                     Pending lab processing...
                   </div>
                 )}

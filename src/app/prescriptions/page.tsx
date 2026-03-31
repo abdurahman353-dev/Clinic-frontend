@@ -207,12 +207,16 @@ export default function PrescriptionsPage() {
                         ))}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-slate-500 line-clamp-2 max-w-xs">{rx.patient_id && (
-                        <div className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">In-patient</div>
-                      ) || (
-                          <div className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs">Walk-in</div>
-                        )}</span>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {rx.patient_id ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                           In-patient
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-100">
+                           Walk-in
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                       <div className="flex items-center">
