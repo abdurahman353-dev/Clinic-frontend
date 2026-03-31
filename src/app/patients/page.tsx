@@ -48,7 +48,7 @@ export default function PatientsList() {
       };
       if (genderFilter) params['filter[gender]'] = genderFilter;
       if (typeFilter) params['filter[patient_type]'] = typeFilter;
-      
+
       const data = await patientAPI.list(params);
       setPatients(data.data || []);
     } catch (err: any) {
@@ -69,7 +69,7 @@ export default function PatientsList() {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Patients</h1>
           <p className="text-slate-500 mt-1">Manage patient records and histories</p>
         </div>
-        <Link 
+        <Link
           href="/patients/new"
           className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-primary-600 text-white hover:bg-primary-700 h-10 px-4 py-2 shadow-sm"
         >
@@ -100,9 +100,9 @@ export default function PatientsList() {
                 className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md leading-5 bg-white placeholder-slate-500 focus:outline-none focus:placeholder-slate-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition duration-150 ease-in-out"
               />
             </div>
-            
-            <select 
-              value={genderFilter} 
+
+            <select
+              value={genderFilter}
               onChange={(e) => setGenderFilter(e.target.value)}
               className="text-sm border-slate-300 rounded-md shadow-sm h-9"
             >
@@ -112,8 +112,8 @@ export default function PatientsList() {
               <option value="other">Other</option>
             </select>
 
-            <select 
-              value={typeFilter} 
+            <select
+              value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
               className="text-sm border-slate-300 rounded-md shadow-sm h-9"
             >
@@ -158,7 +158,7 @@ export default function PatientsList() {
                           <Link href={`/patients/${patient.db_id}`} className="text-sm font-medium text-slate-900 hover:text-primary-600">
                             {patient.name}
                           </Link>
-                          <div className="text-sm text-slate-500">{patient.id} &bull; {patient.age || '?'} yrs, {patient.gender}</div>
+                          <div className="text-sm text-slate-500"> {patient.age || '?'} yrs, {patient.gender}</div>
                         </div>
                       </div>
                     </td>
@@ -169,9 +169,8 @@ export default function PatientsList() {
                       <div className="text-sm text-slate-600">{patient.id_number || '-'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        patient.patient_type === 'inpatient' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                      }`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${patient.patient_type === 'inpatient' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
                         {patient.patient_type || 'outpatient'}
                       </span>
                     </td>
@@ -179,22 +178,22 @@ export default function PatientsList() {
                       {new Date(patient.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative">
-                      <button 
+                      <button
                         onClick={() => setOpenMenuId(openMenuId === patient.db_id ? null : patient.db_id)}
                         className="text-slate-400 hover:text-slate-600 focus:outline-none p-1 rounded-full hover:bg-slate-100 transition-colors"
                       >
                         <MoreHorizontal className="h-5 w-5" />
                       </button>
-                      
+
                       {openMenuId === patient.db_id && (
                         <>
-                          <div 
-                            className="fixed inset-0 z-10" 
+                          <div
+                            className="inset-0 z-10"
                             onClick={() => setOpenMenuId(null)}
                           />
                           <div className="absolute right-6 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20">
                             <div className="py-1" role="menu" aria-orientation="vertical">
-                              <Link 
+                              <Link
                                 href={`/patients/${patient.db_id}`}
                                 className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
                                 role="menuitem"
@@ -202,7 +201,7 @@ export default function PatientsList() {
                                 <Eye className="mr-3 h-4 w-4 text-slate-400" />
                                 View Profile
                               </Link>
-                              <Link 
+                              <Link
                                 href={`/patients/${patient.db_id}/edit`}
                                 className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
                                 role="menuitem"
@@ -234,7 +233,7 @@ export default function PatientsList() {
             </table>
           )}
         </div>
-        
+
         {/* Pagination placeholder */}
         <div className="bg-white px-4 py-3 border-t border-slate-200 flex items-center justify-between sm:px-6">
           <div className="hidden sm:block text-sm text-slate-700">

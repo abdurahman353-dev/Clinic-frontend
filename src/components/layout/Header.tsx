@@ -5,6 +5,7 @@ import { Bell, Search, UserCircle, LogOut, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useStock } from "@/hooks/useStock";
 import Link from "next/link";
+import { Breadcrumb } from "./Breadcrumb";
 
 export function Header() {
   const { user, logout } = useAuth();
@@ -47,7 +48,8 @@ export function Header() {
 
   return (
     <header className="h-16 bg-surface border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 lg:px-8 shadow-sm">
-      <div className="flex-1"></div>
+      <div className="flex-1 min-w-0">
+        <Breadcrumb /></div>
       
       <div className="flex items-center gap-4">
         <Link href="/stock" className={`p-1.5 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 ${bellColorClass} ${bellBgClass} ${bellAnimationClass}`} title={stockAlertStatus !== 'none' ? `Stock Alert: ${stockAlertStatus}` : "Notifications"}>

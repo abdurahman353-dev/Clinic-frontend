@@ -5,8 +5,86 @@ import { Loader2, Receipt, FileText, CreditCard } from "lucide-react";
 import { billingAPI, paymentAPI, visitAPI } from "@/lib/api";
 import { toast } from "sonner";
 import { Modal } from "@/components/ui/Modal";
+import { printHtml } from "@/lib/print";
 
-// Reusable Receipt Component
+// Utility: print a bill object as an A5 receipt
+function printBill(bill: any, title = "WAFAA MEDICAL", subtitle = "Invoice / Receipt") {
+  if (!bill) return;
+  const itemsHtml = (bill.items || []).map((item: any) => {
+    const qtyMatch = item.name.match(/(\(Qty: (\d+)\))/);
+    const nameOnly = item.name.replace(/\s*\(Qty: \d+\)/, "").replace(/^Med: /, "").replace(/^Lab: /, "");
+    const qty = qtyMatch ? qtyMatch[2] : (item.quantity || 1);
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
+        <span style="flex:1;text-transform:uppercase;font-weight:600;font-size:11px;color:#0f172a;">${nameOnly}</span>
+        <div style="display:flex;gap:16px;width:80px;justify-content:space-between;flex-shrink:0;">
+          <span style="width:24px;text-align:center;color:#64748b;font-size:11px;">${qty}</span>
+          <span style="flex:1;text-align:right;font-weight:700;font-size:11px;">${parseFloat(item.amount).toLocaleString()}</span>
+        </div>
+      </div>`;
+  }).join("");
+
+  const total = parseFloat(bill.grand_total) - parseFloat(bill.discount_amount || 0);
+  const date = new Date(bill.created_at).toLocaleDateString();
+  const time = new Date(bill.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+  const html = `
+    <div style="max-width:148mm;margin:0 auto;padding:12mm 10mm;font-family:monospace;font-size:12px;color:#1e293b;background:white;">
+      <div style="text-align:center;margin-bottom:16px;">
+        <img src="/wafaa_logo.jpeg" alt="Logo" style="height:56px;width:auto;object-fit:contain;display:block;margin:0 auto 6px;" />
+        <h2 style="font-size:16px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 2px;">${title}</h2>
+        <p style="font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;margin:0 0 2px;">${subtitle}</p>
+        <p style="font-size:10px;margin:0;">Nairobi, Kenya</p>
+        <p style="font-size:10px;margin:2px 0 0;">Tel: +254 700 000 000</p>
+      </div>
+
+      <div style="border-top:1px dashed #cbd5e1;margin:12px 0;"></div>
+
+      <div style="font-size:10px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>DATE:</span><span>${date} ${time}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>REF NO:</span><span style="font-weight:700;">#${bill.id || bill.visit_id || "N/A"}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>PATIENT:</span><span style="font-weight:700;">${bill.patient_name || bill.patient?.name || "WALK-IN"}</span></div>
+      </div>
+
+      <div style="border-top:1px dashed #cbd5e1;margin:12px 0;"></div>
+
+      <div style="display:flex;justify-content:space-between;font-weight:900;font-size:9px;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid #e2e8f0;padding-bottom:6px;margin-bottom:8px;color:#64748b;">
+        <span style="flex:1;">ITEM</span>
+        <div style="display:flex;gap:16px;width:80px;justify-content:space-between;">
+          <span style="width:24px;text-align:center;">QTY</span>
+          <span style="flex:1;text-align:right;">PRICE</span>
+        </div>
+      </div>
+
+      ${itemsHtml}
+
+      <div style="border-top:1px dashed #cbd5e1;margin:12px 0;"></div>
+
+      <div>
+        <div style="display:flex;justify-content:space-between;font-weight:700;font-size:13px;margin-bottom:4px;"><span>SUB TOTAL</span><span>KSh ${parseFloat(bill.grand_total).toLocaleString()}</span></div>
+        ${parseFloat(bill.discount_amount || 0) > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;font-style:italic;margin-bottom:4px;"><span>DISCOUNT</span><span>- ${parseFloat(bill.discount_amount).toLocaleString()}</span></div>` : ""}
+        <div style="display:flex;justify-content:space-between;font-weight:900;font-size:16px;border-top:2px solid #0f172a;padding-top:8px;margin-top:4px;"><span>TOTAL</span><span>KSh ${total.toLocaleString()}</span></div>
+      </div>
+
+      <div style="border-top:1px dashed #cbd5e1;margin:12px 0;"></div>
+
+      <div style="font-size:10px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>TENDERED:</span><span>${parseFloat(bill.paid_amount || 0).toLocaleString()}</span></div>
+        <div style="display:flex;justify-content:space-between;font-weight:700;color:#dc2626;border-top:1px solid #f1f5f9;padding-top:4px;margin-top:4px;"><span>BALANCE DUE:</span><span>${parseFloat(bill.balance_amount || 0).toLocaleString()}</span></div>
+      </div>
+
+      <div style="border-top:1px dashed #cbd5e1;margin:16px 0;"></div>
+
+      <div style="text-align:center;">
+        <p style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;margin:0;">THANK YOU!</p>
+        <p style="font-size:9px;margin:4px 0 0;">WISH YOU A QUICK RECOVERY</p>
+      </div>
+    </div>
+  `;
+
+  printHtml(html, "A5", `@page { size: A5 portrait; margin: 0; }`);
+}
+
 export const ThermalReceipt = ({ bill, title = "WAFAA MEDICAL", subtitle = "Quality Healthcare Services" }: { bill: any, title?: string, subtitle?: string }) => {
   if (!bill) return null;
   return (
@@ -392,7 +470,7 @@ export default function BillingTab({ patientId }: { patientId: number }) {
           <ThermalReceipt bill={selectedVisitForReceipt} title="FINAL RECEIPT" subtitle="CUMULATIVE CHARGES" />
         </div>
         <div className="mt-4 flex justify-end gap-3">
-          <button onClick={() => window.print()} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800">Print</button>
+          <button onClick={() => printBill(selectedVisitForReceipt, "FINAL RECEIPT", "CUMULATIVE CHARGES")} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800">Print Receipt</button>
           <button onClick={() => setIsReceiptModalOpen(false)} className="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50">Close</button>
         </div>
       </Modal>
@@ -411,7 +489,7 @@ export default function BillingTab({ patientId }: { patientId: number }) {
               Pay Now
             </button>
           )}
-          <button onClick={() => window.print()} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800">Print</button>
+          <button onClick={() => printBill(selectedBill, "WAFAA MEDICAL", "Invoice / Receipt")} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800">Print Invoice</button>
           <button onClick={() => setIsInvoicePrintOpen(false)} className="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50">Close</button>
         </div>
       </Modal>

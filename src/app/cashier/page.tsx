@@ -24,6 +24,20 @@ import {
 import { billingAPI, paymentAPI, visitAPI } from "@/lib/api";
 import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
+import { printHtml } from "@/lib/print";
+
+function printBill(bill: any) {
+  if (!bill) return;
+  const itemsHtml = (bill.items || []).map((item: any) => {
+    const qtyMatch = item.name.match(/(\(Qty: (\d+)\))/);
+    const nameOnly = item.name.replace(/\s*\(Qty: \d+\)/, "").replace(/^Med: /, "").replace(/^Lab: /, "");
+    const qty = qtyMatch ? qtyMatch[2] : (item.quantity || 1);
+    return `<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:8px;"><span style="flex:1;text-transform:uppercase;font-weight:600;font-size:11px;">${nameOnly}</span><div style="display:flex;gap:12px;width:80px;justify-content:space-between;"><span style="width:20px;text-align:center;font-size:11px;">${qty}</span><span style="flex:1;text-align:right;font-weight:700;font-size:11px;">${parseFloat(item.amount).toLocaleString()}</span></div></div>`;
+  }).join("");
+  const total = parseFloat(bill.grand_total) - parseFloat(bill.discount_amount || 0);
+  const html = `<div style="max-width:148mm;margin:0 auto;padding:12mm 10mm;font-family:monospace;font-size:12px;color:#1e293b;"><div style="text-align:center;margin-bottom:16px;"><img src="/wafaa_logo.jpeg" alt="" style="height:52px;display:block;margin:0 auto 6px;" /><h2 style="font-size:15px;font-weight:900;text-transform:uppercase;margin:0 0 2px;">WAFAA MEDICAL</h2><p style="font-size:9px;color:#64748b;text-transform:uppercase;margin:0;">Quality Healthcare Services</p><p style="font-size:10px;margin:4px 0 0;">Nairobi, Kenya | Tel: +254 700 000 000</p></div><div style="border-top:1px dashed #cbd5e1;margin:10px 0;"></div><div style="font-size:10px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span>DATE:</span><span>${new Date(bill.created_at).toLocaleDateString()} ${new Date(bill.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span>${bill.visit_id ? 'VISIT NO' : 'INV NO'}:</span><span style="font-weight:700;">#${bill.id || bill.visit_id}</span></div><div style="display:flex;justify-content:space-between;"><span>PATIENT:</span><span style="font-weight:700;">${bill.patient_name || 'WALK-IN'}</span></div></div><div style="border-top:1px dashed #cbd5e1;margin:10px 0;"></div><div style="display:flex;justify-content:space-between;font-size:9px;font-weight:900;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:4px;margin-bottom:8px;color:#64748b;"><span style="flex:1;">ITEM</span><div style="display:flex;gap:12px;width:80px;justify-content:space-between;"><span>QTY</span><span>PRICE</span></div></div>${itemsHtml}<div style="border-top:1px dashed #cbd5e1;margin:10px 0;"></div><div><div style="display:flex;justify-content:space-between;font-weight:700;font-size:13px;margin-bottom:4px;"><span>SUB TOTAL</span><span>KSh ${parseFloat(bill.grand_total).toLocaleString()}</span></div>${parseFloat(bill.discount_amount || 0) > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;font-style:italic;margin-bottom:4px;"><span>DISCOUNT</span><span>- ${parseFloat(bill.discount_amount).toLocaleString()}</span></div>` : ""}<div style="display:flex;justify-content:space-between;font-weight:900;font-size:16px;border-top:2px solid #0f172a;padding-top:6px;margin-top:4px;"><span>TOTAL</span><span>KSh ${total.toLocaleString()}</span></div></div><div style="border-top:1px dashed #cbd5e1;margin:10px 0;"></div><div style="font-size:10px;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span>TENDERED:</span><span>${parseFloat(bill.paid_amount || 0).toLocaleString()}</span></div><div style="display:flex;justify-content:space-between;font-weight:700;color:#dc2626;"><span>BALANCE DUE:</span><span>${parseFloat(bill.balance_amount || 0).toLocaleString()}</span></div></div><div style="border-top:1px dashed #cbd5e1;margin:14px 0;"></div><div style="text-align:center;"><p style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;margin:0;">THANK YOU!</p><p style="font-size:9px;margin:4px 0 0;">WISH YOU A QUICK RECOVERY</p><p style="font-size:8px;color:#94a3b8;margin:8px 0 0;text-transform:uppercase;letter-spacing:0.1em;">** CUSTOMER COPY **</p></div></div>`;
+  printHtml(html, "A5", `@page { size: A5 portrait; margin: 0; }`);
+}
 
 const ThermalReceipt = ({ bill }: { bill: any }) => {
   if (!bill) return null;
@@ -66,7 +80,7 @@ const ThermalReceipt = ({ bill }: { bill: any }) => {
           <span className="flex-1 text-right">PRICE</span>
         </div>
       </div>
-      
+
       <div className="space-y-3 text-[11px]">
         {bill.items?.map((item: any, i: number) => {
           const qtyMatch = item.name.match(/\(Qty: (\d+)\)/);
@@ -208,7 +222,7 @@ export default function CashierPage() {
       groups[vid].paid_amount += parseFloat(bill.paid_amount);
       groups[vid].balance_amount += parseFloat(bill.balance_amount);
       if (bill.items) groups[vid].items = [...groups[vid].items, ...bill.items];
-      
+
       if (groups[vid].paid_amount > 0 && groups[vid].balance_amount > 0) {
         groups[vid].status = 'partial';
       }
@@ -297,9 +311,9 @@ export default function CashierPage() {
     setIsSubmitting(true);
     try {
       if (selectedBill.visit_id) {
-         await paymentAPI.payVisit(selectedBill.visit_id, paymentData);
+        await paymentAPI.payVisit(selectedBill.visit_id, paymentData);
       } else {
-         await paymentAPI.store(selectedBill.bill_id || selectedBill.id, paymentData);
+        await paymentAPI.store(selectedBill.bill_id || selectedBill.id, paymentData);
       }
       fetchBills(); // Refresh in background for consistency
       fetchHistory();
@@ -320,8 +334,7 @@ export default function CashierPage() {
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900 tracking-tight flex items-center gap-2">
-            <CreditCard className="h-6 w-6 text-slate-700" />
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
             Cashier Management
           </h1>
           <p className="text-sm text-slate-500 mt-1">Invoice generation and payment processing.</p>
@@ -392,9 +405,9 @@ export default function CashierPage() {
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-1">
                           {bill.items?.slice(0, 3).map((item: any, idx: number) => (
-                             <span key={idx} className="px-1.5 py-0.5 border border-slate-200 text-slate-600 rounded text-xs font-medium uppercase truncate max-w-[120px]">
-                               {item.name}
-                             </span>
+                            <span key={idx} className="px-1.5 py-0.5 border border-slate-200 text-slate-600 rounded text-xs font-medium uppercase truncate max-w-[120px]">
+                              {item.name}
+                            </span>
                           ))}
                           {bill.items?.length > 3 && (
                             <span className="px-1.5 py-0.5 text-slate-400 text-xs font-medium">+{bill.items.length - 3}</span>
@@ -511,11 +524,11 @@ export default function CashierPage() {
               </div>
             )}
             <button
-              onClick={() => window.print()}
+              onClick={() => printBill(selectedBill)}
               className="px-4 border border-slate-200 rounded hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 text-slate-500"
             >
               <Receipt className="h-4 w-4" />
-              <span className="text-xs font-medium">Print</span>
+              <span className="text-xs font-medium">Print A5</span>
             </button>
           </div>
         </div>
@@ -641,8 +654,8 @@ export default function CashierPage() {
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">
                 {paymentData.payment_method === 'mobile' ? 'M-Pesa Transaction Code' :
-                 paymentData.payment_method === 'card' ? 'Bank/Card Reference No.' :
-                 'Reference / Auth No.'}
+                  paymentData.payment_method === 'card' ? 'Bank/Card Reference No.' :
+                    'Reference / Auth No.'}
               </label>
               <input
                 type="text"

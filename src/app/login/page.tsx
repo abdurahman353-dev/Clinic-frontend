@@ -6,6 +6,7 @@ import { Mail, Lock, LogIn, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { authAPI } from "@/lib/api";
 import toast from "react-hot-toast";
+import { loginSchema } from "@/lib/validation";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -20,6 +21,15 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     setErrorMsg("");
+
+    // Client-side validation before sending to server
+    const parsed = loginSchema.safeParse({ email, password });
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0]?.message || "Invalid input";
+      setErrorMsg(firstError);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const { user, token } = await authAPI.login(email, password, rememberMe);
@@ -36,8 +46,9 @@ export default function LoginPage() {
       setUser(user);
 
       window.location.href = "/";
-    } catch (err: any) {
-      setErrorMsg(err.message || "Failed to login");
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setErrorMsg(e.message || "Failed to login");
     } finally {
       setIsLoading(false);
     }
