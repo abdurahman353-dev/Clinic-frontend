@@ -9,8 +9,9 @@ import VitalsTab from "@/components/patients/VitalsTab";
 import InvestigationsTab from "@/components/patients/InvestigationsTab";
 import PrescriptionsTab from "@/components/patients/PrescriptionsTab";
 import BillingTab from "@/components/patients/BillingTab";
+import { Suspense } from "react";
 
-export default function PatientDetailPage({ params }: { params: Promise<{ id: string }> }) {
+function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
   const unwrappedId = unwrappedParams.id;
 
@@ -229,5 +230,17 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PatientDetailPage(props: any) {
+  return (
+    <Suspense fallback={
+       <div className="p-6 md:p-8 max-w-7xl mx-auto flex justify-center items-center min-h-[50vh]">
+         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+       </div>
+    }>
+      <PatientDetailContent {...props} />
+    </Suspense>
   );
 }

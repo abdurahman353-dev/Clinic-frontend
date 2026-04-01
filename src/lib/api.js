@@ -239,6 +239,10 @@ export const labTestAPI = {
     bulkStore: async (data) => {
         const response = await apiClient.post('/lab-tests/bulk', data);
         return response.data;
+    },
+    delete: async (id) => {
+        const response = await apiClient.delete(`/lab-tests/${id}`);
+        return response.data;
     }
 };
 
@@ -322,6 +326,14 @@ export const medicineAPI = {
     },
     update: async (id, data) => {
         const response = await apiClient.put(`/medicines/${id}`, data);
+        return response.data;
+    },
+    updateCategory: async (old_name, new_name) => {
+        const response = await apiClient.post('/medicines/category/update', { old_name, new_name });
+        return response.data;
+    },
+    deleteCategory: async (name) => {
+        const response = await apiClient.post('/medicines/category/delete', { name });
         return response.data;
     }
 };

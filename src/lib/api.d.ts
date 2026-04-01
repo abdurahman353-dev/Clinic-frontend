@@ -67,6 +67,8 @@ declare module "@/lib/api" {
     list: (params?: any) => Promise<any>;
     store: (data: any) => Promise<any>;
     update: (id: string | number, data: any) => Promise<any>;
+    updateCategory: (old_name: string, new_name: string) => Promise<any>;
+    deleteCategory: (name: string) => Promise<any>;
   }
 
   export interface StockAPI {
@@ -80,6 +82,7 @@ declare module "@/lib/api" {
     store: (data: any) => Promise<any>;
     update: (id: string | number, data: any) => Promise<any>;
     bulkStore: (data: any) => Promise<any>;
+    delete: (id: string | number) => Promise<any>;
   }
 
   export interface SalesAPI {

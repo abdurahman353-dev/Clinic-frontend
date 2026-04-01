@@ -96,5 +96,29 @@ export function useStock() {
     }
   };
 
-  return { medicines, isLoading, errorMsg, fetchMedicines, addMedicine, updateMedicine, addStock, adjustStock, setMedicines };
+  const updateCategory = async (oldName: string, newName: string) => {
+    const originalMedicines = [...medicines];
+    setMedicines(prev => prev.map(m => m.category === oldName ? { ...m, category: newName } : m));
+
+    try {
+      await medicineAPI.updateCategory(oldName, newName);
+    } catch (err: any) {
+      setMedicines(originalMedicines);
+      throw err;
+    }
+  };
+
+  const deleteCategory = async (name: string) => {
+    const originalMedicines = [...medicines];
+    setMedicines(prev => prev.map(m => m.category === name ? { ...m, category: null } : m));
+
+    try {
+      await medicineAPI.deleteCategory(name);
+    } catch (err: any) {
+      setMedicines(originalMedicines);
+      throw err;
+    }
+  };
+
+  return { medicines, isLoading, errorMsg, fetchMedicines, addMedicine, updateMedicine, addStock, adjustStock, updateCategory, deleteCategory, setMedicines };
 }

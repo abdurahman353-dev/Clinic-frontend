@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, CheckCircle2, Clock, Loader2, FileText, Edit2, X, Search } from "lucide-react";
+import { Plus, CheckCircle2, Clock, Loader2, FileText, Edit2, X, Search, Trash2 } from "lucide-react";
 import { useInvestigations } from "@/hooks/useInvestigations";
 import { useLabTests } from "@/hooks/useLabTests";
+import { labTestAPI } from "@/lib/api";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
 
 export default function InvestigationsTab({
@@ -21,7 +23,7 @@ export default function InvestigationsTab({
   onLoadComplete: () => void;
 }): React.JSX.Element {
   const { investigations, isLoading, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations } = useInvestigations(patientId);
-  const { labTests, isLoadingLabTests, fetchLabTests, addLabTest, updateLabTest, bulkAddLabTests } = useLabTests();
+  const { labTests, isLoadingLabTests, fetchLabTests, addLabTest, updateLabTest, bulkAddLabTests, deleteLabTest } = useLabTests();
 
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
@@ -35,6 +37,8 @@ export default function InvestigationsTab({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTests, setSelectedTests] = useState<any[]>([]);
   const [bulkNewLabTests, setBulkNewLabTests] = useState<any[]>([{ name: "", type: "lab", default_cost: "" }]);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [labTestToDelete, setLabTestToDelete] = useState<any>(null);
 
   const [requestForm, setRequestForm] = useState({
     name: "",
@@ -289,6 +293,29 @@ export default function InvestigationsTab({
     }
   };
 
+
+  const handleDeleteLabTest = (id: number, name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLabTestToDelete({ id, name });
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteLabTest = async () => {
+    if (!labTestToDelete) return;
+    
+    // Close modal and provide immediate feedback
+    const originalId = labTestToDelete.id;
+    setIsDeleteConfirmOpen(false);
+    setLabTestToDelete(null);
+    toast.success("Investigation type removed from library");
+
+    try {
+      await deleteLabTest(originalId);
+    } catch (err: any) {
+      // Hook handles state restoration; API interceptor handles toast error
+    }
+  };
+
   const filteredLabTests = labTests.filter(test => 
     test.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -485,18 +512,28 @@ export default function InvestigationsTab({
                           </div>
                           <p className="text-[10px] text-slate-400 uppercase tracking-tight">{test.type}</p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingLabTest({ ...test });
-                            setIsEditLabTestModalOpen(true);
-                          }}
-                          className="ml-2 p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-md opacity-0 group-hover:opacity-100 transition-all"
-                          title="Edit Library Item"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingLabTest({ ...test });
+                              setIsEditLabTestModalOpen(true);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-md"
+                            title="Edit Library Item"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteLabTest(test.id, test.name, e)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md"
+                            title="Delete Library Item"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
                     ))
                   ) : (
@@ -719,6 +756,17 @@ export default function InvestigationsTab({
           </form>
         )}
       </Modal>
+      {/* Lab Test Deletion Confirmation */}
+      <ConfirmDialog
+        isOpen={isDeleteConfirmOpen}
+        onClose={() => setIsDeleteConfirmOpen(false)}
+        onConfirm={confirmDeleteLabTest}
+        title="Delete Investigation Type"
+        message={`Are you sure you want to delete "${labTestToDelete?.name}" from the master library? Existing patient records will remain, but this test won't be available for new requests.`}
+        confirmText="Delete"
+        type="danger"
+        isLoading={isSubmitting}
+      />
     </div>
   );
 }

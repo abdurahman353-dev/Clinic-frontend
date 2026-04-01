@@ -69,5 +69,17 @@ export function useLabTests() {
     }
   };
 
-  return { labTests, isLoadingLabTests, labTestsError, fetchLabTests, addLabTest, updateLabTest, bulkAddLabTests, setLabTests };
+  const deleteLabTest = async (id: number) => {
+    const originalTests = [...labTests];
+    setLabTests(prev => prev.filter(item => item.id !== id));
+
+    try {
+      await labTestAPI.delete(id);
+    } catch (err: any) {
+      setLabTests(originalTests);
+      throw err;
+    }
+  };
+
+  return { labTests, isLoadingLabTests, labTestsError, fetchLabTests, addLabTest, updateLabTest, bulkAddLabTests, deleteLabTest, setLabTests };
 }

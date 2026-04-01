@@ -197,16 +197,18 @@ export default function CashierPage() {
     if (activeTab === 'history') fetchHistory();
   }, [activeTab, fetchBills, fetchHistory]);
 
-  const groupedBills = useMemo(() => {
+  const allGroupedVisits = useMemo(() => {
     const groups: { [visitId: string]: any } = {};
-    bills.forEach(bill => {
-      const vid = bill.visit_id || `standalone-${bill.id}`;
+    const allRecords = [...bills, ...historyBills];
+    
+    allRecords.forEach(bill => {
+      const vid = bill.visit_id ? `visit-${bill.visit_id}` : `bill-${bill.id}`;
       if (!groups[vid]) {
         groups[vid] = {
           id: vid,
           visit_id: bill.visit_id,
           bill_id: bill.id,
-          patient_name: bill.patient_name || bill.patient?.name,
+          patient_name: bill.patient_name || bill.patient?.name || 'Walk-in Patient',
           updated_at: bill.updated_at,
           created_at: bill.created_at,
           grand_total: 0,
@@ -217,57 +219,50 @@ export default function CashierPage() {
           status: 'pending'
         };
       }
-      groups[vid].grand_total += parseFloat(bill.grand_total);
-      groups[vid].discount_amount += parseFloat(bill.discount_amount);
-      groups[vid].paid_amount += parseFloat(bill.paid_amount);
-      groups[vid].balance_amount += parseFloat(bill.balance_amount);
+      
+      groups[vid].grand_total += parseFloat(bill.grand_total || 0);
+      groups[vid].discount_amount += parseFloat(bill.discount_amount || 0);
+      groups[vid].paid_amount += parseFloat(bill.paid_amount || 0);
+      groups[vid].balance_amount += parseFloat(bill.balance_amount || 0);
       if (bill.items) groups[vid].items = [...groups[vid].items, ...bill.items];
-
-      if (groups[vid].paid_amount > 0 && groups[vid].balance_amount > 0) {
-        groups[vid].status = 'partial';
+      
+      // Update timestamps to latest
+      if (new Date(bill.updated_at) > new Date(groups[vid].updated_at)) {
+        groups[vid].updated_at = bill.updated_at;
       }
     });
-    return Object.values(groups).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [bills]);
 
-  const filteredBills = groupedBills.filter((bill: any) =>
-    bill.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    bill.id.toString().includes(searchTerm)
-  );
-
-  const groupedHistory = useMemo(() => {
-    const groups: { [visitId: string]: any } = {};
-    historyBills.forEach(bill => {
-      const vid = bill.visit_id || `standalone-${bill.id}`;
-      if (!groups[vid]) {
-        groups[vid] = {
-          id: vid,
-          visit_id: bill.visit_id,
-          bill_id: bill.id,
-          patient_name: bill.patient_name || bill.patient?.name,
-          updated_at: bill.updated_at,
-          created_at: bill.created_at,
-          grand_total: 0,
-          discount_amount: 0,
-          paid_amount: 0,
-          balance_amount: 0,
-          items: [],
-          status: 'paid'
-        };
+    return Object.values(groups).map((group: any) => {
+      if (group.balance_amount <= 0 && group.paid_amount > 0) {
+        group.status = 'paid';
+      } else if (group.paid_amount > 0) {
+        group.status = 'partial';
+      } else {
+        group.status = 'pending';
       }
-      groups[vid].grand_total += parseFloat(bill.grand_total);
-      groups[vid].discount_amount += parseFloat(bill.discount_amount);
-      groups[vid].paid_amount += parseFloat(bill.paid_amount);
-      groups[vid].balance_amount += parseFloat(bill.balance_amount);
-      if (bill.items) groups[vid].items = [...groups[vid].items, ...bill.items];
+      return group;
     });
-    return Object.values(groups).sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-  }, [historyBills]);
+  }, [bills, historyBills]);
 
-  const filteredHistory = groupedHistory.filter((bill: any) =>
-    bill.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    bill.id.toString().includes(searchTerm)
-  );
+  const filteredBills = useMemo(() => {
+    return allGroupedVisits
+      .filter(v => v.status !== 'paid')
+      .filter(v => 
+        v.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (v.visit_id || v.bill_id).toString().includes(searchTerm)
+      )
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [allGroupedVisits, searchTerm]);
+
+  const filteredHistory = useMemo(() => {
+    return allGroupedVisits
+      .filter(v => v.status === 'paid')
+      .filter(v => 
+        v.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (v.visit_id || v.bill_id).toString().includes(searchTerm)
+      )
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+  }, [allGroupedVisits, searchTerm]);
 
   const handleOpenPayment = (bill: any) => {
     setSelectedBill(bill);
@@ -399,8 +394,8 @@ export default function CashierPage() {
                   ) : filteredBills.map((bill) => (
                     <tr key={bill.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-slate-900">{bill.patient_name || 'Walking Patient'}</div>
-                        <div className="text-xs text-slate-500 font-mono">#{bill.id} &bull; {new Date(bill.created_at).toLocaleDateString()}</div>
+                        <div className="text-sm font-medium text-slate-900">{bill.patient_name}</div>
+                        <div className="text-xs text-slate-500 font-mono">{bill.visit_id ? `Visit #${bill.visit_id}` : `Inv #${bill.bill_id}`} &bull; {new Date(bill.created_at).toLocaleDateString()}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-1">
@@ -467,8 +462,8 @@ export default function CashierPage() {
                   ) : filteredHistory.map((bill: any) => (
                     <tr key={bill.id} className="hover:bg-slate-50/50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-slate-900">{bill.patient_name || 'Walking Patient'}</div>
-                        <div className="text-xs text-slate-400">Inv #{bill.id}</div>
+                        <div className="text-sm font-medium text-slate-900">{bill.patient_name}</div>
+                        <div className="text-xs text-slate-400">{bill.visit_id ? `Visit #${bill.visit_id}` : `Inv #${bill.bill_id}`}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">KSh {parseFloat(bill.grand_total).toLocaleString()}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
