@@ -7,8 +7,9 @@ import Image from "next/image";
 import { Lock, Eye, EyeOff, CheckCircle } from "lucide-react";
 import { authAPI } from "@/lib/api";
 import toast from "react-hot-toast";
+import { Suspense } from "react";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const [token, setToken] = useState("");
   const [email, setEmail] = useState("");
@@ -173,5 +174,17 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-blue-600">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+      </div>
+    }>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }
