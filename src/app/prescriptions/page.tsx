@@ -25,7 +25,7 @@ export default function PrescriptionsPage() {
   const [formData, setFormData] = useState({
     patient_name: "",
     notes: "",
-    items: [{ medicine_id: "", dosage: "", quantity: 1, duration: "" }]
+    items: [{ medicine_id: "", dosage: "", frequency: "", quantity: 1, duration: "" }]
   });
 
   const fetchPrescriptions = useCallback(async () => {
@@ -57,7 +57,7 @@ export default function PrescriptionsPage() {
   const handleAddItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { medicine_id: "", dosage: "", quantity: 1, duration: "" }]
+      items: [...formData.items, { medicine_id: "", dosage: "", frequency: "", quantity: 1, duration: "" }]
     });
   };
 
@@ -66,9 +66,61 @@ export default function PrescriptionsPage() {
     setFormData({ ...formData, items: newItems });
   };
 
+  const getFormCategory = (med: any) => {
+    if (!med) return "exact";
+    const form = (med.dosage_form || "").toLowerCase();
+    const unit = (med.unit || "").toLowerCase();
+    
+    const volumeForms = ["bottle", "syrup", "suspension", "liquid"];
+    const volumeUnits = ["bottle"];
+    
+    const manualForms = ["tube", "ointment", "cream"];
+    const manualUnits = ["tube"];
+    
+    if (volumeForms.some(v => form.includes(v)) || volumeUnits.includes(unit)) return "volume";
+    if (manualForms.some(m => form.includes(m)) || manualUnits.includes(unit)) return "manual";
+    
+    return "exact";
+  };
+
+  const calculateQty = (dose: any, freq: any, dur: any, med: any, currentQty: number) => {
+    const category = getFormCategory(med);
+    if (category === "manual") return currentQty || 1; // User decides
+
+    const d = parseFloat(dose) || 0;
+    const freqMap: Record<string, number> = {
+      "once a day": 1,
+      "twice a day": 2,
+      "thrice a day": 3,
+      "four times a day": 4
+    };
+    const f = freqMap[freq] || 0;
+    const du = parseInt(dur) || 0;
+    
+    if (category === "volume") {
+      const sizeStr = med?.size?.toString() || "1";
+      const match = sizeStr.match(/(\d+(\.\d+)?)/);
+      const bottleSize = match ? parseFloat(match[0]) : 1;
+      
+      const totalMl = d * f * du;
+      const bottles = Math.ceil(totalMl / bottleSize);
+      return bottles > 0 ? bottles : 1;
+    }
+    
+    const result = Math.ceil(d * f * du);
+    return result > 0 ? result : 1;
+  };
+
   const handleItemChange = (index: number, field: string, value: any) => {
     const newItems = [...formData.items];
-    newItems[index] = { ...newItems[index], [field]: value };
+    const updatedItem = { ...newItems[index], [field]: value };
+    
+    if (field !== "quantity") {
+      const selectedMed = medicines.find(m => m.id == updatedItem.medicine_id);
+      updatedItem.quantity = calculateQty(updatedItem.dosage, updatedItem.frequency, updatedItem.duration, selectedMed, updatedItem.quantity);
+    }
+    
+    newItems[index] = updatedItem;
     setFormData({ ...formData, items: newItems });
   };
 
@@ -78,7 +130,7 @@ export default function PrescriptionsPage() {
     setFormData({
       patient_name: "",
       notes: "",
-      items: [{ medicine_id: "", dosage: "", quantity: 1, duration: "" }]
+      items: [{ medicine_id: "", dosage: "", frequency: "", quantity: 1, duration: "" }]
     });
     setIsModalOpen(true);
   };
@@ -93,6 +145,7 @@ export default function PrescriptionsPage() {
         medicine_id: item.medicine_id.toString(),
         dosage: item.dosage || "",
         quantity: item.quantity,
+        frequency: item.frequency || "",
         duration: item.duration || ""
       }))
     });
@@ -111,19 +164,35 @@ export default function PrescriptionsPage() {
       return;
     }
 
+    // Stock Validation
+    const overStockItem = formData.items.find(item => {
+      const med = medicines.find(m => m.id == item.medicine_id);
+      const stockQty = med?.stock?.quantity || 0;
+      return item.quantity > stockQty;
+    });
+
+    if (overStockItem) {
+      const medName = medicines.find(m => m.id == overStockItem.medicine_id)?.name || "Unknown Medicine";
+      toast.error(`Quantity for ${medName} exceeds available stock`);
+      return;
+    }
+
     setIsSubmitting(true);
+    // Optimistic UI updates
+    setIsModalOpen(false);
+    toast.success(isEditing ? "Prescription updated successfully!" : "Prescription saved instantly!");
+
     try {
       if (isEditing && selectedPrescription) {
         await prescriptionAPI.updateStandalone(selectedPrescription.id, formData);
-        toast.success("Prescription updated successfully");
       } else {
         await prescriptionAPI.storeStandalone(formData);
-        toast.success("Prescription added successfully");
       }
-      setIsModalOpen(false);
       fetchPrescriptions();
     } catch (err) {
       console.error("Failed to save prescription", err);
+      // Let global interceptor handle error visually, but re-sync
+      fetchPrescriptions();
     } finally {
       setIsSubmitting(false);
     }
@@ -307,51 +376,113 @@ export default function PrescriptionsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Dosage</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 1x3"
-                      value={item.dosage}
-                      onChange={(e) => handleItemChange(index, 'dosage', e.target.value)}
-                      className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                    />
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Dose *</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        required
+                        placeholder={(() => {
+                          const med = item.medicine_id ? medicines.find(m => m.id == item.medicine_id) : null;
+                          if (med && getFormCategory(med) === "manual") return "e.g. Apply thinly";
+                          return "e.g. 1";
+                        })()}
+                        value={item.dosage}
+                        onChange={(e) => handleItemChange(index, 'dosage', e.target.value)}
+                        className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      />
+                      {(() => {
+                        const med = item.medicine_id ? medicines.find(m => m.id == item.medicine_id) : null;
+                        if (!med) return null;
+                        const category = getFormCategory(med);
+                        let suffix = med.unit;
+                        if (category === "volume") suffix = "ml";
+                        if (category === "manual") suffix = "";
+                        if (!suffix) return null;
+                        return (
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">
+                            {suffix}
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Quantity</label>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Frequency *</label>
+                    <select
+                      required
+                      value={item.frequency}
+                      onChange={(e) => handleItemChange(index, 'frequency', e.target.value)}
+                      className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white"
+                    >
+                      <option value="">Select frequency...</option>
+                      <option value="once a day">once a day</option>
+                      <option value="twice a day">twice a day</option>
+                      <option value="thrice a day">thrice a day</option>
+                      <option value="four times a day">four times a day</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Qty</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={Number.isNaN(item.quantity) ? "" : item.quantity}
+                        onChange={(e) => handleItemChange(index, 'quantity', e.target.value === "" ? "" : parseInt(e.target.value, 10))}
+                        className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-slate-50 font-bold text-primary-700"
+                      />
+                      {(() => {
+                        const med = medicines.find(m => m.id == item.medicine_id);
+                        if (med && med.stock?.quantity !== undefined && (Number(item.quantity) || 1) > med.stock.quantity) {
+                          return <p className="text-red-500 text-[10px] mt-1 font-semibold">Exceeds stock ({med.stock.quantity} left)</p>;
+                        }
+                        return null;
+                      })()}
+                    </div>
+                    {formData.items.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItem(index)}
+                        className="text-red-500 hover:text-red-700 p-2 mt-4"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Duration (days) *</label>
                     <input
                       type="number"
                       min="1"
-                      value={item.quantity}
-                      onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
+                      required
+                      placeholder="e.g. 5"
+                      value={item.duration}
+                      onChange={(e) => handleItemChange(index, 'duration', e.target.value)}
                       className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Duration</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="e.g. 5 days"
-                        value={item.duration}
-                        onChange={(e) => handleItemChange(index, 'duration', e.target.value)}
-                        className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      />
-                      {formData.items.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveItem(index)}
-                          className="text-red-500 hover:text-red-700 p-2"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
+                
+                {item.medicine_id && (
+                  <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-sm">
+                    <span className="text-slate-500 font-medium">Item Total</span>
+                    <span className="font-bold text-primary-700">
+                      KSh {(item.quantity * (medicines.find((m: any) => m.id == item.medicine_id)?.unit_price || 0)).toFixed(2)}
+                    </span>
                   </div>
-                </div>
+                )}
               </div>
             ))}
+          </div>
+
+          <div className="bg-primary-50 p-4 rounded-xl flex justify-between items-center mb-4">
+            <span className="font-bold text-primary-900 border-b border-primary-200 pb-1">Grand Total</span>
+            <span className="font-bold text-primary-800 text-xl">
+              KSh {formData.items.reduce((sum, item) => sum + (item.quantity * (medicines.find((m: any) => m.id == item.medicine_id)?.unit_price || 0)), 0).toFixed(2)}
+            </span>
           </div>
 
           <div>
@@ -419,10 +550,11 @@ export default function PrescriptionsPage() {
                         Qty: {item.quantity}
                       </span>
                     </div>
-                    {(item.dosage || item.duration) && (
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
-                        {item.dosage && <span>Dosage: <span className="text-slate-700 font-medium">{item.dosage}</span></span>}
-                        {item.duration && <span>Duration: <span className="text-slate-700 font-medium">{item.duration}</span></span>}
+                    {(item.dosage || item.frequency || item.duration) && (
+                      <div className="mt-2 text-sm text-slate-500 flex flex-wrap gap-x-4 gap-y-1">
+                        {item.dosage && <span>Dosage: <span className="font-semibold text-slate-700">{item.dosage}</span></span>}
+                        {item.frequency && <span>Frequency: <span className="font-semibold text-slate-700">{item.frequency}</span></span>}
+                        {item.duration && <span>Duration: <span className="font-semibold text-slate-700">{item.duration} days</span></span>}
                       </div>
                     )}
                   </div>

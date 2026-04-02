@@ -67,9 +67,65 @@ export default function PrescriptionsTab({
     }
   };
 
+  const getFormCategory = (med: any) => {
+    if (!med) return "exact";
+    const form = (med.dosage_form || "").toLowerCase();
+    const unit = (med.unit || "").toLowerCase();
+    
+    const volumeForms = ["bottle", "syrup", "suspension", "liquid"];
+    const volumeUnits = ["bottle"];
+    
+    const manualForms = ["tube", "ointment", "cream"];
+    const manualUnits = ["tube"];
+    
+    if (volumeForms.some(v => form.includes(v)) || volumeUnits.includes(unit)) return "volume";
+    if (manualForms.some(m => form.includes(m)) || manualUnits.includes(unit)) return "manual";
+    
+    // Default to exact mapping (tablet, capsule, vial, ampoule, puff, etc.)
+    return "exact";
+  };
+
+  const calculateQty = (item: PrescriptionItem, med: any, currentQty: string) => {
+    const category = getFormCategory(med);
+    if (category === "manual") return currentQty || "1"; // User decides
+
+    const dose = parseFloat(item.dosage) || 0;
+    const freqMap: Record<string, number> = {
+      "once a day": 1,
+      "twice a day": 2,
+      "thrice a day": 3,
+      "four times a day": 4
+    };
+    const freq = freqMap[item.frequency] || 0;
+    const dur = parseInt(item.duration) || 0;
+    
+    if (category === "volume") {
+      const sizeStr = med?.size?.toString() || "1";
+      // Extract numeric value from size e.g., "150ml" -> 150
+      const match = sizeStr.match(/(\d+(\.\d+)?)/);
+      const bottleSize = match ? parseFloat(match[0]) : 1;
+      
+      const totalMl = dose * freq * dur;
+      const bottles = Math.ceil(totalMl / bottleSize);
+      return (bottles > 0 ? bottles : 1).toString();
+    }
+    
+    // exact category
+    const result = Math.ceil(dose * freq * dur);
+    return (result > 0 ? result : 1).toString();
+  };
+
   const updateItem = (index: number, field: keyof PrescriptionItem, value: string) => {
     const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
+    const updatedItem = { ...newItems[index], [field]: value };
+    
+    // Auto-calculate QTY if it's not the manual QTY field being changed
+    if (field !== "quantity") {
+      const selectedMed = medicines.find(m => m.id == updatedItem.medicine_id);
+      updatedItem.quantity = calculateQty(updatedItem, selectedMed, updatedItem.quantity);
+    }
+    
+    newItems[index] = updatedItem;
     setItems(newItems);
   };
 
@@ -79,6 +135,19 @@ export default function PrescriptionsTab({
     // Validation
     if (items.some(item => !item.medicine_id || !item.dosage || !item.duration || !item.quantity)) {
       toast.error("Please fill all required fields for each medicine");
+      return;
+    }
+
+    // Stock Validation
+    const overStockItem = items.find(item => {
+      const med = medicines.find(m => m.id == item.medicine_id);
+      const stockQty = med?.stock?.quantity || 0;
+      return parseInt(item.quantity) > stockQty;
+    });
+
+    if (overStockItem) {
+      const medName = medicines.find(m => m.id == overStockItem.medicine_id)?.name || "Unknown Medicine";
+      toast.error(`Quantity for ${medName} exceeds available stock`);
       return;
     }
 
@@ -99,22 +168,24 @@ export default function PrescriptionsTab({
       })
     };
 
+    // Optimistic UI Updates
+    setIsModalOpen(false);
+    toast.success(editingId ? "Prescription updated successfully!" : "Prescription saved instantly!");
+
     try {
       if (editingId) {
         // When editing, we currently only support single item update for simplicity 
         // as per the existing backend delta logic concerns.
         await updatePrescription(editingId, dataToSave);
-        toast.success("Prescription updated successfully");
       } else {
         await addPrescription(dataToSave);
-        toast.success("Prescription added successfully");
       }
-      setIsModalOpen(false);
+      
       setEditingId(null);
       setNotes("");
       setItems([{ medicine_id: "", dosage: "", frequency: "", duration: "", quantity: "1" }]);
     } catch (err: any) {
-      // toast.error is handled by api.js interceptor
+      // API error caught visually, background refresh restores state
     } finally {
       setIsSubmitting(false);
     }
@@ -283,52 +354,94 @@ export default function PrescriptionsTab({
                   </div>
 
                   <div className="md:col-span-3">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">Dosage *</label>
-                    <input 
-                      required 
-                      type="text" 
-                      value={item.dosage} 
-                      onChange={(e) => updateItem(index, "dosage", e.target.value)} 
-                      placeholder="e.g. 1 tab" 
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" 
-                    />
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">Dose *</label>
+                    <div className="relative">
+                      <input 
+                        required 
+                        type="text" 
+                        value={item.dosage} 
+                        onChange={(e) => updateItem(index, "dosage", e.target.value)} 
+                        placeholder={(() => {
+                          const med = item.medicine_id ? medicines.find((m: any) => m.id == item.medicine_id) : null;
+                          if (med && getFormCategory(med) === "manual") return "e.g. Apply thinly";
+                          return "e.g. 1";
+                        })()}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-all" 
+                      />
+                      {(() => {
+                        const med = item.medicine_id ? medicines.find((m: any) => m.id == item.medicine_id) : null;
+                        if (!med) return null;
+                        const category = getFormCategory(med);
+                        let suffix = med.unit;
+                        if (category === "volume") suffix = "ml";
+                        if (category === "manual") suffix = "";
+                        if (!suffix) return null;
+                        return (
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">
+                            {suffix}
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </div>
 
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">Duration *</label>
+                  <div className="md:col-span-4">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">Frequency *</label>
+                    <select 
+                      required 
+                      value={item.frequency} 
+                      onChange={(e) => updateItem(index, "frequency", e.target.value)} 
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-all"
+                    >
+                      <option value="">Select frequency...</option>
+                      <option value="once a day">once a day</option>
+                      <option value="twice a day">twice a day</option>
+                      <option value="thrice a day">thrice a day</option>
+                      <option value="four times a day">four times a day</option>
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-3">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">Duration (days) *</label>
                     <input 
                       required 
-                      type="text" 
+                      type="number" 
+                      min="1"
                       value={item.duration} 
                       onChange={(e) => updateItem(index, "duration", e.target.value)} 
-                      placeholder="5d" 
+                      placeholder="e.g. 5" 
                       className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" 
                     />
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">Qty *</label>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">Qty</label>
                     <input 
                       required 
                       type="number" 
                       min="1" 
                       value={item.quantity} 
                       onChange={(e) => updateItem(index, "quantity", e.target.value)} 
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" 
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm font-bold text-primary-700" 
                     />
-                  </div>
-                  
-                  <div className="md:col-span-12">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">Frequency (Optional)</label>
-                    <input 
-                      type="text" 
-                      value={item.frequency} 
-                      onChange={(e) => updateItem(index, "frequency", e.target.value)} 
-                      placeholder="e.g. 3 times a day" 
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" 
-                    />
+                    {(() => {
+                      const med = medicines.find(m => m.id == item.medicine_id);
+                      if (med && med.stock?.quantity !== undefined && parseInt(item.quantity) > med.stock.quantity) {
+                        return <p className="text-red-500 text-[10px] mt-1 font-semibold">Exceeds stock ({med.stock.quantity} left)</p>;
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
+
+                {item.medicine_id && (
+                  <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-sm">
+                    <span className="text-slate-500 font-medium">Item Total</span>
+                    <span className="font-bold text-primary-700">
+                      KSh {(parseInt(item.quantity || "1") * (medicines.find((m: any) => m.id == item.medicine_id)?.unit_price || 0)).toFixed(2)}
+                    </span>
+                  </div>
+                )}
 
                 {items.length > 1 && (
                   <button
@@ -352,6 +465,12 @@ export default function PrescriptionsTab({
               <Plus className="mr-1.5 h-3.5 w-3.5" />
               Add More Medicine
             </button>
+          </div>
+          <div className="bg-primary-50 p-4 rounded-xl flex justify-between items-center mb-4 mt-6">
+            <span className="font-bold text-primary-900 border-b border-primary-200 pb-1">Grand Total</span>
+            <span className="font-bold text-primary-800 text-xl">
+              KSh {items.reduce((sum, item) => sum + (parseInt(item.quantity || "1") * (medicines.find((m: any) => m.id == item.medicine_id)?.unit_price || 0)), 0).toFixed(2)}
+            </span>
           </div>
 
           <div>

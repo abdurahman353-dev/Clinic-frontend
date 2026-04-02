@@ -80,8 +80,15 @@ import { useRouter } from "next/navigation";
     e.preventDefault();
     setIsSubmitting(true);
 
+    let finalSize = formData.size.trim();
+    const isVolume = ["syrup", "suspension", "liquid", "drops"].includes(formData.dosage_form.toLowerCase());
+    if (finalSize && isVolume && /^\d+(\.\d+)?$/.test(finalSize)) {
+      finalSize += " ml";
+    }
+
     const payload = {
       ...formData,
+      size: finalSize,
       unit_price: formData.unit_price ? parseFloat(formData.unit_price) : 0,
       initial_stock: formData.initial_stock ? parseInt(formData.initial_stock, 10) : 0,
       minimum_stock: formData.minimum_stock ? parseInt(formData.minimum_stock, 10) : 0,
@@ -560,12 +567,28 @@ import { useRouter } from "next/navigation";
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Dosage Form</label>
-              <input type="text" name="dosage_form" value={formData.dosage_form} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. tablet, syrup, injection" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Dosage Form *</label>
+              <select required name="dosage_form" value={formData.dosage_form} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl shadow-sm focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all font-medium sm:text-sm appearance-none">
+                <option value="">Select form...</option>
+                <option value="tablet">Tablet</option>
+                <option value="capsule">Capsule</option>
+                <option value="syrup">Syrup</option>
+                <option value="suspension">Suspension</option>
+                <option value="injection">Injection</option>
+                <option value="ointment">Ointment</option>
+                <option value="cream">Cream</option>
+                <option value="lotion">Lotion</option>
+                <option value="drops">Drops</option>
+                <option value="inhaler">Inhaler</option>
+                <option value="sachet">Sachet</option>
+                <option value="suppository">Suppository</option>
+              </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Size / Strength</label>
-              <input type="text" name="size" value={formData.size} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 500mg" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Size / Strength {["syrup", "suspension", "liquid", "drops"].includes(formData.dosage_form.toLowerCase()) && "(volume in ml)"}
+              </label>
+              <input type="text" name="size" value={formData.size} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder={["syrup", "suspension", "liquid", "drops"].includes(formData.dosage_form.toLowerCase()) ? "e.g. 200" : "e.g. 500mg"} />
             </div>
 
             <div className="md:col-span-2"><h4 className="text-sm font-semibold text-slate-900 border-b pb-2 mt-2">Initial Stock Configuration</h4></div>
@@ -577,8 +600,18 @@ import { useRouter } from "next/navigation";
             </div>
             <div className="flex gap-4">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Tracking Unit</label>
-                <input type="text" name="unit" value={formData.unit} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. tablets, boxes, bottles" />
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tracking Unit *</label>
+                <select required name="unit" value={formData.unit} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl shadow-sm focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all font-medium sm:text-sm appearance-none">
+                  <option value="">Select unit...</option>
+                  <option value="tablet">tablet</option>
+                  <option value="capsule">capsule</option>
+                  <option value="bottle">bottle</option>
+                  <option value="vial">vial</option>
+                  <option value="ampoule">ampoule</option>
+                  <option value="tube">tube</option>
+                  <option value="sachet">sachet</option>
+                  <option value="puff">puff</option>
+                </select>
               </div>
               <div className="flex-1">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Unit Price (KSh)</label>
