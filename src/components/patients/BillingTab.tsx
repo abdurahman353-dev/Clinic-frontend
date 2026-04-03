@@ -122,7 +122,7 @@ export const ThermalReceipt = ({ bill, title = "WAFAA MEDICAL", subtitle = "Qual
           <span className="flex-1 text-right">PRICE</span>
         </div>
       </div>
-      
+
       <div className="space-y-3 text-[11px]">
         {bill.items?.map((item: any, i: number) => {
           const qtyMatch = item.name.match(/\(Qty: (\d+)\)/);
@@ -476,8 +476,8 @@ export default function BillingTab({ patientId }: { patientId: number }) {
       </Modal>
 
       {/* Print individual invoice modal */}
-      <Modal isOpen={isInvoicePrintOpen} onClose={() => setIsInvoicePrintOpen(false)} title={`Invoice #${selectedBill?.id}`} maxWidth="sm">
-        <div className="bg-slate-50 p-4 rounded-xl">
+      <Modal isOpen={isInvoicePrintOpen} onClose={() => setIsInvoicePrintOpen(false)} title={`Invoice #${selectedBill?.id}`} maxWidth="100px">
+        <div className="bg-slate-50 p-2 rounded-xl">
           <ThermalReceipt bill={selectedBill} title="WAFAA MEDICAL" subtitle="Invoice / Receipt" />
         </div>
         <div className="mt-4 flex justify-end gap-3">

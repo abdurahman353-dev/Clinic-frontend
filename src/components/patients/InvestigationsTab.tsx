@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, CheckCircle2, Clock, Loader2, FileText, Edit2, X, Search, Trash2 } from "lucide-react";
+import { Plus, CheckCircle2, Clock, Loader2, FileText, Edit2, X, Search, Trash2, ArrowLeft } from "lucide-react";
 import { useInvestigations } from "@/hooks/useInvestigations";
 import { useLabTests } from "@/hooks/useLabTests";
 import { labTestAPI } from "@/lib/api";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
+
+type FormView = "table" | "request" | "result";
 
 export default function InvestigationsTab({
   patientId,
@@ -25,8 +27,7 @@ export default function InvestigationsTab({
   const { investigations, isLoading, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations } = useInvestigations(patientId);
   const { labTests, isLoadingLabTests, fetchLabTests, addLabTest, updateLabTest, bulkAddLabTests, deleteLabTest } = useLabTests();
 
-  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
-  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  const [view, setView] = useState<FormView>("table");
   const [isNewLabTestModalOpen, setIsNewLabTestModalOpen] = useState(false);
   const [isEditLabTestModalOpen, setIsEditLabTestModalOpen] = useState(false);
   const [editingLabTest, setEditingLabTest] = useState<any>(null);
@@ -44,12 +45,12 @@ export default function InvestigationsTab({
     name: "",
     type: "lab",
     notes: "",
-    cost: ""
+    cost: "",
+    diagnosis: ""
   });
 
   const totalCost = selectedTests.reduce((sum, test) => sum + (Number(test.default_cost) || 0), 0);
-  
-  // Sync requestForm name with selected tests for comma-separated display if not editing
+
   useEffect(() => {
     if (!editingId && selectedTests.length > 0) {
       const names = selectedTests.map(t => t.name).join(", ");
@@ -78,24 +79,35 @@ export default function InvestigationsTab({
     }
   }, [fetchInvestigations, fetchLabTests, isInitialLoaded, onLoadComplete]);
 
-  // Sync internal investigations with lifted state
   useEffect(() => {
     if (isInitialLoaded && investigations.length === 0 && initialData.length > 0) {
       setInvestigations(initialData);
     }
   }, [initialData, isInitialLoaded, setInvestigations, investigations.length]);
 
-  // Update lifted state when internal investigations change
   useEffect(() => {
     if (investigations.length > 0) {
       onDataChange(investigations);
     }
   }, [investigations, onDataChange]);
 
+  const resetRequestForm = () => {
+    setRequestForm({ name: "", type: "lab", notes: "", cost: "", diagnosis: "" });
+    setSelectedTests([]);
+    setSearchTerm("");
+    setEditingId(null);
+    setView("table");
+  };
+
+  const resetResultForm = () => {
+    setResultForm({ result: "", status: "completed" });
+    setSelectedInvId(null);
+    setView("table");
+  };
+
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate: if not editing, must have at least one test selected
+
     if (!editingId && selectedTests.length === 0 && !requestForm.name) {
       toast.error("Please select at least one investigation");
       return;
@@ -104,54 +116,47 @@ export default function InvestigationsTab({
     setIsSubmitting(true);
 
     const commonNotes = requestForm.notes;
-
-    // Optimistic Closure
-    setIsRequestModalOpen(false);
+    const diagnosis = requestForm.diagnosis;
     const originalSelectedTests = [...selectedTests];
     const originalRequestForm = { ...requestForm };
-    
-    // Clear state
-    setSelectedTests([]);
-    setRequestForm({ name: "", type: "lab", notes: "", cost: "" });
-    setSearchTerm("");
+
+    resetRequestForm();
 
     try {
       if (editingId) {
-        // Edit single request
         await updateInvestigation(editingId, {
           name: originalRequestForm.name,
           type: originalRequestForm.type,
           notes: originalRequestForm.notes,
-          cost: originalRequestForm.cost
+          cost: originalRequestForm.cost,
+          diagnosis: originalRequestForm.diagnosis
         });
         toast.success("Investigation updated successfully");
       } else {
-        // Bulk Add
-        const testsToRequest = selectedTests.length > 0 
-          ? selectedTests 
+        const testsToRequest = originalSelectedTests.length > 0
+          ? originalSelectedTests
           : [{ name: originalRequestForm.name, type: originalRequestForm.type, cost: originalRequestForm.cost }];
 
-        await Promise.all(testsToRequest.map(test => 
+        await Promise.all(testsToRequest.map(test =>
           addInvestigation({
             name: test.name,
             type: test.type,
             notes: commonNotes,
-            cost: test.cost || test.default_cost
+            cost: test.cost || test.default_cost,
+            diagnosis
           })
         ));
         toast.success(`${testsToRequest.length} investigation(s) requested successfully`);
       }
     } catch (err: any) {
-      // Error handled by api.js
+      // handled by api.js
     } finally {
       setIsSubmitting(false);
-      setEditingId(null);
     }
   };
 
   const selectLabTest = (test: any) => {
     if (editingId) {
-      // When editing, we just update the form
       setRequestForm({
         ...requestForm,
         name: test.name,
@@ -160,7 +165,6 @@ export default function InvestigationsTab({
       });
       setSearchTerm(test.name);
     } else {
-      // When adding new, we add to bulk selection
       if (!selectedTests.find(t => t.id === test.id)) {
         setSelectedTests(prev => [...prev, test]);
       }
@@ -178,26 +182,23 @@ export default function InvestigationsTab({
     if (!selectedInvId) return;
     setIsSubmitting(true);
 
-    // Optimistic Closure
-    setIsResultModalOpen(false);
-    setSelectedInvId(null);
     const originalResult = { ...resultForm };
-    setResultForm({ result: "", status: "completed" });
+    resetResultForm();
 
     try {
       await updateInvestigation(selectedInvId, originalResult);
       toast.success("Test result uploaded successfully");
     } catch (err: any) {
-      // toast.error is handled by api.js interceptor
+      // handled by api.js
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const openResultModal = (invId: number) => {
+  const openResultForm = (invId: number) => {
     setSelectedInvId(invId);
     setResultForm({ result: "", status: "completed" });
-    setIsResultModalOpen(true);
+    setView("result");
   };
 
   const handleEditRequest = (test: any) => {
@@ -206,28 +207,27 @@ export default function InvestigationsTab({
       name: test.name || "",
       type: test.type || "lab",
       notes: test.notes || "",
-      cost: test.cost || ""
+      cost: test.cost || "",
+      diagnosis: test.diagnosis || ""
     });
-    setIsRequestModalOpen(true);
+    setView("request");
   };
 
   const handleAddRequest = () => {
     setEditingId(null);
-    setRequestForm({ name: "", type: "lab", notes: "", cost: "" });
+    setRequestForm({ name: "", type: "lab", notes: "", cost: "", diagnosis: "" });
     setSearchTerm("");
     setIsDropdownOpen(false);
-    setIsRequestModalOpen(true);
+    setView("request");
   };
 
   const handleNewLabTestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     const validTests = bulkNewLabTests.filter(t => t.name.trim() !== "");
     if (validTests.length === 0) {
       toast.error("Please add at least one investigation name");
       return;
     }
-
     setIsSubmitting(true);
     try {
       await bulkAddLabTests(validTests.map(test => ({
@@ -235,20 +235,17 @@ export default function InvestigationsTab({
         type: test.type,
         default_cost: parseFloat(test.default_cost) || 0
       })));
-      
       toast.success(`${validTests.length} investigation types registered`);
       setIsNewLabTestModalOpen(false);
       setBulkNewLabTests([{ name: "", type: "lab", default_cost: "" }]);
     } catch (error: any) {
-      // Error toast is handled by interceptor or hook
+      // handled
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const addBulkRow = () => {
-    setBulkNewLabTests([...bulkNewLabTests, { name: "", type: "lab", default_cost: "" }]);
-  };
+  const addBulkRow = () => setBulkNewLabTests([...bulkNewLabTests, { name: "", type: "lab", default_cost: "" }]);
 
   const removeBulkRow = (index: number) => {
     if (bulkNewLabTests.length > 1) {
@@ -267,29 +264,19 @@ export default function InvestigationsTab({
   const handleEditLabTestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingLabTest) return;
-    
     const data = {
       name: editingLabTest.name,
       type: editingLabTest.type,
       default_cost: parseFloat(editingLabTest.default_cost) || 0
     };
     const id = editingLabTest.id;
-
-    // Close modal and reset immediately
     setIsEditLabTestModalOpen(false);
     setEditingLabTest(null);
-
-    // Update current form if it matches
-    if (requestForm.name === data.name || searchTerm === data.name) {
-      setRequestForm(prev => ({ ...prev, name: data.name, type: data.type, cost: data.default_cost.toString() }));
-      setSearchTerm(data.name);
-    }
-
     try {
       await updateLabTest(id, data);
       toast.success("Investigation type updated in library");
     } catch (err: any) {
-      // Error handled by api.js
+      // handled
     }
   };
 
@@ -302,7 +289,7 @@ export default function InvestigationsTab({
 
   const confirmDeleteLabTest = async () => {
     if (!labTestToDelete) return;
-    
+
     // Close modal and provide immediate feedback
     const originalId = labTestToDelete.id;
     setIsDeleteConfirmOpen(false);
@@ -316,15 +303,400 @@ export default function InvestigationsTab({
     }
   };
 
-  const filteredLabTests = labTests.filter(test => 
+  const filteredLabTests = labTests.filter(test =>
     test.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // ── REQUEST / EDIT FORM ───────────────────────────────────────────────────────
+  if (view === "request") {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={resetRequestForm}
+            className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1.5" />
+            Back to Investigations
+          </button>
+          <span className="text-slate-300">/</span>
+          <h2 className="text-lg font-bold text-slate-900">
+            {editingId ? "Edit Investigation Request" : "Request Investigation"}
+          </h2>
+        </div>
 
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-primary-50 to-blue-50 px-6 py-4 border-b border-slate-200">
+            <p className="text-sm text-slate-600">
+              {editingId ? "Update test request details." : "Add a new test request for this patient. You can select multiple tests at once."}
+            </p>
+          </div>
+
+          <form onSubmit={handleRequestSubmit} className="p-6 space-y-6">
+            {/* Investigation Name */}
+            <div className="relative">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-medium text-slate-700">Investigation Name *</label>
+                <button
+                  type="button"
+                  onClick={() => setIsNewLabTestModalOpen(true)}
+                  className="text-xs text-primary-600 hover:text-primary-700 font-medium inline-flex items-center"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add New Type
+                </button>
+              </div>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-slate-400" />
+                </div>
+                <input
+                  required={!editingId && selectedTests.length === 0}
+                  type="text"
+                  value={searchTerm || (selectedTests.length > 0 ? selectedTests.map(t => t.name).join(", ") : "")}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (selectedTests.length > 0 && val === "") {
+                      setSelectedTests([]);
+                      setSearchTerm("");
+                    } else {
+                      setSearchTerm(val);
+                    }
+                    if (editingId) setRequestForm({ ...requestForm, name: val });
+                    setIsDropdownOpen(true);
+                  }}
+                  onFocus={() => setIsDropdownOpen(true)}
+                  className={`w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${selectedTests.length > 0 ? 'bg-primary-50/30' : ''}`}
+                  placeholder={editingId ? "Investigation name..." : "Search or type investigation name... (Bulk allowed)"}
+                  autoComplete="off"
+                />
+
+                {!editingId && selectedTests.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5 p-2 bg-slate-50 border border-dashed border-slate-200 rounded-lg">
+                    {selectedTests.map(test => (
+                      <span
+                        key={test.id}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white text-primary-700 text-[11px] font-semibold border border-primary-200 shadow-sm"
+                      >
+                        {test.name}
+                        <button
+                          type="button"
+                          onClick={() => removeSelectedTest(test.id)}
+                          className="p-0.5 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      </span>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTests([])}
+                      className="text-[10px] text-slate-400 hover:text-red-500 ml-auto px-1"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                )}
+
+                {isDropdownOpen && (
+                  <div className="absolute z-50 mt-1 w-full bg-white shadow-lg max-h-48 rounded-lg py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm border border-slate-200">
+                    {filteredLabTests.length > 0 ? (
+                      filteredLabTests.map((test) => (
+                        <div
+                          key={test.id}
+                          className="cursor-pointer select-none relative py-2 pl-3 pr-2 hover:bg-slate-50 transition-colors flex items-center justify-between group"
+                          onClick={() => selectLabTest(test)}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="block truncate font-medium text-slate-900">{test.name}</span>
+                              <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded ml-2 whitespace-nowrap">KSh {test.default_cost}</span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 uppercase tracking-tight">{test.type}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingLabTest({ ...test });
+                              setIsEditLabTestModalOpen(true);
+                            }}
+                            className="ml-2 p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-md opacity-0 group-hover:opacity-100 transition-all"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-2 px-3 text-slate-500 text-sm">No matches. You can still type the name manually.</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Category</label>
+                <select
+                  value={requestForm.type}
+                  onChange={e => setRequestForm({ ...requestForm, type: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                >
+                  <option value="lab">Laboratory (Blood, Urine, etc.)</option>
+                  <option value="radiology">Radiology (X-Ray, MRI, Ultrasound)</option>
+                  <option value="procedure">Clinical Procedure</option>
+                </select>
+              </div>
+
+              {/* Test Fee */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Test Fee (KES)</label>
+                <div className="relative rounded-lg shadow-sm">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <span className="text-slate-500 sm:text-sm font-medium">KSh</span>
+                  </div>
+                  <input
+                    type="number"
+                    value={requestForm.cost}
+                    onChange={e => setRequestForm({ ...requestForm, cost: e.target.value })}
+                    className="block w-full rounded-lg border border-slate-300 py-2 pl-12 pr-3 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Diagnosis */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Diagnosis / Clinical Indication
+                {/* <span className="ml-1.5 text-xs font-normal text-slate-400">(Why is this test being ordered?)</span> */}
+              </label>
+              <input
+                type="text"
+                value={requestForm.diagnosis}
+                onChange={e => setRequestForm({ ...requestForm, diagnosis: e.target.value })}
+                placeholder="e.g. Suspected malaria, screening for diabetes, follow-up on hypertension..."
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              />
+            </div>
+
+            {/* Clinical Notes */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Additional Clinical Notes</label>
+              <textarea
+                value={requestForm.notes}
+                onChange={e => setRequestForm({ ...requestForm, notes: e.target.value })}
+                rows={3}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                placeholder="Any extra instructions or context for the lab..."
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={resetRequestForm}
+                className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex items-center px-5 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 transition-colors active:scale-[0.98]"
+              >
+                {isSubmitting
+                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {editingId ? "Saving..." : "Requesting..."}</>
+                  : editingId ? "Save Changes" : "Request Test"
+                }
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Add New Lab Test Type Modal (Bulk) - kept as modal since it's a library action */}
+        <Modal
+          isOpen={isNewLabTestModalOpen}
+          onClose={() => setIsNewLabTestModalOpen(false)}
+          title="Add New Investigation Types"
+          description="Register one or more test types to the master library"
+          maxWidth="max-w-4xl"
+        >
+          <form onSubmit={handleNewLabTestSubmit} className="space-y-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[600px]">
+                <thead>
+                  <tr className="text-slate-600 text-xs font-bold uppercase tracking-wider bg-slate-50">
+                    <th className="px-3 py-2 border-b border-slate-200">Investigation Name *</th>
+                    <th className="px-3 py-2 border-b border-slate-200">Category</th>
+                    <th className="px-3 py-2 border-b border-slate-200 w-32">Price (KES) *</th>
+                    <th className="px-3 py-2 border-b border-slate-200 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {bulkNewLabTests.map((row, index) => (
+                    <tr key={index} className="hover:bg-slate-50">
+                      <td className="px-2 py-2">
+                        <input required type="text" value={row.name} onChange={e => updateBulkRow(index, 'name', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. Thyroid Profile" />
+                      </td>
+                      <td className="px-2 py-2">
+                        <select value={row.type} onChange={e => updateBulkRow(index, 'type', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                          <option value="lab">Laboratory</option>
+                          <option value="radiology">Radiology</option>
+                          <option value="procedure">Procedure</option>
+                        </select>
+                      </td>
+                      <td className="px-2 py-2">
+                        <div className="relative rounded-md shadow-sm">
+                          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
+                            <span className="text-slate-400 text-xs">KSh</span>
+                          </div>
+                          <input required type="number" value={row.default_cost} onChange={e => updateBulkRow(index, 'default_cost', e.target.value)} className="block w-full rounded-md border-slate-300 pl-8 focus:border-primary-500 focus:ring-primary-500 sm:text-sm py-1.5" placeholder="0.00" />
+                        </div>
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        {bulkNewLabTests.length > 1 && (
+                          <button type="button" onClick={() => removeBulkRow(index)} className="text-slate-400 hover:text-red-600 transition-colors">
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-between items-center pt-2">
+              <button type="button" onClick={addBulkRow} className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700">
+                <Plus className="h-4 w-4 mr-1" /> Add Another Row
+              </button>
+            </div>
+            <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <button type="button" onClick={() => setIsNewLabTestModalOpen(false)} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
+              <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
+                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Register Investigations"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+
+        {/* Edit Lab Test Type Modal */}
+        <Modal
+          isOpen={isEditLabTestModalOpen}
+          onClose={() => { setIsEditLabTestModalOpen(false); setEditingLabTest(null); }}
+          title="Edit Investigation Type"
+          description="Update master investigation details in the library"
+        >
+          {editingLabTest && (
+            <form onSubmit={handleEditLabTestSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Investigation Name *</label>
+                <input required type="text" value={editingLabTest.name} onChange={e => setEditingLabTest({ ...editingLabTest, name: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                <select value={editingLabTest.type} onChange={e => setEditingLabTest({ ...editingLabTest, type: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                  <option value="lab">Laboratory (Blood, Urine, etc.)</option>
+                  <option value="radiology">Radiology (X-Ray, MRI, Ultrasound)</option>
+                  <option value="procedure">Clinical Procedure</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Default Price (KES) *</label>
+                <div className="relative mt-1 rounded-md shadow-sm">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <span className="text-slate-500 sm:text-sm">KSh</span>
+                  </div>
+                  <input required type="number" value={editingLabTest.default_cost} onChange={e => setEditingLabTest({ ...editingLabTest, default_cost: e.target.value })} className="block w-full rounded-md border-slate-300 pl-12 focus:border-primary-500 focus:ring-primary-500 sm:text-sm" />
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button type="button" onClick={() => { setIsEditLabTestModalOpen(false); setEditingLabTest(null); }} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
+                <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
+                  {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          )}
+        </Modal>
+      </div>
+    );
+  }
+
+  // ── UPLOAD RESULT FORM ────────────────────────────────────────────────────────
+  if (view === "result") {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={resetResultForm}
+            className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1.5" />
+            Back to Investigations
+          </button>
+          <span className="text-slate-300">/</span>
+          <h2 className="text-lg font-bold text-slate-900">Upload Test Results</h2>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-slate-200">
+            <p className="text-sm text-slate-600">Enter diagnostic findings for this investigation.</p>
+          </div>
+
+          <form onSubmit={handleResultSubmit} className="p-6 space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Status</label>
+              <select
+                value={resultForm.status}
+                onChange={e => setResultForm({ ...resultForm, status: e.target.value })}
+                className="w-full max-w-xs px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              >
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Result Details *</label>
+              <textarea
+                required
+                value={resultForm.result}
+                onChange={e => setResultForm({ ...resultForm, result: e.target.value })}
+                rows={8}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                placeholder="Enter findings, measurements, or diagnostic results..."
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={resetResultForm}
+                className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex items-center px-5 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 transition-colors active:scale-[0.98]"
+              >
+                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Save Results"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // ── TABLE VIEW ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-slate-900">Investigations & Labs</h2>
+        <h2 className="text-lg font-bold text-slate-900">Investigations &amp; Labs</h2>
         <button
           onClick={handleAddRequest}
           className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-primary-600 text-white hover:bg-primary-700 h-9 px-4 shadow-sm"
@@ -348,28 +720,27 @@ export default function InvestigationsTab({
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-start gap-4">
                     <div className={`h-10 w-10 flex items-center justify-center rounded-full mt-1 ${test.status === 'completed' ? 'bg-green-100' : 'bg-amber-100'}`}>
-                      {test.status === 'completed' ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <Clock className="h-5 w-5 text-amber-600" />
-                      )}
+                      {test.status === 'completed'
+                        ? <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        : <Clock className="h-5 w-5 text-amber-600" />
+                      }
                     </div>
                     <div>
                       <h4 className="text-sm font-bold text-slate-900">{test.name}</h4>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider ${test.type === 'radiology' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                          }`}>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider ${test.type === 'radiology' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
                           {test.type}
                         </span>
                         <p className="text-xs text-slate-500">Requested on {new Date(test.created_at).toLocaleDateString()}</p>
                       </div>
-
-                      {test.cost && (
-                        <p className="text-sm font-bold text-slate-900 mt-2">
-                          Test Fee: KSh {test.cost}
+                      {test.diagnosis && (
+                        <p className="text-xs text-slate-600 mt-1.5 bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                          <span className="font-semibold text-slate-700">Diagnosis:</span> {test.diagnosis}
                         </p>
                       )}
-
+                      {test.cost && (
+                        <p className="text-sm font-bold text-slate-900 mt-2">Test Fee: KSh {test.cost}</p>
+                      )}
                       {test.status === 'completed' && test.result && (
                         <div className="mt-3 bg-slate-50 p-3 rounded-lg border border-slate-100 text-sm text-slate-700">
                           <span className="font-semibold block mb-1">Result:</span>
@@ -382,8 +753,7 @@ export default function InvestigationsTab({
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2 text-sm ml-auto sm:ml-0">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize mb-2 ${test.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                      }`}>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize mb-2 ${test.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
                       {test.status}
                     </span>
                     <div className="flex items-center justify-end gap-2 text-xs">
@@ -397,7 +767,7 @@ export default function InvestigationsTab({
                             <Edit2 className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => openResultModal(test.id)}
+                            onClick={() => openResultForm(test.id)}
                             className="text-primary-600 hover:text-primary-700 font-medium bg-primary-50 px-3 py-1.5 rounded-md hover:bg-primary-100 transition-colors"
                           >
                             Upload Result
@@ -407,7 +777,7 @@ export default function InvestigationsTab({
                       {test.is_cleared && (
                         <div className="flex items-center text-slate-400 gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
                           <CheckCircle2 className="h-3 w-3 text-slate-400" />
-                          <span className="font-medium">Cleared & Locked</span>
+                          <span className="font-medium">Cleared &amp; Locked</span>
                         </div>
                       )}
                     </div>
@@ -419,194 +789,7 @@ export default function InvestigationsTab({
         )}
       </div>
 
-      {/* Request Test Modal */}
-      <Modal
-        isOpen={isRequestModalOpen}
-        onClose={() => { setIsRequestModalOpen(false); setEditingId(null); }}
-        title={editingId ? "Edit Investigation Request" : "Request Investigation"}
-        description={editingId ? "Update test request details" : "Add a new test request for this patient"}
-      >
-        <form onSubmit={handleRequestSubmit} className="space-y-4">
-          <div className="relative">
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm font-medium text-slate-700">Investigation Name *</label>
-              <button
-                type="button"
-                onClick={() => setIsNewLabTestModalOpen(true)}
-                className="text-xs text-primary-600 hover:text-primary-700 font-medium inline-flex items-center"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Add New Type
-              </button>
-            </div>
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none transition-opacity group-focus-within:opacity-40">
-                <Search className={`h-4 w-4 ${selectedTests.length > 0 ? 'text-primary-500' : 'text-slate-400'}`} />
-              </div>
-              <input
-                required={!editingId && selectedTests.length === 0}
-                type="text"
-                value={searchTerm || (selectedTests.length > 0 ? selectedTests.map(t => t.name).join(", ") : "")}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  // If user is clearing the comma separated list, clear everything
-                  if (selectedTests.length > 0 && val === "") {
-                    setSelectedTests([]);
-                    setSearchTerm("");
-                  } else {
-                    setSearchTerm(val);
-                  }
-                  
-                  if (editingId) {
-                    setRequestForm({ ...requestForm, name: val });
-                  }
-                  setIsDropdownOpen(true);
-                }}
-                onFocus={() => setIsDropdownOpen(true)}
-                className={`w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${selectedTests.length > 0 ? 'bg-primary-50/30' : ''}`}
-                placeholder={editingId ? "Investigation name..." : "Search or type investigation name... (Bulk allowed)"}
-                autoComplete="off"
-              />
-              
-              {/* Selected Tests Tags for Bulk - Visual confirmation below */}
-              {!editingId && selectedTests.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5 p-1 bg-slate-50 border border-dotted border-slate-200 rounded-md">
-                  {selectedTests.map(test => (
-                    <span 
-                      key={test.id} 
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white text-primary-700 text-[11px] font-semibold border border-primary-200 shadow-sm animate-in fade-in zoom-in duration-200"
-                    >
-                      {test.name}
-                      <button 
-                        type="button" 
-                        onClick={() => removeSelectedTest(test.id)}
-                        className="p-0.5 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors"
-                      >
-                        <X className="h-2.5 w-2.5" />
-                      </button>
-                    </span>
-                  ))}
-                  <button 
-                    type="button" 
-                    onClick={() => setSelectedTests([])}
-                    className="text-[10px] text-slate-400 hover:text-red-500 ml-auto px-1"
-                  >
-                    Clear All
-                  </button>
-                </div>
-              )}
-              
-              {isDropdownOpen && (
-                <div className="absolute z-50 mt-1 w-full bg-white shadow-lg max-h-40 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm border border-slate-200">
-                  {filteredLabTests.length > 0 ? (
-                    filteredLabTests.map((test) => (
-                      <div
-                        key={test.id}
-                        className="cursor-pointer select-none relative py-2 pl-3 pr-2 hover:bg-slate-50 transition-colors flex items-center justify-between group"
-                        onClick={() => selectLabTest(test)}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="block truncate font-medium text-slate-900">{test.name}</span>
-                            <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded ml-2 whitespace-nowrap">KSh {test.default_cost}</span>
-                          </div>
-                          <p className="text-[10px] text-slate-400 uppercase tracking-tight">{test.type}</p>
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingLabTest({ ...test });
-                              setIsEditLabTestModalOpen(true);
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-md"
-                            title="Edit Library Item"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => handleDeleteLabTest(test.id, test.name, e)}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md"
-                            title="Delete Library Item"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="py-2 px-3 text-slate-500 text-sm">No matches found. You can still type the name manually.</div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
-            <select value={requestForm.type} onChange={e => setRequestForm({ ...requestForm, type: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
-              <option value="lab">Laboratory (Blood, Urine, etc.)</option>
-              <option value="radiology">Radiology (X-Ray, MRI, Ultrasound)</option>
-              <option value="procedure">Clinical Procedure</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Clinical Notes</label>
-            <textarea value={requestForm.notes} onChange={e => setRequestForm({ ...requestForm, notes: e.target.value })} rows={3} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Why is this test being requested..."></textarea>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Test Fee (KES)</label>
-            <div className="relative mt-1 rounded-md shadow-sm">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <span className="text-slate-500 sm:text-sm">KSh</span>
-              </div>
-              <input
-                type="number"
-                value={requestForm.cost}
-                onChange={e => setRequestForm({ ...requestForm, cost: e.target.value })}
-                className="block w-full rounded-md border-slate-300 pl-12 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-          <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
-            <button type="button" onClick={() => { setIsRequestModalOpen(false); setEditingId(null); }} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
-            <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {editingId ? "Saving..." : "Requesting..."}</> : editingId ? "Save Changes" : "Request Test"}
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Upload Result Modal */}
-      <Modal
-        isOpen={isResultModalOpen}
-        onClose={() => setIsResultModalOpen(false)}
-        title="Upload Test Results"
-        description="Enter diagnostic findings for this investigation"
-      >
-        <form onSubmit={handleResultSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-            <select value={resultForm.status} onChange={e => setResultForm({ ...resultForm, status: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Result Details *</label>
-            <textarea required value={resultForm.result} onChange={e => setResultForm({ ...resultForm, result: e.target.value })} rows={6} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Enter findings, measurements, or diagnostic results..."></textarea>
-          </div>
-          <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
-            <button type="button" onClick={() => setIsResultModalOpen(false)} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
-            <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Save Results"}
-            </button>
-          </div>
-        </form>
-      </Modal>
-      {/* Add New Lab Test Type Modal (Bulk) */}
+      {/* Library modals are fine to remain as modals — they're admin/utility actions */}
       <Modal
         isOpen={isNewLabTestModalOpen}
         onClose={() => setIsNewLabTestModalOpen(false)}
@@ -628,22 +811,9 @@ export default function InvestigationsTab({
               <tbody className="divide-y divide-slate-100">
                 {bulkNewLabTests.map((row, index) => (
                   <tr key={index} className="hover:bg-slate-50">
+                    <td className="px-2 py-2"><input required type="text" value={row.name} onChange={e => updateBulkRow(index, 'name', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. Thyroid Profile" /></td>
                     <td className="px-2 py-2">
-                      <input 
-                        required 
-                        type="text" 
-                        value={row.name} 
-                        onChange={e => updateBulkRow(index, 'name', e.target.value)} 
-                        className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm" 
-                        placeholder="e.g. Thyroid Profile" 
-                      />
-                    </td>
-                    <td className="px-2 py-2">
-                      <select 
-                        value={row.type} 
-                        onChange={e => updateBulkRow(index, 'type', e.target.value)} 
-                        className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      >
+                      <select value={row.type} onChange={e => updateBulkRow(index, 'type', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
                         <option value="lab">Laboratory</option>
                         <option value="radiology">Radiology</option>
                         <option value="procedure">Procedure</option>
@@ -651,47 +821,19 @@ export default function InvestigationsTab({
                     </td>
                     <td className="px-2 py-2">
                       <div className="relative rounded-md shadow-sm">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
-                          <span className="text-slate-400 text-xs">KSh</span>
-                        </div>
-                        <input
-                          required
-                          type="number"
-                          value={row.default_cost}
-                          onChange={e => updateBulkRow(index, 'default_cost', e.target.value)}
-                          className="block w-full rounded-md border-slate-300 pl-8 focus:border-primary-500 focus:ring-primary-500 sm:text-sm py-1.5"
-                          placeholder="0.00"
-                        />
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2"><span className="text-slate-400 text-xs">KSh</span></div>
+                        <input required type="number" value={row.default_cost} onChange={e => updateBulkRow(index, 'default_cost', e.target.value)} className="block w-full rounded-md border-slate-300 pl-8 focus:border-primary-500 focus:ring-primary-500 sm:text-sm py-1.5" placeholder="0.00" />
                       </div>
                     </td>
-                    <td className="px-2 py-2 text-right">
-                      {bulkNewLabTests.length > 1 && (
-                        <button 
-                          type="button" 
-                          onClick={() => removeBulkRow(index)}
-                          className="text-slate-400 hover:text-red-600 transition-colors"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      )}
-                    </td>
+                    <td className="px-2 py-2 text-right">{bulkNewLabTests.length > 1 && <button type="button" onClick={() => removeBulkRow(index)} className="text-slate-400 hover:text-red-600 transition-colors"><X className="h-4 w-4" /></button>}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-
           <div className="flex justify-between items-center pt-2">
-            <button 
-              type="button" 
-              onClick={addBulkRow}
-              className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Add Another Row
-            </button>
+            <button type="button" onClick={addBulkRow} className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700"><Plus className="h-4 w-4 mr-1" /> Add Another Row</button>
           </div>
-
           <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
             <button type="button" onClick={() => setIsNewLabTestModalOpen(false)} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
             <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
@@ -701,7 +843,6 @@ export default function InvestigationsTab({
         </form>
       </Modal>
 
-      {/* Edit Lab Test Type Modal */}
       <Modal
         isOpen={isEditLabTestModalOpen}
         onClose={() => { setIsEditLabTestModalOpen(false); setEditingLabTest(null); }}
@@ -712,21 +853,11 @@ export default function InvestigationsTab({
           <form onSubmit={handleEditLabTestSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Investigation Name *</label>
-              <input 
-                required 
-                type="text" 
-                value={editingLabTest.name} 
-                onChange={e => setEditingLabTest({ ...editingLabTest, name: e.target.value })} 
-                className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" 
-              />
+              <input required type="text" value={editingLabTest.name} onChange={e => setEditingLabTest({ ...editingLabTest, name: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
-              <select 
-                value={editingLabTest.type} 
-                onChange={e => setEditingLabTest({ ...editingLabTest, type: e.target.value })} 
-                className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              >
+              <select value={editingLabTest.type} onChange={e => setEditingLabTest({ ...editingLabTest, type: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
                 <option value="lab">Laboratory (Blood, Urine, etc.)</option>
                 <option value="radiology">Radiology (X-Ray, MRI, Ultrasound)</option>
                 <option value="procedure">Clinical Procedure</option>
@@ -735,16 +866,8 @@ export default function InvestigationsTab({
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Default Price (KES) *</label>
               <div className="relative mt-1 rounded-md shadow-sm">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                  <span className="text-slate-500 sm:text-sm">KSh</span>
-                </div>
-                <input
-                  required
-                  type="number"
-                  value={editingLabTest.default_cost}
-                  onChange={e => setEditingLabTest({ ...editingLabTest, default_cost: e.target.value })}
-                  className="block w-full rounded-md border-slate-300 pl-12 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                />
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><span className="text-slate-500 sm:text-sm">KSh</span></div>
+                <input required type="number" value={editingLabTest.default_cost} onChange={e => setEditingLabTest({ ...editingLabTest, default_cost: e.target.value })} className="block w-full rounded-md border-slate-300 pl-12 focus:border-primary-500 focus:ring-primary-500 sm:text-sm" />
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
