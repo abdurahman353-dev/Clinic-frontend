@@ -34,8 +34,8 @@ function printBill(bill: any, title = "WAFAA MEDICAL", subtitle = "Invoice / Rec
         <img src="/wafaa_logo.jpeg" alt="Logo" style="height:56px;width:auto;object-fit:contain;display:block;margin:0 auto 6px;" />
         <h2 style="font-size:16px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 2px;">${title}</h2>
         <p style="font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;margin:0 0 2px;">${subtitle}</p>
-        <p style="font-size:10px;margin:0;">Nairobi, Kenya</p>
-        <p style="font-size:10px;margin:2px 0 0;">Tel: +254 700 000 000</p>
+        <p style="font-size:10px;margin:0;">Mombasa, Kenya</p>
+        <p style="font-size:10px;margin:2px 0 0;">Tel: +254 710262377</p>
       </div>
 
       <div style="border-top:1px dashed #cbd5e1;margin:12px 0;"></div>
@@ -92,8 +92,8 @@ export const ThermalReceipt = ({ bill, title = "WAFAA MEDICAL", subtitle = "Qual
       <div className="text-center mb-6">
         <h2 className="text-xl font-bold uppercase tracking-tight mb-1">{title}</h2>
         <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">{subtitle}</p>
-        <p className="text-xs">Nairobi, Kenya</p>
-        <p className="text-xs">Tel: +254 700 000 000</p>
+        <p className="text-xs">Mombasa, Kenya</p>
+        <p className="text-xs">Tel: +254 710262377</p>
       </div>
 
       <div className="border-t border-dashed border-slate-300 my-4" />

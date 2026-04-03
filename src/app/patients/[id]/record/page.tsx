@@ -173,7 +173,7 @@ export default function ModernPatientRecord({ params }: { params: Promise<{ id: 
           <div style="text-align:center;">
             <div style="height:1px;background:#e2e8f0;margin-bottom:8px;"></div>
             <p style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#94a3b8;margin:0;">Medical Officer Signature</p>
-            <p style="font-size:8px;color:#cbd5e1;font-weight:700;text-transform:uppercase;margin:4px 0 0;">Nairobi, Kenya</p>
+            <p style="font-size:8px;color:#cbd5e1;font-weight:700;text-transform:uppercase;margin:4px 0 0;">Mombasa, Kenya</p>
           </div>
           <div style="text-align:center;">
             <div style="height:3px;background:#0f172a;margin-bottom:8px;"></div>
@@ -320,7 +320,7 @@ export default function ModernPatientRecord({ params }: { params: Promise<{ id: 
           <div className="text-center">
             <div className="h-px w-full bg-slate-200 mb-3" />
             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Medical Officer Signature</p>
-            <p className="text-[8px] text-slate-300 font-bold uppercase mt-1">Nairobi, Kenya</p>
+            <p className="text-[8px] text-slate-300 font-bold uppercase mt-1">Mombasa, Kenya</p>
           </div>
           <div className="text-center">
             <div className="h-1 w-full bg-slate-900 mb-3" />
