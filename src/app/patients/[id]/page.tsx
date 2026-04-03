@@ -2,9 +2,11 @@
 
 import { useState, useEffect, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, User as UserIcon, Calendar, Phone, Mail, Droplet, AlertTriangle, FileText, Activity, ClipboardList } from "lucide-react";
+import { ArrowLeft, User as UserIcon, Calendar, Phone, Mail, Droplet, AlertTriangle, FileText, Activity, ClipboardList, PlusCircle } from "lucide-react";
 import Link from "next/link";
-import { patientAPI } from "@/lib/api";
+import { patientAPI, visitAPI } from "@/lib/api";
+import { Modal } from "@/components/ui/Modal";
+import { toast } from "sonner";
 import VitalsTab from "@/components/patients/VitalsTab";
 import InvestigationsTab from "@/components/patients/InvestigationsTab";
 import PrescriptionsTab from "@/components/patients/PrescriptionsTab";
@@ -23,6 +25,11 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const [activeTab, setActiveTab] = useState(initialTab);
+  
+  // New Visit State
+  const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
+  const [consultationFee, setConsultationFee] = useState("1500");
+  const [isStartingVisit, setIsStartingVisit] = useState(false);
 
   // Centralized state for tabs to avoid re-fetching on switch
   const [vitalsData, setVitalsData] = useState<any[]>([]);
@@ -40,10 +47,10 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
   }, [searchParams]);
 
   useEffect(() => {
-    const fetchPatient = async () => {
+      const fetchPatient = async () => {
       try {
-        const data = await patientAPI.get(unwrappedId); // Changed apiFetch to patientAPI.get and removed endpoint string
-        setPatient(data.data); // Changed response.data to data.data
+        const data = await patientAPI.get(unwrappedId); 
+        setPatient(data.data); 
       } catch (err: any) {
         setErrorMsg(err.message || "Failed to load patient");
       } finally {
@@ -52,6 +59,30 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
     };
     fetchPatient();
   }, [unwrappedId]);
+
+  const handleStartVisit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsStartingVisit(true);
+    try {
+      const userStr = typeof window !== 'undefined' ? sessionStorage.getItem("admin_user") || localStorage.getItem("admin_user") : null;
+      const user = userStr ? JSON.parse(userStr) : null;
+      
+      await visitAPI.store({ 
+        patient_id: patient.db_id, 
+        doctor_id: user?.id,
+        reason: "General Consultation",
+        consultation_fee: parseFloat(consultationFee) || 0
+      });
+      
+      toast.success("New visit started successfully! A consultation bill has been generated.");
+      setIsVisitModalOpen(false);
+      // Trigger a refresh logic if necessary, or just rely on the new active visit detection
+    } catch (err: any) {
+      toast.error(err.message || "Failed to start visit");
+    } finally {
+      setIsStartingVisit(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -89,13 +120,22 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
         <Link href="/patients" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors">
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Patients
         </Link>
-        <button
-          onClick={() => router.push(`/patients/${unwrappedId}/record`)}
-          className="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none transition-all active:scale-95"
-        >
-          <ClipboardList className="h-4 w-4 mr-2 text-slate-500" />
-          Patient Record
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsVisitModalOpen(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-slate-900 hover:bg-slate-800 focus:outline-none transition-all active:scale-95"
+          >
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Start New Visit
+          </button>
+          <button
+            onClick={() => router.push(`/patients/${unwrappedId}/record`)}
+            className="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none transition-all active:scale-95"
+          >
+            <ClipboardList className="h-4 w-4 mr-2 text-slate-500" />
+            Patient Record
+          </button>
+        </div>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -229,6 +269,54 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
           )}
         </div>
       </div>
+
+      {/* Start New Visit Modal */}
+      <Modal
+        isOpen={isVisitModalOpen}
+        onClose={() => !isStartingVisit && setIsVisitModalOpen(false)}
+        title="Start New Visit"
+        description={`Check-in ${patient?.name} for a new visit.`}
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleStartVisit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Consultation Fee (KSh)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              required
+              value={consultationFee}
+              onChange={(e) => setConsultationFee(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500"
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              This will automatically generate a pending consultation bill.
+            </p>
+          </div>
+          
+          <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setIsVisitModalOpen(false)}
+              disabled={isStartingVisit}
+              className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isStartingVisit}
+              className="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded hover:bg-slate-800 disabled:opacity-50"
+            >
+              {isStartingVisit ? "Starting..." : "Start Visit"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
     </div>
   );
 }

@@ -216,7 +216,8 @@ export default function BillingTab({ patientId }: { patientId: number }) {
     setIsLoading(true);
     try {
       const pendingResponse = await billingAPI.list({ status: 'pending,partial', patient_id: patientId });
-      setBills(pendingResponse.data || []);
+      const activeBills = (pendingResponse.data || []).filter((b: any) => parseFloat(b.balance_amount) > 0);
+      setBills(activeBills);
 
       const historyResponse = await billingAPI.list({ status: 'paid', patient_id: patientId });
       setHistoryBills(historyResponse.data || []);
