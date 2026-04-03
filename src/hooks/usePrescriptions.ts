@@ -43,19 +43,12 @@ export function usePrescriptions(patientId?: number) {
           'sort': '-created_at'
         });
         const recentVisit = visitsResponse.data?.[0];
+        const isRecent = recentVisit && (new Date().getTime() - new Date(recentVisit.created_at).getTime()) < 24 * 60 * 60 * 1000;
         
-        if (recentVisit) {
+        if (recentVisit && isRecent && recentVisit.status !== 'completed' && recentVisit.status !== 'paid') {
           visitId = recentVisit.id;
         } else {
-          const userStr = typeof window !== 'undefined' ? sessionStorage.getItem("admin_user") : null;
-          const user = userStr ? JSON.parse(userStr) : null;
-
-          const newVisitResponse = await visitAPI.store({ 
-            patient_id: patientId, 
-            doctor_id: user?.id,
-            reason: "prescription refill" 
-          });
-          visitId = newVisitResponse.data.id;
+          throw new Error("No active visit found for today. Please start a new visit from the Patient Profile before adding records.");
         }
         setActiveVisitId(visitId);
       }

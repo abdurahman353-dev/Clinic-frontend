@@ -35,7 +35,7 @@ function printBill(bill: any) {
     return `<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:8px;"><span style="flex:1;text-transform:uppercase;font-weight:600;font-size:11px;">${nameOnly}</span><div style="display:flex;gap:12px;width:80px;justify-content:space-between;"><span style="width:20px;text-align:center;font-size:11px;">${qty}</span><span style="flex:1;text-align:right;font-weight:700;font-size:11px;">${parseFloat(item.amount).toLocaleString()}</span></div></div>`;
   }).join("");
   const total = parseFloat(bill.grand_total) - parseFloat(bill.discount_amount || 0);
-  const html = `<div style="max-width:148mm;margin:0 auto;padding:12mm 10mm;font-family:monospace;font-size:12px;color:#1e293b;"><div style="text-align:center;margin-bottom:16px;"><img src="/wafaa_logo.jpeg" alt="" style="height:52px;display:block;margin:0 auto 6px;" /><h2 style="font-size:15px;font-weight:900;text-transform:uppercase;margin:0 0 2px;">WAFAA MEDICAL</h2><p style="font-size:9px;color:#64748b;text-transform:uppercase;margin:0;">Quality Healthcare Services</p><p style="font-size:10px;margin:4px 0 0;">Nairobi, Kenya | Tel: +254 700 000 000</p></div><div style="border-top:1px dashed #cbd5e1;margin:10px 0;"></div><div style="font-size:10px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span>DATE:</span><span>${new Date(bill.created_at).toLocaleDateString()} ${new Date(bill.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span>${bill.visit_id ? 'VISIT NO' : 'INV NO'}:</span><span style="font-weight:700;">#${bill.id || bill.visit_id}</span></div><div style="display:flex;justify-content:space-between;"><span>PATIENT:</span><span style="font-weight:700;">${bill.patient_name || 'WALK-IN'}</span></div></div><div style="border-top:1px dashed #cbd5e1;margin:10px 0;"></div><div style="display:flex;justify-content:space-between;font-size:9px;font-weight:900;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:4px;margin-bottom:8px;color:#64748b;"><span style="flex:1;">ITEM</span><div style="display:flex;gap:12px;width:80px;justify-content:space-between;"><span>QTY</span><span>PRICE</span></div></div>${itemsHtml}<div style="border-top:1px dashed #cbd5e1;margin:10px 0;"></div><div><div style="display:flex;justify-content:space-between;font-weight:700;font-size:13px;margin-bottom:4px;"><span>SUB TOTAL</span><span>KSh ${parseFloat(bill.grand_total).toLocaleString()}</span></div>${parseFloat(bill.discount_amount || 0) > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;font-style:italic;margin-bottom:4px;"><span>DISCOUNT</span><span>- ${parseFloat(bill.discount_amount).toLocaleString()}</span></div>` : ""}<div style="display:flex;justify-content:space-between;font-weight:900;font-size:16px;border-top:2px solid #0f172a;padding-top:6px;margin-top:4px;"><span>TOTAL</span><span>KSh ${total.toLocaleString()}</span></div></div><div style="border-top:1px dashed #cbd5e1;margin:10px 0;"></div><div style="font-size:10px;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span>TENDERED:</span><span>${parseFloat(bill.paid_amount || 0).toLocaleString()}</span></div><div style="display:flex;justify-content:space-between;font-weight:700;color:#dc2626;"><span>BALANCE DUE:</span><span>${parseFloat(bill.balance_amount || 0).toLocaleString()}</span></div></div><div style="border-top:1px dashed #cbd5e1;margin:14px 0;"></div><div style="text-align:center;"><p style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;margin:0;">THANK YOU!</p><p style="font-size:9px;margin:4px 0 0;">WISH YOU A QUICK RECOVERY</p><p style="font-size:8px;color:#94a3b8;margin:8px 0 0;text-transform:uppercase;letter-spacing:0.1em;">** CUSTOMER COPY **</p></div></div>`;
+  const html = `<div style="max-width:148mm;margin:0 auto;padding:12mm 10mm;font-family:monospace;font-size:12px;color:#1e293b;"><div style="text-align:center;margin-bottom:16px;"><img src="/wafaa_logo.jpeg" alt="" style="height:52px;display:block;margin:0 auto 6px;" /><h2 style="font-size:15px;font-weight:900;text-transform:uppercase;margin:0 0 2px;">WAFAA MEDICAL</h2><p style="font-size:9px;color:#64748b;text-transform:uppercase;margin:0;">Quality Healthcare Services</p><p style="font-size:10px;margin:4px 0 0;">Mombasa, Kenya | Tel: +254 710262377</p></div><div style="border-top:1px dashed #cbd5e1;margin:10px 0;"></div><div style="font-size:10px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span>DATE:</span><span>${new Date(bill.created_at).toLocaleDateString()} ${new Date(bill.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span>${bill.visit_id ? 'VISIT NO' : 'INV NO'}:</span><span style="font-weight:700;">#${bill.id || bill.visit_id}</span></div><div style="display:flex;justify-content:space-between;"><span>PATIENT:</span><span style="font-weight:700;">${bill.patient_name || 'WALK-IN'}</span></div></div><div style="border-top:1px dashed #cbd5e1;margin:10px 0;"></div><div style="display:flex;justify-content:space-between;font-size:9px;font-weight:900;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:4px;margin-bottom:8px;color:#64748b;"><span style="flex:1;">ITEM</span><div style="display:flex;gap:12px;width:80px;justify-content:space-between;"><span>QTY</span><span>PRICE</span></div></div>${itemsHtml}<div style="border-top:1px dashed #cbd5e1;margin:10px 0;"></div><div><div style="display:flex;justify-content:space-between;font-weight:700;font-size:13px;margin-bottom:4px;"><span>SUB TOTAL</span><span>KSh ${parseFloat(bill.grand_total).toLocaleString()}</span></div>${parseFloat(bill.discount_amount || 0) > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;font-style:italic;margin-bottom:4px;"><span>DISCOUNT</span><span>- ${parseFloat(bill.discount_amount).toLocaleString()}</span></div>` : ""}<div style="display:flex;justify-content:space-between;font-weight:900;font-size:16px;border-top:2px solid #0f172a;padding-top:6px;margin-top:4px;"><span>TOTAL</span><span>KSh ${total.toLocaleString()}</span></div></div><div style="border-top:1px dashed #cbd5e1;margin:10px 0;"></div><div style="font-size:10px;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span>TENDERED:</span><span>${parseFloat(bill.paid_amount || 0).toLocaleString()}</span></div><div style="display:flex;justify-content:space-between;font-weight:700;color:#dc2626;"><span>BALANCE DUE:</span><span>${parseFloat(bill.balance_amount || 0).toLocaleString()}</span></div></div><div style="border-top:1px dashed #cbd5e1;margin:14px 0;"></div><div style="text-align:center;"><p style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;margin:0;">THANK YOU!</p><p style="font-size:9px;margin:4px 0 0;">WISH YOU A QUICK RECOVERY</p><p style="font-size:8px;color:#94a3b8;margin:8px 0 0;text-transform:uppercase;letter-spacing:0.1em;">** CUSTOMER COPY **</p></div></div>`;
   printHtml(html, "A5", `@page { size: A5 portrait; margin: 0; }`);
 }
 
@@ -46,8 +46,8 @@ const ThermalReceipt = ({ bill }: { bill: any }) => {
       <div className="text-center mb-6">
         <h2 className="text-xl font-bold uppercase tracking-tight mb-1">WAFAA MEDICAL</h2>
         <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Quality Healthcare Services</p>
-        <p className="text-xs">Nairobi, Kenya</p>
-        <p className="text-xs">Tel: +254 700 000 000</p>
+        <p className="text-xs">Mombasa, Kenya</p>
+        <p className="text-xs">Tel: +254 710262377</p>
       </div>
 
       <div className="border-t border-dashed border-slate-300 my-4" />
@@ -197,11 +197,10 @@ export default function CashierPage() {
     if (activeTab === 'history') fetchHistory();
   }, [activeTab, fetchBills, fetchHistory]);
 
-  const allGroupedVisits = useMemo(() => {
+  const groupBills = (records: any[]) => {
     const groups: { [visitId: string]: any } = {};
-    const allRecords = [...bills, ...historyBills];
     
-    allRecords.forEach(bill => {
+    records.forEach(bill => {
       const vid = bill.visit_id ? `visit-${bill.visit_id}` : `bill-${bill.id}`;
       if (!groups[vid]) {
         groups[vid] = {
@@ -216,7 +215,9 @@ export default function CashierPage() {
           paid_amount: 0,
           balance_amount: 0,
           items: [],
-          status: 'pending'
+          status: 'pending',
+          payment_method: bill.payment_method,
+          transaction_reference: bill.transaction_reference
         };
       }
       
@@ -229,6 +230,8 @@ export default function CashierPage() {
       // Update timestamps to latest
       if (new Date(bill.updated_at) > new Date(groups[vid].updated_at)) {
         groups[vid].updated_at = bill.updated_at;
+        groups[vid].payment_method = bill.payment_method;
+        groups[vid].transaction_reference = bill.transaction_reference;
       }
     });
 
@@ -242,27 +245,34 @@ export default function CashierPage() {
       }
       return group;
     });
-  }, [bills, historyBills]);
+  };
+
+  const pendingGroupedVisits = useMemo(() => groupBills(bills), [bills]);
+  const historyGroupedVisits = useMemo(() => groupBills(historyBills), [historyBills]);
+
+  const pendingCount = useMemo(() => {
+    return pendingGroupedVisits.filter(v => v.status !== 'paid').length;
+  }, [pendingGroupedVisits]);
 
   const filteredBills = useMemo(() => {
-    return allGroupedVisits
+    return pendingGroupedVisits
       .filter(v => v.status !== 'paid')
       .filter(v => 
         v.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (v.visit_id || v.bill_id).toString().includes(searchTerm)
       )
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [allGroupedVisits, searchTerm]);
+  }, [pendingGroupedVisits, searchTerm]);
 
   const filteredHistory = useMemo(() => {
-    return allGroupedVisits
+    return historyGroupedVisits
       .filter(v => v.status === 'paid')
       .filter(v => 
         v.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (v.visit_id || v.bill_id).toString().includes(searchTerm)
       )
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-  }, [allGroupedVisits, searchTerm]);
+  }, [historyGroupedVisits, searchTerm]);
 
   const handleOpenPayment = (bill: any) => {
     setSelectedBill(bill);
@@ -361,7 +371,7 @@ export default function CashierPage() {
           className={`flex items-center gap-2 px-1 py-4 text-sm font-medium border-b-2 transition-all ${activeTab === 'pending' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
         >
           Unpaid Invoices
-          {bills.length > 0 && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-xs border border-slate-200">{bills.length}</span>}
+          {pendingCount > 0 && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-xs border border-slate-200">{pendingCount}</span>}
         </button>
       </div>
 
@@ -453,6 +463,7 @@ export default function CashierPage() {
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Final Amount</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date Settled</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Payment Info</th>
                     <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
@@ -477,6 +488,16 @@ export default function CashierPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
                         {bill.updated_at ? new Date(bill.updated_at).toLocaleDateString() : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-semibold text-slate-700 uppercase bg-slate-100 px-2 py-0.5 rounded w-max inline-block">
+                            {bill.payment_method === 'mpesa' ? 'M-PESA' : bill.payment_method || 'CASH'}
+                          </span>
+                          {bill.transaction_reference && (
+                            <span className="text-xs text-slate-500 font-mono tracking-wider">{bill.transaction_reference}</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <button onClick={() => viewBillDetails(bill)} className="text-slate-400 hover:text-slate-600">
@@ -623,11 +644,10 @@ export default function CashierPage() {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">Payment Method</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {[
                 { id: 'cash', label: 'Cash', icon: Banknote },
-                { id: 'card', label: 'Card', icon: CardIcon },
-                { id: 'mobile', label: 'M-Pesa', icon: Smartphone }
+                { id: 'mpesa', label: 'M-Pesa', icon: Smartphone }
               ].map((method) => (
                 <button
                   key={method.id}
@@ -648,17 +668,15 @@ export default function CashierPage() {
           {paymentData.payment_method !== 'cash' && (
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">
-                {paymentData.payment_method === 'mobile' ? 'M-Pesa Transaction Code' :
-                  paymentData.payment_method === 'card' ? 'Bank/Card Reference No.' :
-                    'Reference / Auth No.'}
+                {paymentData.payment_method === 'mpesa' ? 'M-Pesa Transaction Code' : 'Reference / Auth No.'}
               </label>
               <input
                 type="text"
                 required
-                placeholder={paymentData.payment_method === 'mobile' ? 'e.g. QJB5RF4KZT' : 'Enter reference number'}
+                placeholder={paymentData.payment_method === 'mpesa' ? 'e.g. QJB5RF4KZT' : 'Enter reference number'}
                 value={paymentData.transaction_reference}
                 onChange={(e) => setPaymentData({ ...paymentData, transaction_reference: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-900 rounded text-sm font-mono tracking-wider placeholder-slate-400 focus:ring-1 focus:ring-slate-900 focus:border-slate-900"
+                className="w-full px-3 py-2 border border-slate-900 rounded text-sm font-mono tracking-wider placeholder-slate-400 focus:ring-1 focus:ring-slate-900 focus:border-slate-900 uppercase"
               />
             </div>
           )}
