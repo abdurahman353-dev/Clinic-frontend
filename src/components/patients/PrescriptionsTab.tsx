@@ -361,14 +361,14 @@ export default function PrescriptionsTab({
               </button>
             </div>
 
-            {/* General Notes */}
+            {/* Reason */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">General Notes</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Reason for Prescription</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                placeholder="e.g. Take after meals, watch for allergies..."
+                placeholder="Why is this prescription being given?..."
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               />
             </div>
@@ -460,7 +460,7 @@ export default function PrescriptionsTab({
                     <p className="text-xs text-slate-400 mt-0.5">{new Date(rx.created_at).toLocaleDateString()}</p>
                   </div>
                   {rx.notes && (
-                    <p className="text-xs text-slate-500 italic max-w-xs text-right bg-slate-50 p-2 rounded-md">{rx.notes}</p>
+                    <p className="text-xs text-slate-500 italic max-w-xs text-right bg-slate-50 p-2 rounded-md"><span className="font-semibold text-slate-700">Reason:</span> {rx.notes}</p>
                   )}
                 </div>
 

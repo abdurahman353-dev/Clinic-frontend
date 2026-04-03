@@ -483,15 +483,15 @@ export default function InvestigationsTab({
               />
             </div>
 
-            {/* Clinical Notes */}
+            {/* Clinical Notes (Reason) */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Additional Clinical Notes</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Reason for Investigation</label>
               <textarea
                 value={requestForm.notes}
                 onChange={e => setRequestForm({ ...requestForm, notes: e.target.value })}
                 rows={3}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                placeholder="Any extra instructions or context for the lab..."
+                placeholder="Why is this investigation being requested?..."
               />
             </div>
 
@@ -748,7 +748,7 @@ export default function InvestigationsTab({
                         </div>
                       )}
                       {test.notes && !test.result && (
-                        <p className="text-sm text-slate-500 italic mt-2">Notes: {test.notes}</p>
+                        <p className="text-sm text-slate-500 italic mt-2"><span className="font-semibold text-slate-700">Reason:</span> {test.notes}</p>
                       )}
                     </div>
                   </div>

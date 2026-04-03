@@ -64,7 +64,7 @@ export default function ModernPatientRecord({ params }: { params: Promise<{ id: 
         type: "INVESTIGATION",
         icon: <Microscope className="h-4 w-4" />,
         iconHtml: "🔬",
-        details: `${i.name.toUpperCase()}: ${i.result}`,
+        details: `${i.name.toUpperCase()}: ${i.result}${i.notes ? ` | Reason: ${i.notes}` : ''}`,
       })),
     ...(patient.prescriptions || []).map((p: any) => ({
       date: p.created_at,
@@ -73,7 +73,7 @@ export default function ModernPatientRecord({ params }: { params: Promise<{ id: 
       iconHtml: "💊",
       details: p.items
         .map((item: any) => `${item.medicine} [${item.dosage || "N/A"}] (Qty: ${item.quantity})`)
-        .join("; "),
+        .join("; ") + (p.notes ? ` | Reason: ${p.notes}` : ''),
     })),
   ].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
