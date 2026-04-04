@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { billingAPI, paymentAPI, visitAPI } from "@/lib/api";
 import { Modal } from "@/components/ui/Modal";
+import { Pagination } from "@/components/ui/Pagination";
 import { toast } from "sonner";
 import { printHtml } from "@/lib/print";
 
@@ -155,10 +156,26 @@ export default function CashierPage() {
   const [historyBills, setHistoryBills] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedBill, setSelectedBill] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBillDetailOpen, setIsBillDetailOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
+
+  const [pendingPage, setPendingPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [pendingMeta, setPendingMeta] = useState<any>(null);
+  const [historyMeta, setHistoryMeta] = useState<any>(null);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setPendingPage(1);
+      setHistoryPage(1);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
   const [paymentData, setPaymentData] = useState({
     amount: "",
@@ -169,110 +186,70 @@ export default function CashierPage() {
   });
 
   const fetchBills = useCallback(async () => {
-    setIsLoading(true);
+    if (bills.length === 0) setIsLoading(true);
+    else setIsFetching(true);
     try {
-      const response = await billingAPI.list({ status: 'pending,partial' });
+      const response = await billingAPI.list({ 
+        status: 'pending,partial', 
+        search: debouncedSearchTerm, 
+        per_page: 10, 
+        page: pendingPage,
+        summarize: true
+      });
       setBills(response.data || []);
+      setPendingMeta(response.meta || null);
     } catch (err) {
       console.error("Failed to fetch bills", err);
     } finally {
       setIsLoading(false);
+      setIsFetching(false);
     }
-  }, []);
+  }, [debouncedSearchTerm, pendingPage]);
 
   const fetchHistory = useCallback(async () => {
-    setIsLoading(true);
+    if (historyBills.length === 0) setIsLoading(true);
+    else setIsFetching(true);
     try {
-      const response = await billingAPI.list({ status: 'paid' });
+      const response = await billingAPI.list({ 
+        status: 'paid', 
+        search: debouncedSearchTerm, 
+        per_page: 10, 
+        page: historyPage,
+        summarize: true
+      });
       setHistoryBills(response.data || []);
+      setHistoryMeta(response.meta || null);
     } catch (err) {
       console.error("Failed to fetch history", err);
     } finally {
       setIsLoading(false);
+      setIsFetching(false);
     }
-  }, []);
+  }, [debouncedSearchTerm, historyPage]);
 
   useEffect(() => {
     if (activeTab === 'pending') fetchBills();
     if (activeTab === 'history') fetchHistory();
   }, [activeTab, fetchBills, fetchHistory]);
 
-  const groupBills = (records: any[]) => {
-    const groups: { [visitId: string]: any } = {};
-    
-    records.forEach(bill => {
-      const vid = bill.visit_id ? `visit-${bill.visit_id}` : `bill-${bill.id}`;
-      if (!groups[vid]) {
-        groups[vid] = {
-          id: vid,
-          visit_id: bill.visit_id,
-          bill_id: bill.id,
-          patient_name: bill.patient_name || bill.patient?.name || 'Walk-in Patient',
-          updated_at: bill.updated_at,
-          created_at: bill.created_at,
-          grand_total: 0,
-          discount_amount: 0,
-          paid_amount: 0,
-          balance_amount: 0,
-          items: [],
-          status: 'pending',
-          payment_method: bill.payment_method,
-          transaction_reference: bill.transaction_reference
-        };
-      }
-      
-      groups[vid].grand_total += parseFloat(bill.grand_total || 0);
-      groups[vid].discount_amount += parseFloat(bill.discount_amount || 0);
-      groups[vid].paid_amount += parseFloat(bill.paid_amount || 0);
-      groups[vid].balance_amount += parseFloat(bill.balance_amount || 0);
-      if (bill.items) groups[vid].items = [...groups[vid].items, ...bill.items];
-      
-      // Update timestamps to latest
-      if (new Date(bill.updated_at) > new Date(groups[vid].updated_at)) {
-        groups[vid].updated_at = bill.updated_at;
-        groups[vid].payment_method = bill.payment_method;
-        groups[vid].transaction_reference = bill.transaction_reference;
-      }
-    });
-
-    return Object.values(groups).map((group: any) => {
-      if (group.balance_amount <= 0 && group.paid_amount > 0) {
-        group.status = 'paid';
-      } else if (group.paid_amount > 0) {
-        group.status = 'partial';
-      } else {
-        group.status = 'pending';
-      }
-      return group;
-    });
-  };
-
-  const pendingGroupedVisits = useMemo(() => groupBills(bills), [bills]);
-  const historyGroupedVisits = useMemo(() => groupBills(historyBills), [historyBills]);
+  const pendingGroupedVisits = useMemo(() => bills, [bills]);
+  const historyGroupedVisits = useMemo(() => historyBills, [historyBills]);
 
   const pendingCount = useMemo(() => {
-    return pendingGroupedVisits.filter(v => v.status !== 'paid').length;
-  }, [pendingGroupedVisits]);
+    return pendingMeta?.total || 0;
+  }, [pendingMeta]);
+
+  const historyCount = useMemo(() => {
+    return historyMeta?.total || 0;
+  }, [historyMeta]);
 
   const filteredBills = useMemo(() => {
-    return pendingGroupedVisits
-      .filter(v => v.status !== 'paid')
-      .filter(v => 
-        v.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (v.visit_id || v.bill_id).toString().includes(searchTerm)
-      )
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [pendingGroupedVisits, searchTerm]);
+    return pendingGroupedVisits;
+  }, [pendingGroupedVisits]);
 
   const filteredHistory = useMemo(() => {
-    return historyGroupedVisits
-      .filter(v => v.status === 'paid')
-      .filter(v => 
-        v.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (v.visit_id || v.bill_id).toString().includes(searchTerm)
-      )
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-  }, [historyGroupedVisits, searchTerm]);
+    return historyGroupedVisits;
+  }, [historyGroupedVisits]);
 
   const handleOpenPayment = (bill: any) => {
     setSelectedBill(bill);
@@ -291,7 +268,12 @@ export default function CashierPage() {
     if (!selectedBill) return;
 
     const amountPaid = parseFloat(paymentData.amount);
-    const isFullPayment = amountPaid >= parseFloat(selectedBill.balance_amount);
+    let discountVal = parseFloat(paymentData.discount_amount || "0");
+    if (paymentData.discount_type === 'percentage') {
+      discountVal = (parseFloat(selectedBill.grand_total || "0") * discountVal) / 100;
+    }
+    
+    const isFullPayment = (amountPaid + discountVal) >= parseFloat(selectedBill.balance_amount);
 
     // Optimistic UI: Close modal and show success immediately
     setIsModalOpen(false);
@@ -365,6 +347,7 @@ export default function CashierPage() {
           className={`flex items-center gap-2 px-1 py-4 text-sm font-medium border-b-2 transition-all ${activeTab === 'history' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
         >
           Payment History
+          {historyCount > 0 && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-xs border border-slate-200">{historyCount}</span>}
         </button>
         <button
           onClick={() => setActiveTab('pending')}
@@ -383,7 +366,7 @@ export default function CashierPage() {
           </div>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+        <div className={`bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm transition-opacity duration-200 ${isFetching ? 'opacity-60' : 'opacity-100'}`}>
           {activeTab === 'pending' && (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200">
@@ -449,6 +432,7 @@ export default function CashierPage() {
                   ))}
                 </tbody>
               </table>
+              <Pagination meta={pendingMeta} onPageChange={setPendingPage} />
             </div>
           )}
 
@@ -508,6 +492,7 @@ export default function CashierPage() {
                   ))}
                 </tbody>
               </table>
+              <Pagination meta={historyMeta} onPageChange={setHistoryPage} />
             </div>
           )}
         </div>

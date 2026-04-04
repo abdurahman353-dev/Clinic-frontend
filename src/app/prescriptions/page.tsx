@@ -1,207 +1,74 @@
 "use client";
 
-import { FileText, Loader2, Search, Calendar, User, Pill, Plus, Trash2, Eye } from "lucide-react";
+import { FileText, Loader2, Search, Calendar, User, Pill, Eye } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
-import { prescriptionAPI, medicineAPI } from "@/lib/api";
+import { prescriptionAPI } from "@/lib/api";
 import Link from "next/link";
 import { Modal } from "@/components/ui/Modal";
-import { toast } from "sonner";
+import { Pagination } from "@/components/ui/Pagination";
 import DirectPrescriptionModal from "@/components/prescriptions/DirectPrescriptionModal";
 
 export default function PrescriptionsPage() {
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [meta, setMeta] = useState<any>(null);
 
   // Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [medicines, setMedicines] = useState<any[]>([]);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedPrescription, setSelectedPrescription] = useState<any>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [editPrescription, setEditPrescription] = useState<any>(null);
 
-  // Form state
-  const [formData, setFormData] = useState({
-    patient_name: "",
-    notes: "",
-    items: [{ medicine_id: "", dosage: "", frequency: "", quantity: 1, duration: "" }]
-  });
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1); // Reset to first page on new search
+    }, 500);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
 
   const fetchPrescriptions = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await prescriptionAPI.listGlobal();
+      const params = {
+        'filter[search]': debouncedSearch,
+        'page': currentPage,
+      };
+      const response = await prescriptionAPI.listGlobal(params);
       setPrescriptions(response.data || []);
+      setMeta(response.meta || null);
     } catch (err) {
       console.error("Failed to fetch global prescriptions", err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  const fetchMedicines = async () => {
-    try {
-      const response = await medicineAPI.list();
-      setMedicines(response.data || []);
-    } catch (err) {
-      console.error("Failed to fetch medicines", err);
-    }
-  };
+  }, [debouncedSearch, currentPage]);
 
   useEffect(() => {
     fetchPrescriptions();
-    fetchMedicines();
   }, [fetchPrescriptions]);
-
-  const handleAddItem = () => {
-    setFormData({
-      ...formData,
-      items: [...formData.items, { medicine_id: "", dosage: "", frequency: "", quantity: 1, duration: "" }]
-    });
-  };
-
-  const handleRemoveItem = (index: number) => {
-    const newItems = formData.items.filter((_, i) => i !== index);
-    setFormData({ ...formData, items: newItems });
-  };
-
-  const getFormCategory = (med: any) => {
-    if (!med) return "exact";
-    const form = (med.dosage_form || "").toLowerCase();
-    const unit = (med.unit || "").toLowerCase();
-    
-    const volumeForms = ["bottle", "syrup", "suspension", "liquid"];
-    const volumeUnits = ["bottle"];
-    
-    const manualForms = ["tube", "ointment", "cream"];
-    const manualUnits = ["tube"];
-    
-    if (volumeForms.some(v => form.includes(v)) || volumeUnits.includes(unit)) return "volume";
-    if (manualForms.some(m => form.includes(m)) || manualUnits.includes(unit)) return "manual";
-    
-    return "exact";
-  };
-
-  const calculateQty = (dose: any, freq: any, dur: any, med: any, currentQty: number) => {
-    const category = getFormCategory(med);
-    if (category === "manual") return currentQty || 1; // User decides
-
-    const d = parseFloat(dose) || 0;
-    const freqMap: Record<string, number> = {
-      "once a day": 1,
-      "twice a day": 2,
-      "thrice a day": 3,
-      "four times a day": 4
-    };
-    const f = freqMap[freq] || 0;
-    const du = parseInt(dur) || 0;
-    
-    if (category === "volume") {
-      const sizeStr = med?.size?.toString() || "1";
-      const match = sizeStr.match(/(\d+(\.\d+)?)/);
-      const bottleSize = match ? parseFloat(match[0]) : 1;
-      
-      const totalMl = d * f * du;
-      const bottles = Math.ceil(totalMl / bottleSize);
-      return bottles > 0 ? bottles : 1;
-    }
-    
-    const result = Math.ceil(d * f * du);
-    return result > 0 ? result : 1;
-  };
-
-  const handleItemChange = (index: number, field: string, value: any) => {
-    const newItems = [...formData.items];
-    const updatedItem = { ...newItems[index], [field]: value };
-    
-    if (field !== "quantity") {
-      const selectedMed = medicines.find(m => m.id == updatedItem.medicine_id);
-      updatedItem.quantity = calculateQty(updatedItem.dosage, updatedItem.frequency, updatedItem.duration, selectedMed, updatedItem.quantity);
-    }
-    
-    newItems[index] = updatedItem;
-    setFormData({ ...formData, items: newItems });
-  };
-
-  const openAddModal = () => {
-    setIsEditing(false);
-    setSelectedPrescription(null);
-    setFormData({
-      patient_name: "",
-      notes: "",
-      items: [{ medicine_id: "", dosage: "", frequency: "", quantity: 1, duration: "" }]
-    });
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (rx: any) => {
-    setIsEditing(true);
-    setSelectedPrescription(rx);
-    setFormData({
-      patient_name: rx.patient_name || "",
-      notes: rx.notes || "",
-      items: rx.items.map((item: any) => ({
-        medicine_id: item.medicine_id.toString(),
-        dosage: item.dosage || "",
-        quantity: item.quantity,
-        frequency: item.frequency || "",
-        duration: item.duration || ""
-      }))
-    });
-    setIsModalOpen(true);
-  };
 
   const openViewModal = (rx: any) => {
     setSelectedPrescription(rx);
     setIsViewModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.patient_name || formData.items.some(item => !item.medicine_id)) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    // Stock Validation
-    const overStockItem = formData.items.find(item => {
-      const med = medicines.find(m => m.id == item.medicine_id);
-      const stockQty = med?.stock?.quantity || 0;
-      return item.quantity > stockQty;
-    });
-
-    if (overStockItem) {
-      const medName = medicines.find(m => m.id == overStockItem.medicine_id)?.name || "Unknown Medicine";
-      toast.error(`Quantity for ${medName} exceeds available stock`);
-      return;
-    }
-
-    setIsSubmitting(true);
-    // Optimistic UI updates
-    setIsModalOpen(false);
-    toast.success(isEditing ? "Prescription updated successfully!" : "Prescription saved instantly!");
-
-    try {
-      if (isEditing && selectedPrescription) {
-        await prescriptionAPI.updateStandalone(selectedPrescription.id, formData);
-      } else {
-        await prescriptionAPI.storeStandalone(formData);
-      }
-      fetchPrescriptions();
-    } catch (err) {
-      console.error("Failed to save prescription", err);
-      // Let global interceptor handle error visually, but re-sync
-      fetchPrescriptions();
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleEdit = (rx: any) => {
+    setEditPrescription(rx);
+    setIsAddModalOpen(true);
   };
 
-  const filteredPrescriptions = prescriptions.filter(rx =>
-    rx.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    rx.items?.some((item: any) => item.medicine?.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const handleCloseModal = () => {
+    setIsAddModalOpen(false);
+    setEditPrescription(null);
+  };
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
@@ -224,21 +91,21 @@ export default function PrescriptionsPage() {
             />
           </div>
           <button
-            onClick={openAddModal}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+            onClick={() => setIsAddModalOpen(true)}
+            className="inline-flex items-center justify-center rounded-md text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-primary-600 text-white hover:bg-primary-700 h-10 px-4 shadow-sm"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Prescription
+             <Pill className="mr-2 h-4 w-4" />
+             New Prescription
           </button>
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
         {isLoading ? (
           <div className="p-12 flex justify-center">
             <Loader2 className="h-8 w-8 text-primary-500 animate-spin" />
           </div>
-        ) : filteredPrescriptions.length === 0 ? (
+        ) : prescriptions.length === 0 ? (
           <div className="p-12 text-center text-slate-500 italic">
             No prescriptions found.
           </div>
@@ -255,7 +122,7 @@ export default function PrescriptionsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
-                {filteredPrescriptions.map((rx) => (
+                {prescriptions.map((rx) => (
                   <tr key={rx.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -302,13 +169,14 @@ export default function PrescriptionsPage() {
                         >
                           <Eye className="h-4 w-4" />
                         </button>
-                        {!rx.patient_id && (
-                          <button
-                            onClick={() => openEditModal(rx)}
-                            className="text-primary-600 hover:text-primary-700 font-semibold"
-                          >
-                            Edit
-                          </button>
+                        {!rx.patient_id && !rx.is_cleared && (
+                           <button
+                             onClick={() => handleEdit(rx)}
+                             className="text-primary-600 hover:text-primary-800 transition-colors"
+                             title="Edit Purchase"
+                           >
+                              <FileText className="h-4 w-4" />
+                           </button>
                         )}
                         {rx.patient_id && (
                           <Link href={`/patients/${rx.patient_id}?tab=prescriptions`} className="text-primary-600 hover:text-primary-700 font-semibold">
@@ -323,196 +191,13 @@ export default function PrescriptionsPage() {
             </table>
           </div>
         )}
+
+        {/* Pagination */}
+        <Pagination
+          meta={meta}
+          onPageChange={(page) => setCurrentPage(page)}
+        />
       </div>
-
-      {/* Modal for adding/editing standalone prescription */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={isEditing ? "Edit Standalone Prescription" : "Add Standalone Prescription"}
-        description={isEditing ? "Modify a walk-in prescription record." : "Create a prescription for a walk-in patient. This will generate an invoice."}
-        maxWidth="max-w-2xl"
-      >
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Patient Name *</label>
-            <input
-              type="text"
-              required
-              placeholder="Enter full name"
-              value={formData.patient_name}
-              onChange={(e) => setFormData({ ...formData, patient_name: e.target.value })}
-              className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            />
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-md font-semibold text-slate-900">Medicines</h4>
-              <button
-                type="button"
-                onClick={handleAddItem}
-                className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center"
-              >
-                <Plus className="h-4 w-4 mr-1" /> Add Medication
-              </button>
-            </div>
-
-            {formData.items.map((item, index) => (
-              <div key={index} className="p-4 border border-slate-200 rounded-lg bg-slate-50/50 space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Medicine *</label>
-                    <select
-                      required
-                      value={item.medicine_id}
-                      onChange={(e) => handleItemChange(index, 'medicine_id', e.target.value)}
-                      className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white"
-                    >
-                      <option value="">Select Medicine</option>
-                      {medicines.map((m) => (
-                        <option key={m.id} value={m.id}>{m.name} - ${m.unit_price}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Dose *</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        required
-                        placeholder={(() => {
-                          const med = item.medicine_id ? medicines.find(m => m.id == item.medicine_id) : null;
-                          if (med && getFormCategory(med) === "manual") return "e.g. Apply thinly";
-                          return "e.g. 1";
-                        })()}
-                        value={item.dosage}
-                        onChange={(e) => handleItemChange(index, 'dosage', e.target.value)}
-                        className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      />
-                      {(() => {
-                        const med = item.medicine_id ? medicines.find(m => m.id == item.medicine_id) : null;
-                        if (!med) return null;
-                        const category = getFormCategory(med);
-                        let suffix = med.unit;
-                        if (category === "volume") suffix = "ml";
-                        if (category === "manual") suffix = "";
-                        if (!suffix) return null;
-                        return (
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">
-                            {suffix}
-                          </span>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Frequency *</label>
-                    <select
-                      required
-                      value={item.frequency}
-                      onChange={(e) => handleItemChange(index, 'frequency', e.target.value)}
-                      className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white"
-                    >
-                      <option value="">Select frequency...</option>
-                      <option value="once a day">once a day</option>
-                      <option value="twice a day">twice a day</option>
-                      <option value="thrice a day">thrice a day</option>
-                      <option value="four times a day">four times a day</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Qty</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={Number.isNaN(item.quantity) ? "" : item.quantity}
-                        onChange={(e) => handleItemChange(index, 'quantity', e.target.value === "" ? "" : parseInt(e.target.value, 10))}
-                        className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-slate-50 font-bold text-primary-700"
-                      />
-                      {(() => {
-                        const med = medicines.find(m => m.id == item.medicine_id);
-                        if (med && med.stock?.quantity !== undefined && (Number(item.quantity) || 1) > med.stock.quantity) {
-                          return <p className="text-red-500 text-[10px] mt-1 font-semibold">Exceeds stock ({med.stock.quantity} left)</p>;
-                        }
-                        return null;
-                      })()}
-                    </div>
-                    {formData.items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItem(index)}
-                        className="text-red-500 hover:text-red-700 p-2 mt-4"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Duration (days) *</label>
-                    <input
-                      type="number"
-                      min="1"
-                      required
-                      placeholder="e.g. 5"
-                      value={item.duration}
-                      onChange={(e) => handleItemChange(index, 'duration', e.target.value)}
-                      className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                    />
-                  </div>
-                
-                {item.medicine_id && (
-                  <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-sm">
-                    <span className="text-slate-500 font-medium">Item Total</span>
-                    <span className="font-bold text-primary-700">
-                      KSh {(item.quantity * (medicines.find((m: any) => m.id == item.medicine_id)?.unit_price || 0)).toFixed(2)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-primary-50 p-4 rounded-xl flex justify-between items-center mb-4">
-            <span className="font-bold text-primary-900 border-b border-primary-200 pb-1">Grand Total</span>
-            <span className="font-bold text-primary-800 text-xl">
-              KSh {formData.items.reduce((sum, item) => sum + (item.quantity * (medicines.find((m: any) => m.id == item.medicine_id)?.unit_price || 0)), 0).toFixed(2)}
-            </span>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-            <textarea
-              rows={3}
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            ></textarea>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : (isEditing ? "Update Prescription" : "Save Prescription")}
-            </button>
-          </div>
-        </form>
-      </Modal>
 
       {/* View Modal */}
       <Modal
@@ -582,6 +267,13 @@ export default function PrescriptionsPage() {
           </div>
         )}
       </Modal>
+      
+      <DirectPrescriptionModal 
+        isOpen={isAddModalOpen} 
+        onClose={handleCloseModal} 
+        onSuccess={fetchPrescriptions} 
+        prescription={editPrescription}
+      />
     </div>
   );
 }

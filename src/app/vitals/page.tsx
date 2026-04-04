@@ -4,32 +4,48 @@ import { Activity, Loader2, Search, Calendar, User } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { vitalAPI } from "@/lib/api";
 import Link from "next/link";
+import { Pagination } from "@/components/ui/Pagination";
 
 export default function VitalsPage() {
   const [vitals, setVitals] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [meta, setMeta] = useState<any>(null);
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1); // Reset to first page on new search
+    }, 500);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
 
   const fetchVitals = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await vitalAPI.listGlobal();
+      const params = {
+        'filter[search]': debouncedSearch,
+        'page': currentPage,
+      };
+      const response = await vitalAPI.listGlobal(params);
       setVitals(response.data || []);
+      setMeta(response.meta || null);
     } catch (err) {
       console.error("Failed to fetch global vitals", err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [debouncedSearch, currentPage]);
 
   useEffect(() => {
     fetchVitals();
   }, [fetchVitals]);
-
-  const filteredVitals = vitals.filter(v => 
-    v.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    v.vital_type?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
@@ -52,12 +68,12 @@ export default function VitalsPage() {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
         {isLoading ? (
           <div className="p-12 flex justify-center">
             <Loader2 className="h-8 w-8 text-primary-500 animate-spin" />
           </div>
-        ) : filteredVitals.length === 0 ? (
+        ) : vitals.length === 0 ? (
           <div className="p-12 text-center text-slate-500 italic">
             No vitals found.
           </div>
@@ -74,7 +90,7 @@ export default function VitalsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
-                {filteredVitals.map((v) => (
+                {vitals.map((v) => (
                   <tr key={v.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -119,6 +135,12 @@ export default function VitalsPage() {
             </table>
           </div>
         )}
+
+        {/* Pagination */}
+        <Pagination
+          meta={meta}
+          onPageChange={(page) => setCurrentPage(page)}
+        />
       </div>
     </div>
   );

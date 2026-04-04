@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Search, Plus, MoreHorizontal, Filter, Loader2, Eye, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { patientAPI } from "@/lib/api";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface Patient {
   id: string; // the physical db ID or patient_id string
@@ -26,11 +27,14 @@ export default function PatientsList() {
   const [typeFilter, setTypeFilter] = useState("");
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [meta, setMeta] = useState<any>(null);
 
   // Debounce search query
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchQuery);
+      setCurrentPage(1); // Reset to first page on new search
     }, 500);
 
     return () => {
@@ -38,25 +42,31 @@ export default function PatientsList() {
     };
   }, [searchQuery]);
 
+  // Reset to first page on filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [genderFilter, typeFilter]);
+
   const fetchPatients = useCallback(async () => {
     setIsLoading(true);
     setErrorMsg("");
     try {
       const params: any = {
         'filter[search]': debouncedSearch,
-        'page[number]': 1,
+        'page': currentPage,
       };
       if (genderFilter) params['filter[gender]'] = genderFilter;
       if (typeFilter) params['filter[patient_type]'] = typeFilter;
 
       const data = await patientAPI.list(params);
       setPatients(data.data || []);
+      setMeta(data.meta || null);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to load patients");
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearch, genderFilter, typeFilter]);
+  }, [debouncedSearch, genderFilter, typeFilter, currentPage]);
 
   useEffect(() => {
     fetchPatients();
@@ -66,7 +76,14 @@ export default function PatientsList() {
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Patients</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+            Patients
+            {meta?.total > 0 && (
+              <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-xs font-semibold border border-slate-200">
+                {meta.total} Total
+              </span>
+            )}
+          </h1>
           <p className="text-slate-500 mt-1">Manage patient records and histories</p>
         </div>
         <Link
@@ -234,12 +251,11 @@ export default function PatientsList() {
           )}
         </div>
 
-        {/* Pagination placeholder */}
-        <div className="bg-white px-4 py-3 border-t border-slate-200 flex items-center justify-between sm:px-6">
-          <div className="hidden sm:block text-sm text-slate-700">
-            Showing <span className="font-medium">{patients.length}</span> results
-          </div>
-        </div>
+        {/* Pagination */}
+        <Pagination
+          meta={meta}
+          onPageChange={(page) => setCurrentPage(page)}
+        />
       </div>
     </div>
   );

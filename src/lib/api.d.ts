@@ -95,9 +95,9 @@ declare module "@/lib/api" {
   }
 
   export interface AdminAPI {
-    getAdmins(): Promise<any>;
+    getAdmins(params?: any): Promise<any>;
     createAdmin(data: any): Promise<any>;
-    toggleStatus(id: number): Promise<any>;
+    toggleStatus(id: string | number): Promise<any>;
   }
 
   export interface ActivityLogAPI {

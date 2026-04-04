@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Package,
   AlertTriangle,
@@ -19,16 +19,21 @@ import { useStock } from "@/hooks/useStock";
 import { medicineAPI } from "@/lib/api";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Pagination } from "@/components/ui/Pagination";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 
-  export default function StockManagement() {
-  const { medicines, isLoading, fetchMedicines, addMedicine, updateMedicine, addStock, adjustStock, updateCategory, deleteCategory } = useStock();
+export default function StockManagement() {
+  const { medicines, meta, summary, isLoading, fetchMedicines, addMedicine, updateMedicine, addStock, adjustStock, updateCategory, deleteCategory } = useStock();
   const { user } = useAuth();
   const router = useRouter();
+  
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [filter, setFilter] = useState("all");
+  
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -63,14 +68,37 @@ import { useRouter } from "next/navigation";
     expiry_date: ""
   });
 
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1); // Reset to first page on new search
+    }, 500);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
+
+  const loadStock = useCallback(async () => {
+    const params: any = {
+      'page': currentPage,
+      'filter[search]': debouncedSearch
+    };
+    if (filter !== "all") {
+      params['filter[status]'] = filter;
+    }
+    await fetchMedicines(params);
+  }, [fetchMedicines, currentPage, debouncedSearch, filter]);
+
   useEffect(() => {
     if (user && !user.roles?.includes('super-admin')) {
       toast.error("Access denied. Only super-admins can access stock management.");
       router.push("/");
       return;
     }
-    fetchMedicines();
-  }, [fetchMedicines, user, router]);
+    loadStock();
+  }, [loadStock, user, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -98,7 +126,6 @@ import { useRouter } from "next/navigation";
     // Optimistic UI: Close modal immediately to feel lightning fast
     setIsAddItemModalOpen(false);
     setEditingId(null);
-    const originalFormData = { ...formData };
     setFormData({
       name: "", category: "Antibiotics", unit_price: "", description: "", size: "", unit: "tablets",
       dosage_form: "tablet", initial_stock: "", minimum_stock: "50", reorder_level: "100", batch_number: "", expiry_date: ""
@@ -112,6 +139,7 @@ import { useRouter } from "next/navigation";
         await addMedicine(payload);
         toast.success("Item added to inventory successfully!");
       }
+      loadStock(); // Re-sync
     } catch (err: any) {
       // Global errorHandler in api.js handles this
     } finally {
@@ -168,14 +196,14 @@ import { useRouter } from "next/navigation";
     setIsSubmitting(true);
     try {
       await adjustStock(selectedItem.stock.id, finalAdjustment);
+      loadStock(); // Re-sync
     } catch (err) {
       // Re-fetch or handle error (api.js interceptor handles visual error)
-      fetchMedicines();
+      loadStock();
     } finally {
       setIsSubmitting(false);
     }
   };
-
 
   const handleCategoryEdit = (oldName: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -191,7 +219,6 @@ import { useRouter } from "next/navigation";
       return;
     }
 
-    // Optimistic Closure
     const oldName = categoryToEdit;
     const nextName = newCategoryName;
     setIsEditCategoryModalOpen(false);
@@ -200,6 +227,7 @@ import { useRouter } from "next/navigation";
 
     try {
       await updateCategory(oldName, nextName);
+      loadStock();
     } catch (err) {
       // Hook handles state restoration
     }
@@ -214,7 +242,6 @@ import { useRouter } from "next/navigation";
   const confirmCategoryDelete = async () => {
     if (!categoryToDelete) return;
 
-    // Optimistic Closure
     const name = categoryToDelete;
     setIsDeleteCategoryModalOpen(false);
     toast.success(`Category "${name}" removed`);
@@ -222,51 +249,19 @@ import { useRouter } from "next/navigation";
 
     try {
       await deleteCategory(name);
+      loadStock();
     } catch (err) {
       // Hook handles state restoration
     }
   };
 
-  const filteredInventory = useMemo(() => {
-    return medicines.filter((item: any) => {
-      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        item.id.toString().includes(searchTerm);
-
-      if (filter === "all") return matchesSearch;
-
-      const qty = item.stock?.quantity || 0;
-      const min = item.stock?.minimum_stock || 0;
-      const reorder = item.stock?.reorder_level || 0;
-
-      if (filter === "critical") return matchesSearch && (qty <= min);
-      if (filter === "low") return matchesSearch && (qty > min && qty <= reorder);
-
-      return matchesSearch;
-    });
-  }, [medicines, searchTerm, filter]);
-
   const stats = useMemo(() => {
-    let totalItems = 0;
-    let lowStock = 0;
-    let critical = 0;
-
-    medicines.forEach((m: any) => {
-      const qty = m.stock?.quantity || 0;
-      const min = m.stock?.minimum_stock || 0;
-      const reorder = m.stock?.reorder_level || 0;
-
-      totalItems += 1;
-
-      if (qty <= min) {
-        critical += 1;
-      } else if (qty <= reorder) {
-        lowStock += 1;
-      }
-    });
-
-    return { totalItems, lowStock, critical };
-  }, [medicines]);
+    return {
+      totalItems: summary?.total || 0,
+      lowStock: summary?.low || 0,
+      critical: summary?.critical || 0
+    };
+  }, [summary]);
 
   const availableCategories = useMemo(() => {
     const defaults = ["Antibiotics", "Analgesics", "Consumables", "Cardiovascular"];
@@ -348,19 +343,19 @@ import { useRouter } from "next/navigation";
           </div>
           <div className="flex items-center bg-slate-100 p-1 rounded-lg">
             <button
-              onClick={() => setFilter("all")}
+              onClick={() => { setFilter("all"); setCurrentPage(1); }}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${filter === 'all' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               All Items
             </button>
             <button
-              onClick={() => setFilter("low")}
+              onClick={() => { setFilter("low"); setCurrentPage(1); }}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${filter === 'low' ? 'bg-white text-amber-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Low Stock
             </button>
             <button
-              onClick={() => setFilter("critical")}
+              onClick={() => { setFilter("critical"); setCurrentPage(1); }}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${filter === 'critical' ? 'bg-white text-red-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Critical
@@ -374,7 +369,7 @@ import { useRouter } from "next/navigation";
             <div className="flex justify-center p-12">
               <Loader2 className="h-8 w-8 text-primary-500 animate-spin" />
             </div>
-          ) : filteredInventory.length === 0 ? (
+          ) : medicines.length === 0 ? (
             <div className="p-12 text-center text-slate-500">No items found matching your criteria.</div>
           ) : (
             <table className="min-w-full divide-y divide-slate-200">
@@ -390,14 +385,13 @@ import { useRouter } from "next/navigation";
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
-                {filteredInventory.map((item: any) => {
+                {medicines.map((item: any) => {
                   const qty = item.stock?.quantity || 0;
                   const min = item.stock?.minimum_stock || 0;
                   const reorder = item.stock?.reorder_level || 0;
 
                   const isCritical = qty <= min;
                   const isLow = !isCritical && qty <= reorder;
-                  const statusLabel = isCritical ? 'Critical' : isLow ? 'Low Stock' : 'In Stock';
 
                   // Calculate width capped at 100% relative to 3x reorder level
                   const safeDenominator = (reorder || min || 10) * 3;
@@ -408,7 +402,6 @@ import { useRouter } from "next/navigation";
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="max-w-xs">
                           <div className="text-sm font-bold text-slate-900">{item.name} {item.size && `(${item.size})`}</div>
-                          {/* <div className="text-xs text-slate-500 mt-0.5">ID: {item.id} &bull; {item.dosage_form || 'N/A'}</div> */}
                           {item.description && <div className="text-[11px] text-slate-400 mt-1 line-clamp-1" title={item.description}>{item.description}</div>}
                         </div>
                       </td>
@@ -468,6 +461,12 @@ import { useRouter } from "next/navigation";
             </table>
           )}
         </div>
+
+        {/* Pagination */}
+        <Pagination
+          meta={meta}
+          onPageChange={(page) => setCurrentPage(page)}
+        />
       </div>
 
       <Modal
@@ -499,7 +498,7 @@ import { useRouter } from "next/navigation";
                 </div>
 
                 {isCategoryOpen && (
-                  <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in duration-150">
+                  <div className="absolute z-50 mt-1 (restock?)... ml-1 w-full bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in duration-150">
                     <div className="p-2 border-b border-slate-100 italic font-medium text-xs text-primary-500 bg-slate-50 flex items-center">
                       <Search className="h-3 w-3 mr-2" /> Search or Add New
                     </div>

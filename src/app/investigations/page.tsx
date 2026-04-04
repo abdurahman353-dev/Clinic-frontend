@@ -1,139 +1,61 @@
 "use client";
 
-import { FileSearch, Loader2, Search, Calendar, User, Microscope, Plus, Eye } from "lucide-react";
+import { FileSearch, Loader2, Search, Calendar, User, Microscope, Eye } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
-import { investigationAPI, labTestAPI } from "@/lib/api";
+import { investigationAPI } from "@/lib/api";
 import Link from "next/link";
 import { Modal } from "@/components/ui/Modal";
-import { toast } from "sonner";
+import { Pagination } from "@/components/ui/Pagination";
 
 export default function InvestigationsPage() {
   const [investigations, setInvestigations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [meta, setMeta] = useState<any>(null);
   
   // Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [labTests, setLabTests] = useState<any[]>([]);
   const [selectedInvestigation, setSelectedInvestigation] = useState<any>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  
-  // Form state
-  const [formData, setFormData] = useState({
-    patient_name: "",
-    name: "",
-    type: "",
-    cost: 0,
-    notes: "",
-    result: "",
-    status: "pending"
-  });
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1); // Reset to first page on new search
+    }, 500);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
 
   const fetchInvestigations = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await investigationAPI.listGlobal();
+      const params = {
+        'filter[search]': debouncedSearch,
+        'page': currentPage,
+      };
+      const response = await investigationAPI.listGlobal(params);
       setInvestigations(response.data || []);
+      setMeta(response.meta || null);
     } catch (err) {
       console.error("Failed to fetch global investigations", err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  const fetchLabTests = async () => {
-    try {
-      const response = await labTestAPI.list();
-      setLabTests(response.data || []);
-    } catch (err) {
-      console.error("Failed to fetch lab tests", err);
-    }
-  };
+  }, [debouncedSearch, currentPage]);
 
   useEffect(() => {
     fetchInvestigations();
-    fetchLabTests();
   }, [fetchInvestigations]);
-
-  const handleTestChange = (testId: string) => {
-    const test = labTests.find(t => t.id.toString() === testId);
-    if (test) {
-      setFormData({
-        ...formData,
-        name: test.name,
-        type: test.type || "Lab",
-        cost: test.cost || 0
-      });
-    }
-  };
-
-  const openAddModal = () => {
-    setIsEditing(false);
-    setSelectedInvestigation(null);
-    setFormData({
-      patient_name: "",
-      name: "",
-      type: "",
-      cost: 0,
-      notes: "",
-      result: "",
-      status: "pending"
-    });
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (inv: any) => {
-    setIsEditing(true);
-    setSelectedInvestigation(inv);
-    setFormData({
-      patient_name: inv.patient_name || "",
-      name: inv.name || "",
-      type: inv.type || "",
-      cost: inv.cost || 0,
-      notes: inv.notes || "",
-      result: inv.result || "",
-      status: inv.status || "pending"
-    });
-    setIsModalOpen(true);
-  };
 
   const openViewModal = (inv: any) => {
     setSelectedInvestigation(inv);
     setIsViewModalOpen(true);
   };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.patient_name || !formData.name) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      if (isEditing && selectedInvestigation) {
-        await investigationAPI.updateStandalone(selectedInvestigation.id, formData);
-        toast.success("Investigation updated successfully");
-      } else {
-        await investigationAPI.storeStandalone(formData);
-        toast.success("Investigation added successfully");
-      }
-      setIsModalOpen(false);
-      fetchInvestigations();
-    } catch (err) {
-      console.error("Failed to save investigation", err);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const filteredInvestigations = investigations.filter(inv => 
-    inv.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    inv.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    inv.type?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
@@ -155,22 +77,15 @@ export default function InvestigationsPage() {
                 className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md leading-5 bg-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             />
             </div>
-            <button 
-                onClick={openAddModal}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
-            >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Investigation
-            </button>
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
         {isLoading ? (
           <div className="p-12 flex justify-center">
             <Loader2 className="h-8 w-8 text-primary-500 animate-spin" />
           </div>
-        ) : filteredInvestigations.length === 0 ? (
+        ) : investigations.length === 0 ? (
           <div className="p-12 text-center text-slate-500 italic">
             No investigations found.
           </div>
@@ -187,7 +102,7 @@ export default function InvestigationsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
-                {filteredInvestigations.map((inv) => (
+                {investigations.map((inv) => (
                   <tr key={inv.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -226,14 +141,6 @@ export default function InvestigationsPage() {
                         >
                           <Eye className="h-4 w-4" />
                         </button>
-                        {!inv.patient_id && (
-                          <button 
-                            onClick={() => openEditModal(inv)}
-                            className="text-primary-600 hover:text-primary-700 font-semibold"
-                          >
-                            Edit
-                          </button>
-                        )}
                         {inv.patient_id && (
                           <Link href={`/patients/${inv.patient_id}?tab=investigations`} className="text-primary-600 hover:text-primary-700 font-semibold">
                             Results
@@ -247,122 +154,13 @@ export default function InvestigationsPage() {
             </table>
           </div>
         )}
+
+        {/* Pagination */}
+        <Pagination
+          meta={meta}
+          onPageChange={(page) => setCurrentPage(page)}
+        />
       </div>
-
-      {/* Modal for adding/editing standalone investigation */}
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        title={isEditing ? "Edit Standalone Investigation" : "Add Standalone Investigation"}
-        description={isEditing ? "Update test details or enter results." : "Order a laboratory test for a walk-in patient. This will generate an invoice."}
-      >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Patient Name *</label>
-            <input
-              type="text"
-              required
-              placeholder="Enter full name"
-              value={formData.patient_name}
-              onChange={(e) => setFormData({ ...formData, patient_name: e.target.value })}
-              className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Select Investigation *</label>
-            <select
-              required
-              value={labTests.find(t => t.name === formData.name)?.id || ""}
-              onChange={(e) => handleTestChange(e.target.value)}
-              className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white"
-            >
-              <option value="">Select a test</option>
-              {labTests.map((test) => (
-                <option key={test.id} value={test.id}>{test.name} (${test.cost})</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
-              <input
-                type="text"
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-slate-50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Cost</label>
-              <input
-                type="number"
-                value={formData.cost}
-                onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) })}
-                className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              />
-            </div>
-          </div>
-
-          {isEditing && (
-            <div className="pt-4 border-t border-slate-100 space-y-4">
-              <h4 className="text-sm font-bold text-slate-900 flex items-center">
-                <FileSearch className="h-4 w-4 mr-2 text-primary-500" />
-                Test Outcome
-              </h4>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Results</label>
-                <textarea
-                  rows={4}
-                  placeholder="Enter lab results here..."
-                  value={formData.result}
-                  onChange={(e) => setFormData({ ...formData, result: e.target.value })}
-                  className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                ></textarea>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="completed">Completed</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Internal Notes</label>
-            <textarea
-              rows={2}
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            ></textarea>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : (isEditing ? "Update Record" : "Save Investigation")}
-            </button>
-          </div>
-        </form>
-      </Modal>
 
       {/* View Modal */}
       <Modal

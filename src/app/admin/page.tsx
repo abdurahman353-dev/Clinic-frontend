@@ -23,6 +23,7 @@ import {
 import { adminAPI } from "@/lib/api";
 import { toast } from "react-hot-toast";
 import { Modal } from "@/components/ui/Modal";
+import { Pagination } from "@/components/ui/Pagination";
 
 export default function AdminManagementPage() {
   const [admins, setAdmins] = useState<any[]>([]);
@@ -31,6 +32,8 @@ export default function AdminManagementPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [meta, setMeta] = useState<any>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -43,8 +46,9 @@ export default function AdminManagementPage() {
   const fetchAdmins = async () => {
     setIsLoading(true);
     try {
-      const response = await adminAPI.getAdmins();
-      setAdmins(response.data);
+      const response = await adminAPI.getAdmins({ page: currentPage });
+      setAdmins(response.data || []);
+      setMeta(response.meta || null);
     } catch (error) {
       toast.error("Failed to load administrators");
     } finally {
@@ -54,7 +58,7 @@ export default function AdminManagementPage() {
 
   useEffect(() => {
     fetchAdmins();
-  }, []);
+  }, [currentPage]);
 
   const handleToggleStatus = async (admin: any) => {
     if (admin.roles.includes('super-admin')) {
@@ -125,7 +129,7 @@ export default function AdminManagementPage() {
               </div>
               <div>
                 <p className="text-sm text-slate-500 font-bold uppercase tracking-wider mb-1">Total Admins</p>
-                <h3 className="text-3xl font-black text-slate-900">{admins.length}</h3>
+                <h3 className="text-3xl font-black text-slate-900">{meta?.total || admins.length}</h3>
               </div>
             </div>
           </div>
@@ -271,6 +275,10 @@ export default function AdminManagementPage() {
               </tbody>
             </table>
           </div>
+          <Pagination
+            meta={meta}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
         </div>
       </div>
 

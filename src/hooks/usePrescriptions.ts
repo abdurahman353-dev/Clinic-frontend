@@ -3,18 +3,23 @@ import { prescriptionAPI, medicineAPI, visitAPI } from "@/lib/api";
 
 export function usePrescriptions(patientId?: number) {
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
+  const [meta, setMeta] = useState<any>(null);
   const [medicines, setMedicines] = useState<any[]>([]); // To populate the dropdown
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [activeVisitId, setActiveVisitId] = useState<number | null>(null);
 
-  const fetchPrescriptions = useCallback(async () => {
+  const fetchPrescriptions = useCallback(async (params: any = {}) => {
     if (!patientId) return;
     setIsLoading(true);
     setErrorMsg("");
     try {
-      const response = await prescriptionAPI.listGlobal({ 'filter[patient_id]': patientId });
+      const response = await prescriptionAPI.listGlobal({ 
+        'filter[patient_id]': patientId,
+        ...params
+      });
       setPrescriptions(response.data || []);
+      setMeta(response.meta || null);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to load prescriptions");
     } finally {
@@ -94,6 +99,7 @@ export function usePrescriptions(patientId?: number) {
 
   return { 
     prescriptions, 
+    meta,
     medicines, 
     isLoading, 
     errorMsg, 

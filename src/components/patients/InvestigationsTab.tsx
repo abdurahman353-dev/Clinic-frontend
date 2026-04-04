@@ -8,23 +8,23 @@ import { labTestAPI } from "@/lib/api";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
+import { Pagination } from "@/components/ui/Pagination";
 
 type FormView = "table" | "request" | "result";
 
 export default function InvestigationsTab({
   patientId,
-  initialData,
-  onDataChange,
+  onTotalChange,
   isInitialLoaded,
   onLoadComplete
 }: {
   patientId?: number;
-  initialData: any[];
-  onDataChange: (data: any[]) => void;
+  onTotalChange: (total: number) => void;
   isInitialLoaded: boolean;
   onLoadComplete: () => void;
 }): React.JSX.Element {
-  const { investigations, isLoading, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations } = useInvestigations(patientId);
+  const { investigations, meta, isLoading, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations } = useInvestigations(patientId);
+  const [currentPage, setCurrentPage] = useState(1);
   const { labTests, isLoadingLabTests, fetchLabTests, addLabTest, updateLabTest, bulkAddLabTests, deleteLabTest } = useLabTests();
 
   const [view, setView] = useState<FormView>("table");
@@ -72,24 +72,17 @@ export default function InvestigationsTab({
   });
 
   useEffect(() => {
-    if (!isInitialLoaded) {
-      Promise.all([fetchInvestigations(), fetchLabTests()]).then(() => onLoadComplete());
-    } else {
-      fetchLabTests();
-    }
-  }, [fetchInvestigations, fetchLabTests, isInitialLoaded, onLoadComplete]);
+    fetchInvestigations({ page: currentPage }).then(() => {
+      if (!isInitialLoaded) onLoadComplete();
+    });
+    fetchLabTests();
+  }, [fetchInvestigations, fetchLabTests, currentPage, isInitialLoaded, onLoadComplete]);
 
   useEffect(() => {
-    if (isInitialLoaded && investigations.length === 0 && initialData.length > 0) {
-      setInvestigations(initialData);
+    if (meta?.total !== undefined) {
+      onTotalChange(meta.total);
     }
-  }, [initialData, isInitialLoaded, setInvestigations, investigations.length]);
-
-  useEffect(() => {
-    if (investigations.length > 0) {
-      onDataChange(investigations);
-    }
-  }, [investigations, onDataChange]);
+  }, [meta, onTotalChange]);
 
   const resetRequestForm = () => {
     setRequestForm({ name: "", type: "lab", notes: "", cost: "", diagnosis: "" });
@@ -787,6 +780,10 @@ export default function InvestigationsTab({
             ))}
           </ul>
         )}
+        <Pagination
+          meta={meta}
+          onPageChange={(page) => setCurrentPage(page)}
+        />
       </div>
 
       {/* Library modals are fine to remain as modals — they're admin/utility actions */}

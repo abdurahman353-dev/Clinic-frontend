@@ -3,15 +3,19 @@ import { medicineAPI, stockAPI } from "@/lib/api";
 
 export function useStock() {
   const [medicines, setMedicines] = useState<any[]>([]);
+  const [meta, setMeta] = useState<any>(null);
+  const [summary, setSummary] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const fetchMedicines = useCallback(async () => {
+  const fetchMedicines = useCallback(async (params = {}) => {
     setIsLoading(true);
     setErrorMsg("");
     try {
-      const res = await medicineAPI.list();
+      const res = await medicineAPI.list(params);
       setMedicines(res.data || []);
+      setMeta(res.meta || null);
+      setSummary(res.summary || null);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to load medicines and stock");
     } finally {
@@ -120,5 +124,5 @@ export function useStock() {
     }
   };
 
-  return { medicines, isLoading, errorMsg, fetchMedicines, addMedicine, updateMedicine, addStock, adjustStock, updateCategory, deleteCategory, setMedicines };
+  return { medicines, meta, summary, isLoading, errorMsg, fetchMedicines, addMedicine, updateMedicine, addStock, adjustStock, updateCategory, deleteCategory, setMedicines };
 }

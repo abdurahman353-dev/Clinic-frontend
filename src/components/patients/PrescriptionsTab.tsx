@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Pill, Loader2, Edit2, CheckCircle2, Trash2, ArrowLeft } from "lucide-react";
 import { usePrescriptions } from "@/hooks/usePrescriptions";
 import { toast } from "sonner";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface PrescriptionItem {
   medicine_id: string;
@@ -15,18 +16,17 @@ interface PrescriptionItem {
 
 export default function PrescriptionsTab({
   patientId,
-  initialData,
-  onDataChange,
+  onTotalChange,
   isInitialLoaded,
   onLoadComplete
 }: {
   patientId?: number;
-  initialData: any[];
-  onDataChange: (data: any[]) => void;
+  onTotalChange: (total: number) => void;
   isInitialLoaded: boolean;
   onLoadComplete: () => void;
 }): React.JSX.Element {
-  const { prescriptions, medicines, isLoading, fetchPrescriptions, fetchMedicines, addPrescription, updatePrescription, setPrescriptions } = usePrescriptions(patientId);
+  const { prescriptions, medicines, meta, isLoading, fetchPrescriptions, fetchMedicines, addPrescription, updatePrescription } = usePrescriptions(patientId);
+  const [currentPage, setCurrentPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -37,22 +37,17 @@ export default function PrescriptionsTab({
   ]);
 
   useEffect(() => {
-    if (!isInitialLoaded) {
-      Promise.all([fetchPrescriptions(), fetchMedicines()]).then(() => onLoadComplete());
-    }
-  }, [fetchPrescriptions, fetchMedicines, isInitialLoaded, onLoadComplete]);
+    fetchPrescriptions({ page: currentPage }).then(() => {
+      if (!isInitialLoaded) onLoadComplete();
+    });
+    fetchMedicines();
+  }, [fetchPrescriptions, fetchMedicines, currentPage, isInitialLoaded, onLoadComplete]);
 
   useEffect(() => {
-    if (isInitialLoaded && prescriptions.length === 0 && initialData.length > 0) {
-      setPrescriptions(initialData);
+    if (meta?.total !== undefined) {
+      onTotalChange(meta.total);
     }
-  }, [initialData, isInitialLoaded, setPrescriptions, prescriptions.length]);
-
-  useEffect(() => {
-    if (prescriptions.length > 0) {
-      onDataChange(prescriptions);
-    }
-  }, [prescriptions, onDataChange]);
+  }, [meta, onTotalChange]);
 
   const addItem = () => {
     setItems([...items, { medicine_id: "", dosage: "", frequency: "", duration: "", quantity: 1 }]);
@@ -274,7 +269,7 @@ export default function PrescriptionsTab({
                       >
                         <option value="">Select Medicine</option>
                         {medicines.map((m: any) => (
-                          <option key={m.id} value={m.id}>{m.name} - ${m.unit_price}</option>
+                          <option key={m.id} value={m.id}>{m.name} - KSh {m.unit_price}</option>
                         ))}
                       </select>
                     </div>
@@ -458,88 +453,95 @@ export default function PrescriptionsTab({
           No prescriptions recorded yet.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {prescriptions.map((rx) => {
-            const active = isActive(rx);
-            const rxItems = rx.items || [];
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {prescriptions.map((rx) => {
+              const active = isActive(rx);
+              const rxItems = rx.items || [];
 
-            return (
-              <div
-                key={rx.id}
-                className={`bg-white border rounded-xl p-5 shadow-sm relative overflow-hidden flex flex-col h-full ${active ? 'border-primary-100' : 'border-slate-200'}`}
-              >
-                {active && (
-                  <div className="absolute top-0 right-0 shadow-sm z-10">
-                    <div className="bg-green-500 text-white text-[10px] uppercase font-bold tracking-wider py-1 px-3 rounded-bl-lg">Active</div>
-                  </div>
-                )}
-
-                <div className="mb-4 pb-3 border-b border-slate-100 flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <p className="text-sm text-slate-500 font-medium">Prescription #{rx.id}</p>
-                      {!rx.is_cleared ? (
-                        <button
-                          onClick={() => handleEdit(rx)}
-                          className="text-primary-600 hover:text-primary-800 bg-primary-50 hover:bg-primary-100 p-1 rounded-md transition-colors"
-                          title="Edit Prescription"
-                        >
-                          <Edit2 className="h-3 w-3" />
-                        </button>
-                      ) : (
-                        <div className="flex items-center text-slate-400 gap-1 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
-                          <CheckCircle2 className="h-2.5 w-2.5" />
-                          <span className="text-[8px] font-bold uppercase">Locked</span>
-                        </div>
-                      )}
+              return (
+                <div
+                  key={rx.id}
+                  className={`bg-white border rounded-xl p-5 shadow-sm relative overflow-hidden flex flex-col h-full ${active ? 'border-primary-100' : 'border-slate-200'}`}
+                >
+                  {active && (
+                    <div className="absolute top-0 right-0 shadow-sm z-10">
+                      <div className="bg-green-500 text-white text-[10px] uppercase font-bold tracking-wider py-1 px-3 rounded-bl-lg">Active</div>
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5">{new Date(rx.created_at).toLocaleDateString()}</p>
-                  </div>
-                  {rx.notes && (
-                    <p className="text-xs text-slate-500 italic max-w-xs text-right bg-slate-50 p-2 rounded-md"><span className="font-semibold text-slate-700">Reason:</span> {rx.notes}</p>
                   )}
-                </div>
 
-                <div className="space-y-4">
-                  {rxItems.map((item: any, idx: number) => (
-                    <div
-                      key={item.id || idx}
-                      className="flex flex-col sm:flex-row sm:items-center gap-4 bg-slate-50/50 p-3 rounded-lg border border-slate-100"
-                    >
-                      <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${active ? 'bg-primary-50 text-primary-600' : 'bg-slate-50 text-slate-400'}`}>
-                        <Pill className="h-5 w-5" />
+                  <div className="mb-4 pb-3 border-b border-slate-100 flex justify-between items-start">
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <p className="text-sm text-slate-500 font-medium">Prescription #{rx.id}</p>
+                        {!rx.is_cleared ? (
+                          <button
+                            onClick={() => handleEdit(rx)}
+                            className="text-primary-600 hover:text-primary-800 bg-primary-50 hover:bg-primary-100 p-1 rounded-md transition-colors"
+                            title="Edit Prescription"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </button>
+                        ) : (
+                          <div className="flex items-center text-slate-400 gap-1 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                            <CheckCircle2 className="h-2.5 w-2.5" />
+                            <span className="text-[8px] font-bold uppercase">Locked</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                          <h3 className={`text-sm font-bold ${active ? 'text-slate-900' : 'text-slate-600'}`}>
-                            {item.medicine || 'Unknown Medicine'}
-                          </h3>
-                          <span className="text-xs font-medium text-slate-500 bg-white px-2 py-1 rounded border shadow-sm">
-                            Qty: {item.quantity}
-                          </span>
-                        </div>
-                        <div className="mt-2 grid grid-cols-3 gap-2 divide-x divide-slate-200">
-                          <div className="text-left">
-                            <span className="block text-[9px] uppercase tracking-wider text-slate-400 mb-0.5">Dosage</span>
-                            <span className="block text-xs font-semibold text-slate-700 truncate" title={item.dosage}>{item.dosage}</span>
-                          </div>
-                          <div className="px-2 text-left">
-                            <span className="block text-[9px] uppercase tracking-wider text-slate-400 mb-0.5">Frequency</span>
-                            <span className="block text-xs font-semibold text-slate-700 truncate" title={item.frequency || item.dosage}>{item.frequency || '-'}</span>
-                          </div>
-                          <div className="px-2 text-left">
-                            <span className="block text-[9px] uppercase tracking-wider text-slate-400 mb-0.5">Duration</span>
-                            <span className="block text-xs font-semibold text-slate-700 truncate" title={item.duration}>{item.duration}</span>
-                          </div>
-                        </div>
-                      </div>
+                      <p className="text-xs text-slate-400 mt-0.5">{new Date(rx.created_at).toLocaleDateString()}</p>
                     </div>
-                  ))}
+                    {rx.notes && (
+                      <p className="text-xs text-slate-500 italic max-w-xs text-right bg-slate-50 p-2 rounded-md"><span className="font-semibold text-slate-700">Reason:</span> {rx.notes}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-4">
+                    {rxItems.map((item: any, idx: number) => (
+                      <div
+                        key={item.id || idx}
+                        className="flex flex-col sm:flex-row sm:items-center gap-4 bg-slate-50/50 p-3 rounded-lg border border-slate-100"
+                      >
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${active ? 'bg-primary-50 text-primary-600' : 'bg-slate-50 text-slate-400'}`}>
+                          <Pill className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start">
+                            <h3 className={`text-sm font-bold ${active ? 'text-slate-900' : 'text-slate-600'}`}>
+                              {item.medicine || 'Unknown Medicine'}
+                            </h3>
+                            <span className="text-xs font-medium text-slate-500 bg-white px-2 py-1 rounded border shadow-sm">
+                              Qty: {item.quantity}
+                            </span>
+                          </div>
+                          <div className="mt-2 grid grid-cols-3 gap-2 divide-x divide-slate-200">
+                            <div className="text-left">
+                              <span className="block text-[9px] uppercase tracking-wider text-slate-400 mb-0.5">Dosage</span>
+                              <span className="block text-xs font-semibold text-slate-700 truncate" title={item.dosage}>{item.dosage}</span>
+                            </div>
+                            <div className="px-2 text-left">
+                              <span className="block text-[9px] uppercase tracking-wider text-slate-400 mb-0.5">Frequency</span>
+                              <span className="block text-xs font-semibold text-slate-700 truncate" title={item.frequency || item.dosage}>{item.frequency || '-'}</span>
+                            </div>
+                            <div className="px-2 text-left">
+                              <span className="block text-[9px] uppercase tracking-wider text-slate-400 mb-0.5">Duration</span>
+                              <span className="block text-xs font-semibold text-slate-700 truncate" title={item.duration}>{item.duration}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+
+          <Pagination
+            meta={meta}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
+        </>
       )}
     </div>
   );

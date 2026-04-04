@@ -32,9 +32,9 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const [isStartingVisit, setIsStartingVisit] = useState(false);
 
   // Centralized state for tabs to avoid re-fetching on switch
-  const [vitalsData, setVitalsData] = useState<any[]>([]);
-  const [investigationsData, setInvestigationsData] = useState<any[]>([]);
-  const [prescriptionsData, setPrescriptionsData] = useState<any[]>([]);
+  const [vitalsTotal, setVitalsTotal] = useState(0);
+  const [investigationsTotal, setInvestigationsTotal] = useState(0);
+  const [prescriptionsTotal, setPrescriptionsTotal] = useState(0);
   const [isVitalsLoaded, setIsVitalsLoaded] = useState(false);
   const [isInvestigationsLoaded, setIsInvestigationsLoaded] = useState(false);
   const [isPrescriptionsLoaded, setIsPrescriptionsLoaded] = useState(false);
@@ -108,9 +108,9 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
   }
 
   const tabs = [
-    { id: "vitals", label: "Vitals", icon: Activity },
-    { id: "investigations", label: "Investigations", icon: FileText },
-    { id: "prescriptions", label: "Prescriptions", icon: Droplet },
+    { id: "vitals", label: "Vitals", icon: Activity, count: vitalsTotal },
+    { id: "investigations", label: "Investigations", icon: FileText, count: investigationsTotal },
+    { id: "prescriptions", label: "Prescriptions", icon: Droplet, count: prescriptionsTotal },
     { id: "billing", label: "Billing & Invoices", icon: FileText },
   ];
 
@@ -230,6 +230,13 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
               >
                 <tab.icon className={`mr-2 h-4 w-4 ${activeTab === tab.id ? "text-primary-500" : "text-slate-400"}`} />
                 {tab.label}
+                {tab.count !== undefined && (
+                  <span className={`ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    activeTab === tab.id ? 'bg-primary-100 text-primary-700' : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -237,11 +244,10 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
 
         {/* Tab Content Placeholder */}
         <div className="p-6 bg-slate-50 min-h-[400px]">
-          {activeTab === "vitals" && (
+           {activeTab === "vitals" && (
             <VitalsTab
               patientId={patient.db_id}
-              initialData={vitalsData}
-              onDataChange={setVitalsData}
+              onTotalChange={setVitalsTotal}
               isInitialLoaded={isVitalsLoaded}
               onLoadComplete={() => setIsVitalsLoaded(true)}
             />
@@ -249,8 +255,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
           {activeTab === "investigations" && (
             <InvestigationsTab
               patientId={patient.db_id}
-              initialData={investigationsData}
-              onDataChange={setInvestigationsData}
+              onTotalChange={setInvestigationsTotal}
               isInitialLoaded={isInvestigationsLoaded}
               onLoadComplete={() => setIsInvestigationsLoaded(true)}
             />
@@ -258,8 +263,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
           {activeTab === "prescriptions" && (
             <PrescriptionsTab
               patientId={patient.db_id}
-              initialData={prescriptionsData}
-              onDataChange={setPrescriptionsData}
+              onTotalChange={setPrescriptionsTotal}
               isInitialLoaded={isPrescriptionsLoaded}
               onLoadComplete={() => setIsPrescriptionsLoaded(true)}
             />

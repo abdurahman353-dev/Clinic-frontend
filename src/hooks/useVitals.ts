@@ -3,17 +3,22 @@ import { vitalAPI, visitAPI } from "@/lib/api";
 
 export function useVitals(patientId?: number) {
   const [vitals, setVitals] = useState<any[]>([]);
+  const [meta, setMeta] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [activeVisitId, setActiveVisitId] = useState<number | null>(null);
 
-  const fetchVitals = useCallback(async () => {
+  const fetchVitals = useCallback(async (params: any = {}) => {
     if (!patientId) return;
     setIsLoading(true);
     setErrorMsg("");
     try {
-      const response = await vitalAPI.listGlobal({ 'filter[patient_id]': patientId });
+      const response = await vitalAPI.listGlobal({ 
+        'filter[patient_id]': patientId,
+        ...params
+      });
       setVitals(response.data || []);
+      setMeta(response.meta || null);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to load vitals");
     } finally {
@@ -76,5 +81,5 @@ export function useVitals(patientId?: number) {
     }
   };
 
-  return { vitals, isLoading, errorMsg, fetchVitals, addVital, updateVital, setVitals };
+  return { vitals, meta, isLoading, errorMsg, fetchVitals, addVital, updateVital, setVitals };
 }

@@ -258,8 +258,8 @@ export const salesAPI = {
 };
 
 export const adminAPI = {
-    getAdmins: async () => {
-        const response = await apiClient.get('/admins');
+    getAdmins: async (params = {}) => {
+        const response = await apiClient.get('/admins', { params });
         return response.data;
     },
     createAdmin: async (data) => {

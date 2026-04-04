@@ -3,17 +3,22 @@ import { investigationAPI, visitAPI } from "@/lib/api";
 
 export function useInvestigations(patientId?: number) {
   const [investigations, setInvestigations] = useState<any[]>([]);
+  const [meta, setMeta] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [activeVisitId, setActiveVisitId] = useState<number | null>(null);
 
-  const fetchInvestigations = useCallback(async () => {
+  const fetchInvestigations = useCallback(async (params: any = {}) => {
     if (!patientId) return;
     setIsLoading(true);
     setErrorMsg("");
     try {
-      const response = await investigationAPI.listGlobal({ 'filter[patient_id]': patientId });
+      const response = await investigationAPI.listGlobal({ 
+        'filter[patient_id]': patientId,
+        ...params
+      });
       setInvestigations(response.data || []);
+      setMeta(response.meta || null);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to load investigations");
     } finally {
@@ -75,5 +80,5 @@ export function useInvestigations(patientId?: number) {
     }
   };
 
-  return { investigations, isLoading, errorMsg, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations };
+  return { investigations, meta, isLoading, errorMsg, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations };
 }

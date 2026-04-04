@@ -4,21 +4,21 @@ import { useState, useEffect } from "react";
 import { Activity, Plus, TrendingUp, Loader2, Edit2, CheckCircle2, ArrowLeft } from "lucide-react";
 import { useVitals } from "@/hooks/useVitals";
 import { toast } from "sonner";
+import { Pagination } from "@/components/ui/Pagination";
 
 export default function VitalsTab({
   patientId,
-  initialData,
-  onDataChange,
+  onTotalChange,
   isInitialLoaded,
   onLoadComplete
 }: {
-  patientId: number;
-  initialData: any[];
-  onDataChange: (data: any[]) => void;
+  patientId?: number;
+  onTotalChange: (total: number) => void;
   isInitialLoaded: boolean;
   onLoadComplete: () => void;
-}) {
-  const { vitals, isLoading, addVital, updateVital, fetchVitals, setVitals } = useVitals(patientId);
+}): React.JSX.Element {
+  const { vitals, meta, isLoading, addVital, updateVital, fetchVitals, setVitals } = useVitals(patientId);
+  const [currentPage, setCurrentPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -38,22 +38,16 @@ export default function VitalsTab({
   });
 
   useEffect(() => {
-    if (!isInitialLoaded) {
-      fetchVitals().then(() => onLoadComplete());
-    }
-  }, [fetchVitals, isInitialLoaded, onLoadComplete]);
+    fetchVitals({ page: currentPage }).then(() => {
+      if (!isInitialLoaded) onLoadComplete();
+    });
+  }, [fetchVitals, currentPage, isInitialLoaded, onLoadComplete]);
 
   useEffect(() => {
-    if (isInitialLoaded && vitals.length === 0 && initialData.length > 0) {
-      setVitals(initialData);
+    if (meta?.total !== undefined) {
+      onTotalChange(meta.total);
     }
-  }, [initialData, isInitialLoaded, setVitals, vitals.length]);
-
-  useEffect(() => {
-    if (vitals.length > 0) {
-      onDataChange(vitals);
-    }
-  }, [vitals, onDataChange]);
+  }, [meta, onTotalChange]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -459,6 +453,11 @@ export default function VitalsTab({
               )}
             </div>
           </div>
+
+          <Pagination
+            meta={meta}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
         </>
       )}
     </div>
