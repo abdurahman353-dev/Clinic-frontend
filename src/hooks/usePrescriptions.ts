@@ -1,13 +1,21 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { prescriptionAPI, medicineAPI, visitAPI } from "@/lib/api";
 
-export function usePrescriptions(patientId?: number) {
-  const [prescriptions, setPrescriptions] = useState<any[]>([]);
-  const [meta, setMeta] = useState<any>(null);
+export function usePrescriptions(patientId?: number, initialData: any[] = []) {
+  const [prescriptions, setPrescriptions] = useState<any[]>(initialData);
+  const [meta, setMeta] = useState<any>(initialData.length > 0 ? { total: initialData.length, per_page: initialData.length, current_page: 1, last_page: 1 } : null);
   const [medicines, setMedicines] = useState<any[]>([]); // To populate the dropdown
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [activeVisitId, setActiveVisitId] = useState<number | null>(null);
+
+  // Sync internal state if initialData from props changes
+  useEffect(() => {
+    if (initialData && initialData.length > 0) {
+      setPrescriptions(initialData);
+      setMeta({ total: initialData.length, per_page: initialData.length, current_page: 1, last_page: 0 }); 
+    }
+  }, [initialData]);
 
   const fetchPrescriptions = useCallback(async (params: any = {}) => {
     if (!patientId) return;

@@ -1,17 +1,22 @@
 import { useState, useCallback } from "react";
 import { labTestAPI } from "@/lib/api";
 
+// Global singleton cache for instant loading of lab tests library
+let cachedLabTests: any[] | null = null;
+
 export function useLabTests() {
-  const [labTests, setLabTests] = useState<any[]>([]);
-  const [isLoadingLabTests, setIsLoading] = useState(false);
+  const [labTests, setLabTests] = useState<any[]>(cachedLabTests || []);
+  const [isLoadingLabTests, setIsLoading] = useState(!cachedLabTests);
   const [labTestsError, setLabTestsError] = useState("");
 
   const fetchLabTests = useCallback(async () => {
-    setIsLoading(true);
+    if (!cachedLabTests) setIsLoading(true);
     setLabTestsError("");
     try {
       const response = await labTestAPI.list();
-      setLabTests(response.data || []);
+      const tests = response.data || [];
+      setLabTests(tests);
+      cachedLabTests = tests;
     } catch (err: any) {
       setLabTestsError(err.message || "Failed to load lab tests");
     } finally {
@@ -57,15 +62,21 @@ export function useLabTests() {
   };
 
   const bulkAddLabTests = async (tests: any[]) => {
-    setIsLoading(true);
+    // Optimistic Update
+    const tempItems = tests.map(t => ({ ...t, id: Math.random(), isOptimistic: true }));
+    const originalTests = [...labTests];
+    
+    setLabTests(prev => [...prev, ...tempItems].sort((a, b) => a.name.localeCompare(b.name)));
+    cachedLabTests = [...labTests, ...tempItems].sort((a, b) => a.name.localeCompare(b.name));
+
     try {
       const res = await labTestAPI.bulkStore({ tests });
-      await fetchLabTests(); // Refresh the list
+      await fetchLabTests(); // Refresh for real IDs
       return res.data;
     } catch (err: any) {
+      setLabTests(originalTests);
+      cachedLabTests = originalTests;
       throw err;
-    } finally {
-      setIsLoading(false);
     }
   };
 

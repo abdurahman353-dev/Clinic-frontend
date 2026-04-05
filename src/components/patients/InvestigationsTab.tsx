@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, CheckCircle2, Clock, Loader2, FileText, Edit2, X, Search, Trash2, ArrowLeft } from "lucide-react";
+import { Plus, CheckCircle2, Clock, Loader2, FileText, Edit2, X, Search, Trash2, ArrowLeft, AlertTriangle } from "lucide-react";
 import { useInvestigations } from "@/hooks/useInvestigations";
 import { useLabTests } from "@/hooks/useLabTests";
 import { labTestAPI } from "@/lib/api";
@@ -16,14 +16,18 @@ export default function InvestigationsTab({
   patientId,
   onTotalChange,
   isInitialLoaded,
-  onLoadComplete
+  onLoadComplete,
+  initialData = [],
+  isVisitPaid = false
 }: {
   patientId?: number;
   onTotalChange: (total: number) => void;
   isInitialLoaded: boolean;
   onLoadComplete: () => void;
+  initialData?: any[];
+  isVisitPaid?: boolean;
 }): React.JSX.Element {
-  const { investigations, meta, isLoading, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations } = useInvestigations(patientId);
+  const { investigations, meta, isLoading, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations } = useInvestigations(patientId, initialData);
   const [currentPage, setCurrentPage] = useState(1);
   const { labTests, isLoadingLabTests, fetchLabTests, addLabTest, updateLabTest, bulkAddLabTests, deleteLabTest } = useLabTests();
 
@@ -72,9 +76,12 @@ export default function InvestigationsTab({
   });
 
   useEffect(() => {
-    fetchInvestigations({ page: currentPage }).then(() => {
-      if (!isInitialLoaded) onLoadComplete();
-    });
+    // Skip initial fetch if parent already provided data for the first page
+    if (!isInitialLoaded || currentPage > 1) {
+      fetchInvestigations({ page: currentPage }).then(() => {
+        if (!isInitialLoaded) onLoadComplete();
+      });
+    }
     fetchLabTests();
   }, [fetchInvestigations, fetchLabTests, currentPage, isInitialLoaded, onLoadComplete]);
 
@@ -203,6 +210,7 @@ export default function InvestigationsTab({
       cost: test.cost || "",
       diagnosis: test.diagnosis || ""
     });
+    setSearchTerm(test.name || "");
     setView("request");
   };
 
@@ -215,26 +223,28 @@ export default function InvestigationsTab({
   };
 
   const handleNewLabTestSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
     const validTests = bulkNewLabTests.filter(t => t.name.trim() !== "");
     if (validTests.length === 0) {
       toast.error("Please add at least one investigation name");
       return;
     }
-    setIsSubmitting(true);
+
+    // Optimistic: Close modal and show success immediately
+    setIsNewLabTestModalOpen(false);
+    toast.success(`${validTests.length} investigation types are being registered...`);
+    
+    // Background: Process the registration
     try {
       await bulkAddLabTests(validTests.map(test => ({
         name: test.name,
         type: test.type,
         default_cost: parseFloat(test.default_cost) || 0
       })));
-      toast.success(`${validTests.length} investigation types registered`);
-      setIsNewLabTestModalOpen(false);
+      toast.success(`${validTests.length} investigation types registered successfully.`);
       setBulkNewLabTests([{ name: "", type: "lab", default_cost: "" }]);
     } catch (error: any) {
-      // handled
-    } finally {
-      setIsSubmitting(false);
+      // API interceptor handles visual error; hook handles state restoration
+      setIsNewLabTestModalOpen(true);
     }
   };
 
@@ -296,9 +306,14 @@ export default function InvestigationsTab({
     }
   };
 
-  const filteredLabTests = labTests.filter(test =>
-    test.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredLabTests = labTests.filter(test => {
+    // During an edit, if the search term hasn't changed from the original selection, 
+    // show all tests so the user can easily swap for a different one.
+    if (editingId && searchTerm === requestForm.name && searchTerm !== "") {
+      return true;
+    }
+    return test.name.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   // ── REQUEST / EDIT FORM ───────────────────────────────────────────────────────
   if (view === "request") {
@@ -359,10 +374,24 @@ export default function InvestigationsTab({
                     setIsDropdownOpen(true);
                   }}
                   onFocus={() => setIsDropdownOpen(true)}
-                  className={`w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${selectedTests.length > 0 ? 'bg-primary-50/30' : ''}`}
+                  className={`w-full pl-10 pr-10 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${selectedTests.length > 0 ? 'bg-primary-50/30' : ''}`}
                   placeholder={editingId ? "Investigation name..." : "Search or type investigation name... (Bulk allowed)"}
                   autoComplete="off"
                 />
+
+                {(searchTerm || selectedTests.length > 0) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                        setSearchTerm("");
+                        setSelectedTests([]);
+                        if(editingId) setRequestForm({ ...requestForm, name: "" });
+                    }}
+                    className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600 p-1"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
 
                 {!editingId && selectedTests.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5 p-2 bg-slate-50 border border-dashed border-slate-200 rounded-lg">
@@ -454,8 +483,11 @@ export default function InvestigationsTab({
                     type="number"
                     value={requestForm.cost}
                     onChange={e => setRequestForm({ ...requestForm, cost: e.target.value })}
-                    className="block w-full rounded-lg border border-slate-300 py-2 pl-12 pr-3 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    className={`block w-full rounded-lg border border-slate-300 py-2 pl-12 pr-3 focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${
+                      (selectedTests.length > 0 || (editingId && searchTerm)) ? 'bg-slate-50 text-slate-500 cursor-not-allowed border-dashed' : ''
+                    }`}
                     placeholder="0.00"
+                    readOnly={selectedTests.length > 0 || (!!editingId && searchTerm !== "")}
                   />
                 </div>
               </div>
@@ -688,11 +720,32 @@ export default function InvestigationsTab({
   // ── TABLE VIEW ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
+      {isVisitPaid && (
+        <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-xl flex items-start gap-3 shadow-sm">
+          <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="text-sm font-bold text-amber-900 leading-tight">Visit Closed (Fully Paid)</h3>
+            <p className="text-xs text-amber-800 mt-1">
+              This visit is already finalized. To request tests, please <button 
+                onClick={() => {
+                  const btn = document.querySelector('button[class*="bg-slate-900"]') as HTMLButtonElement;
+                  if (btn) btn.click();
+                }}
+                className="font-black underline decoration-amber-300 hover:text-amber-950 transition-colors"
+              >Start a New Visit</button> first.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-slate-900">Investigations &amp; Labs</h2>
         <button
           onClick={handleAddRequest}
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-primary-600 text-white hover:bg-primary-700 h-9 px-4 shadow-sm"
+          disabled={isVisitPaid}
+          className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 h-9 px-4 shadow-sm
+            ${isVisitPaid ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' : 'bg-primary-600 text-white hover:bg-primary-700'}
+          `}
         >
           <Plus className="mr-2 h-4 w-4" />
           Request Test

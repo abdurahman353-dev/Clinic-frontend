@@ -14,7 +14,7 @@ declare module "@/lib/api" {
 
   export interface PatientAPI {
     list: (params?: any) => Promise<any>;
-    get: (id: string | number) => Promise<any>;
+    get: (id: string | number, params?: any) => Promise<any>;
     store: (data: any) => Promise<any>;
     update: (id: string | number, data: any) => Promise<any>;
   }

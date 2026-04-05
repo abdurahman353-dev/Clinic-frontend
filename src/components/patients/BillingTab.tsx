@@ -412,9 +412,20 @@ export default function BillingTab({ patientId }: { patientId: number }) {
             >
               <option value="cash">Cash</option>
               <option value="mpesa">M-Pesa</option>
-              <option value="card">Bank / Card</option>
-              <option value="insurance">Insurance</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Amount to Pay (KSh)</label>
+            <input
+              type="number"
+              step="0.01"
+              required
+              readOnly
+              value={paymentData.amount}
+              onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
+              className="w-full bg-slate-50 border-slate-300 rounded-md p-2 shadow-sm sm:text-sm focus:ring-primary-500 focus:border-primary-500 text-slate-500 cursor-not-allowed"
+            />
           </div>
 
           {paymentData.payment_method !== 'cash' && (
@@ -435,17 +446,6 @@ export default function BillingTab({ patientId }: { patientId: number }) {
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Amount to Pay (KSh)</label>
-            <input
-              type="number"
-              step="0.01"
-              required
-              value={paymentData.amount}
-              onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
-              className="w-full border-slate-300 rounded-md p-2 shadow-sm sm:text-sm focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
 
           <div className="flex gap-4 pt-4 border-t border-slate-200">
             <button

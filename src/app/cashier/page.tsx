@@ -402,11 +402,11 @@ export default function CashierPage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">KSh {parseFloat(bill.grand_total).toLocaleString()}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">KSh {parseFloat(bill.grand_total).toLocaleString()}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-emerald-600">
                         {parseFloat(bill.paid_amount) > 0 ? `KSh ${parseFloat(bill.paid_amount).toLocaleString()}` : '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">KSh {parseFloat(bill.balance_amount).toLocaleString()}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-red-600">KSh {parseFloat(bill.balance_amount).toLocaleString()}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium border ${bill.status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
                           bill.status === 'partial' ? 'bg-blue-50 text-blue-700 border-blue-100' :
@@ -460,11 +460,11 @@ export default function CashierPage() {
                         <div className="text-sm font-medium text-slate-900">{bill.patient_name}</div>
                         <div className="text-xs text-slate-400">{bill.visit_id ? `Visit #${bill.visit_id}` : `Inv #${bill.bill_id}`}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">KSh {parseFloat(bill.grand_total).toLocaleString()}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">KSh {parseFloat(bill.grand_total).toLocaleString()}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-600">
                         {parseFloat(bill.discount_amount) > 0 ? `- KSh ${parseFloat(bill.discount_amount).toLocaleString()}` : '0'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-emerald-700">
                         KSh {(parseFloat(bill.grand_total) - parseFloat(bill.discount_amount)).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

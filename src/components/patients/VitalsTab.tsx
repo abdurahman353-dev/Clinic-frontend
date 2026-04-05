@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Activity, Plus, TrendingUp, Loader2, Edit2, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Activity, Plus, TrendingUp, Loader2, Edit2, CheckCircle2, ArrowLeft, AlertTriangle } from "lucide-react";
 import { useVitals } from "@/hooks/useVitals";
 import { toast } from "sonner";
 import { Pagination } from "@/components/ui/Pagination";
@@ -10,14 +10,18 @@ export default function VitalsTab({
   patientId,
   onTotalChange,
   isInitialLoaded,
-  onLoadComplete
+  onLoadComplete,
+  initialData = [],
+  isVisitPaid = false
 }: {
   patientId?: number;
   onTotalChange: (total: number) => void;
   isInitialLoaded: boolean;
   onLoadComplete: () => void;
+  initialData?: any[];
+  isVisitPaid?: boolean;
 }): React.JSX.Element {
-  const { vitals, meta, isLoading, addVital, updateVital, fetchVitals, setVitals } = useVitals(patientId);
+  const { vitals, meta, isLoading, addVital, updateVital, fetchVitals, setVitals } = useVitals(patientId, initialData);
   const [currentPage, setCurrentPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -350,11 +354,32 @@ export default function VitalsTab({
   // ── TABLE VIEW ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
+      {isVisitPaid && (
+        <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-xl flex items-start gap-3 shadow-sm">
+          <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="text-sm font-bold text-amber-900 leading-tight">Visit Closed (Fully Paid)</h3>
+            <p className="text-xs text-amber-800 mt-1">
+              This visit is already finalized. To record new vitals, please <button 
+                onClick={() => {
+                  const btn = document.querySelector('button[class*="bg-slate-900"]') as HTMLButtonElement;
+                  if (btn) btn.click();
+                }}
+                className="font-black underline decoration-amber-300 hover:text-amber-950 transition-colors"
+              >Start a New Visit</button> first.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between flex-wrap gap-4">
         <h2 className="text-lg font-bold text-slate-900">Vitals History</h2>
         <button
           onClick={handleAdd}
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-primary-600 text-white hover:bg-primary-700 h-9 px-4 shadow-sm"
+          disabled={isVisitPaid}
+          className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 h-9 px-4 shadow-sm
+            ${isVisitPaid ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' : 'bg-primary-600 text-white hover:bg-primary-700'}
+          `}
         >
           <Plus className="mr-2 h-4 w-4" />
           Record Vitals

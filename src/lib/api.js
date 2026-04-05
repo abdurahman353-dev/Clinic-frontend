@@ -144,8 +144,8 @@ export const patientAPI = {
         const response = await apiClient.get('/patients', { params });
         return response.data;
     },
-    get: async (id) => {
-        const response = await apiClient.get(`/patients/${id}`);
+    get: async (id, params = {}) => {
+        const response = await apiClient.get(`/patients/${id}`, { params });
         return response.data;
     },
     store: async (data) => {

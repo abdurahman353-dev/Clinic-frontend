@@ -20,7 +20,7 @@ export default function ModernPatientRecord({ params }: { params: Promise<{ id: 
   useEffect(() => {
     const fetchPatientData = async () => {
       try {
-        const response = await patientAPI.get(patientId);
+        const response = await patientAPI.get(patientId, { include: 'vitalSigns,investigations,prescriptions.items' });
         setPatient(response.data);
       } catch (err: any) {
         setErrorMsg(err.message || "Failed to load clinical records.");

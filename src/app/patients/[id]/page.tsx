@@ -46,39 +46,86 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
     }
   }, [searchParams]);
 
+  // New state for pre-loaded data
+  const [vitalsData, setVitalsData] = useState<any[]>([]);
+  const [investigationsData, setInvestigationsData] = useState<any[]>([]);
+  const [prescriptionsData, setPrescriptionsData] = useState<any[]>([]);
+
+  // New state for visit status
+  const [isVisitPaid, setIsVisitPaid] = useState(false);
+
   useEffect(() => {
-      const fetchPatient = async () => {
+    const fetchAllData = async () => {
       try {
-        const data = await patientAPI.get(unwrappedId); 
-        setPatient(data.data); 
+        // Fetch patient and all historical data in parallel for instant tab switching
+        // We now include 'visits' to check if the latest one is already paid
+        const [patientRes] = await Promise.all([
+          patientAPI.get(unwrappedId, { include: 'vitalSigns,investigations,prescriptions.items,visits' })
+        ]);
+        
+        const p = patientRes.data;
+        setPatient(p);
+        
+        // Determine if the MOST RECENT visit is paid
+        if (p.visits && p.visits.length > 0) {
+          // Sort by creation date descending to get the latest visit
+          const sortedVisits = [...p.visits].sort((a: any, b: any) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+          const latestVisit = sortedVisits[0];
+          setIsVisitPaid(latestVisit.status === 'paid');
+        } else {
+          setIsVisitPaid(false);
+        }
+
+        // Populate individual tab states from the 'deep-loaded' patient object
+        if (p.vitals) {
+           setVitalsData(p.vitals);
+           setVitalsTotal(p.vitals.length);
+           setIsVitalsLoaded(true);
+        }
+        if (p.investigations) {
+           setInvestigationsData(p.investigations);
+           setInvestigationsTotal(p.investigations.length);
+           setIsInvestigationsLoaded(true);
+        }
+        if (p.prescriptions) {
+           setPrescriptionsData(p.prescriptions);
+           setPrescriptionsTotal(p.prescriptions.length);
+           setIsPrescriptionsLoaded(true);
+        }
+
       } catch (err: any) {
-        setErrorMsg(err.message || "Failed to load patient");
+        setErrorMsg(err.message || "Failed to load patient data");
       } finally {
         setIsLoading(false);
       }
     };
-    fetchPatient();
+    fetchAllData();
   }, [unwrappedId]);
 
   const handleStartVisit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const visitData = { 
+      patient_id: patient.db_id, 
+      doctor_id: (typeof window !== 'undefined' ? JSON.parse(sessionStorage.getItem("admin_user") || localStorage.getItem("admin_user") || "{}") : {})?.id,
+      reason: "General Consultation",
+      consultation_fee: parseFloat(consultationFee) || 0
+    };
+
+    // Optimistic UI: Close modal and show success immediately
+    setIsVisitModalOpen(false);
+    toast.success("Starting new visit... A consultation bill is being generated.");
+    
     setIsStartingVisit(true);
     try {
-      const userStr = typeof window !== 'undefined' ? sessionStorage.getItem("admin_user") || localStorage.getItem("admin_user") : null;
-      const user = userStr ? JSON.parse(userStr) : null;
-      
-      await visitAPI.store({ 
-        patient_id: patient.db_id, 
-        doctor_id: user?.id,
-        reason: "General Consultation",
-        consultation_fee: parseFloat(consultationFee) || 0
-      });
-      
-      toast.success("New visit started successfully! A consultation bill has been generated.");
-      setIsVisitModalOpen(false);
-      // Trigger a refresh logic if necessary, or just rely on the new active visit detection
+      await visitAPI.store(visitData);
+      toast.success("Visit started successfully!");
+      // Optional: reload or refresh if needed, but the billing tab will pick it up on next fetch
     } catch (err: any) {
-      toast.error(err.message || "Failed to start visit");
+      toast.error(err.message || "Failed to start visit. Please try again.");
+      setIsVisitModalOpen(true); // Re-open if it failed completely
     } finally {
       setIsStartingVisit(false);
     }
@@ -247,25 +294,31 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
            {activeTab === "vitals" && (
             <VitalsTab
               patientId={patient.db_id}
+              initialData={vitalsData}
               onTotalChange={setVitalsTotal}
               isInitialLoaded={isVitalsLoaded}
               onLoadComplete={() => setIsVitalsLoaded(true)}
+              isVisitPaid={isVisitPaid}
             />
           )}
           {activeTab === "investigations" && (
             <InvestigationsTab
               patientId={patient.db_id}
+              initialData={investigationsData}
               onTotalChange={setInvestigationsTotal}
               isInitialLoaded={isInvestigationsLoaded}
               onLoadComplete={() => setIsInvestigationsLoaded(true)}
+              isVisitPaid={isVisitPaid}
             />
           )}
           {activeTab === "prescriptions" && (
             <PrescriptionsTab
               patientId={patient.db_id}
+              initialData={prescriptionsData}
               onTotalChange={setPrescriptionsTotal}
               isInitialLoaded={isPrescriptionsLoaded}
               onLoadComplete={() => setIsPrescriptionsLoaded(true)}
+              isVisitPaid={isVisitPaid}
             />
           )}
           {activeTab === "billing" && (

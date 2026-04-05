@@ -1,12 +1,20 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { vitalAPI, visitAPI } from "@/lib/api";
 
-export function useVitals(patientId?: number) {
-  const [vitals, setVitals] = useState<any[]>([]);
-  const [meta, setMeta] = useState<any>(null);
+export function useVitals(patientId?: number, initialData: any[] = []) {
+  const [vitals, setVitals] = useState<any[]>(initialData);
+  const [meta, setMeta] = useState<any>(initialData.length > 0 ? { total: initialData.length, per_page: initialData.length, current_page: 1, last_page: 1 } : null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [activeVisitId, setActiveVisitId] = useState<number | null>(null);
+
+  // Sync internal state if initialData from props changes
+  useEffect(() => {
+    if (initialData && initialData.length > 0) {
+      setVitals(initialData);
+      setMeta({ total: initialData.length, per_page: initialData.length, current_page: 1, last_page: 1 });
+    }
+  }, [initialData]);
 
   const fetchVitals = useCallback(async (params: any = {}) => {
     if (!patientId) return;
