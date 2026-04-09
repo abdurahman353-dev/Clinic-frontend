@@ -4,7 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft, User as UserIcon, Calendar, Phone, Mail, Droplet, AlertTriangle, FileText, Activity, ClipboardList, PlusCircle } from "lucide-react";
 import Link from "next/link";
-import { patientAPI, visitAPI } from "@/lib/api";
+import { patientAPI, visitAPI, settingsAPI } from "@/lib/api";
 import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
 import VitalsTab from "@/components/patients/VitalsTab";
@@ -28,7 +28,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
   
   // New Visit State
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
-  const [consultationFee, setConsultationFee] = useState("1500");
+  const [globalFee, setGlobalFee] = useState<number | null>(null);
   const [isStartingVisit, setIsStartingVisit] = useState(false);
 
   // Centralized state for tabs to avoid re-fetching on switch
@@ -102,6 +102,12 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
       }
     };
     fetchAllData();
+
+    // Load the global clinic consultation fee
+    settingsAPI.get().then((res: any) => {
+      const fee = res?.data?.consultation_fee ?? res?.consultation_fee;
+      setGlobalFee(fee !== undefined && fee !== null ? parseFloat(String(fee)) : 500);
+    }).catch(() => setGlobalFee(500));
   }, [unwrappedId]);
 
   const handleStartVisit = async (e: React.FormEvent) => {
@@ -111,21 +117,19 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
       patient_id: patient.db_id, 
       doctor_id: (typeof window !== 'undefined' ? JSON.parse(sessionStorage.getItem("admin_user") || localStorage.getItem("admin_user") || "{}") : {})?.id,
       reason: "General Consultation",
-      consultation_fee: parseFloat(consultationFee) || 0
+      // consultation_fee is ignored by backend — it always uses the global setting
     };
 
-    // Optimistic UI: Close modal and show success immediately
     setIsVisitModalOpen(false);
     toast.success("Starting new visit... A consultation bill is being generated.");
     
     setIsStartingVisit(true);
     try {
       await visitAPI.store(visitData);
-      toast.success("Visit started successfully!");
-      // Optional: reload or refresh if needed, but the billing tab will pick it up on next fetch
+      toast.success("Visit started! Consultation fee of KSh " + (globalFee ?? 0).toLocaleString() + " has been billed.");
     } catch (err: any) {
       toast.error(err.message || "Failed to start visit. Please try again.");
-      setIsVisitModalOpen(true); // Re-open if it failed completely
+      setIsVisitModalOpen(true);
     } finally {
       setIsStartingVisit(false);
     }
@@ -327,34 +331,30 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </div>
 
-      {/* Start New Visit Modal */}
       <Modal
         isOpen={isVisitModalOpen}
         onClose={() => !isStartingVisit && setIsVisitModalOpen(false)}
         title="Start New Visit"
-        description={`Check-in ${patient?.name} for a new visit.`}
+        description={`Check-in ${patient?.name} for a new consultation.`}
         maxWidth="max-w-md"
       >
         <form onSubmit={handleStartVisit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Consultation Fee (KSh)
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              required
-              value={consultationFee}
-              onChange={(e) => setConsultationFee(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500"
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              This will automatically generate a pending consultation bill.
-            </p>
+          <div className="p-4 bg-primary-50 border border-primary-100 rounded-xl flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-700">Consultation Fee</p>
+              <p className="text-xs text-slate-500 mt-0.5">Set globally by Super Admin · Auto-billed on confirmation</p>
+            </div>
+            <div className="text-right">
+              {globalFee !== null ? (
+                <span className="text-2xl font-black text-primary-700">KSh {globalFee.toLocaleString()}</span>
+              ) : (
+                <span className="text-slate-400 text-sm italic">Loading...</span>
+              )}
+              <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">Auto-Billed</p>
+            </div>
           </div>
-          
-          <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
+
+          <div className="pt-2 flex justify-end gap-3 border-t border-slate-100">
             <button
               type="button"
               onClick={() => setIsVisitModalOpen(false)}
@@ -365,10 +365,10 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
             </button>
             <button
               type="submit"
-              disabled={isStartingVisit}
-              className="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded hover:bg-slate-800 disabled:opacity-50"
+              disabled={isStartingVisit || globalFee === null}
+              className="px-6 py-2 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center gap-2"
             >
-              {isStartingVisit ? "Starting..." : "Start Visit"}
+              {isStartingVisit ? "Starting..." : "Confirm & Start Visit"}
             </button>
           </div>
         </form>

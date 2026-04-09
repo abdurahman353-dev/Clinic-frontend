@@ -56,11 +56,12 @@ export const patientSchema = z.object({
     .regex(phoneRegex, "Enter a valid phone number")
     .optional()
     .or(z.literal("")),
-  consultation_fee: z.coerce
-    .number()
-    .min(0, "Fee cannot be negative")
-    .max(1_000_000, "Fee value is unrealistic")
-    .optional(),
+  consultation_fee: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
+    z.number({ message: "Consultation fee is required" })
+      .min(0, "Fee cannot be negative")
+      .max(1_000_000, "Fee value is unrealistic")
+  ).optional(),
 });
 export type PatientInput = z.infer<typeof patientSchema>;
 

@@ -94,8 +94,13 @@ export default function PrescriptionsTab({
     const freqMap: Record<string, number> = {
       "once a day": 1,
       "twice a day": 2,
-      "thrice a day": 3,
-      "four times a day": 4
+      "three times a day": 3,
+      "four times a day": 4,
+      "every 4 hours": 6,
+      "every 6 hours": 4,
+      "every 8 hours": 3,
+      "every 12 hours": 2,
+      "at bedtime": 1
     };
     const freq = freqMap[item.frequency] || 0;
     const dur = parseInt(item.duration) || 0;
@@ -383,8 +388,14 @@ export default function PrescriptionsTab({
                         <option value="">Select frequency...</option>
                         <option value="once a day">once a day</option>
                         <option value="twice a day">twice a day</option>
-                        <option value="thrice a day">thrice a day</option>
+                        <option value="three times a day">three times a day</option>
                         <option value="four times a day">four times a day</option>
+                        <option value="every 4 hours">every 4 hours</option>
+                        <option value="every 6 hours">every 6 hours</option>
+                        <option value="every 8 hours">every 8 hours</option>
+                        <option value="every 12 hours">every 12 hours</option>
+                        <option value="as needed (PRN)">as needed (PRN)</option>
+                        <option value="at bedtime">at bedtime</option>
                       </select>
                     </div>
                     <div className="flex items-center gap-2">

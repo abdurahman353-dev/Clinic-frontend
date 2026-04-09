@@ -106,6 +106,11 @@ declare module "@/lib/api" {
     getLogs(params: any): Promise<any>;
   }
 
+  export interface SettingsAPI {
+    get: () => Promise<any>;
+    update: (data: { consultation_fee: number }) => Promise<any>;
+  }
+
   export const authAPI: AuthAPI;
   export const patientAPI: PatientAPI;
   export const visitAPI: VisitAPI;
@@ -121,6 +126,7 @@ declare module "@/lib/api" {
   export const salesAPI: SalesAPI;
   export const adminAPI: AdminAPI;
   export const activityLogAPI: ActivityLogAPI;
+  export const settingsAPI: SettingsAPI;
 
   export default apiClient;
 }

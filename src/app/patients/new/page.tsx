@@ -3,11 +3,12 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { patientAPI } from "@/lib/api";
+import { patientAPI, settingsAPI } from "@/lib/api";
 import { patientSchema, type PatientInput } from "@/lib/validation";
-import { ArrowLeft, Save, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Save, Loader2, AlertCircle, Lock } from "lucide-react";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -21,6 +22,14 @@ function FieldError({ message }: { message?: string }) {
 
 export default function NewPatientPage() {
   const router = useRouter();
+  const [globalFee, setGlobalFee] = useState<number | null>(null);
+
+  useEffect(() => {
+    settingsAPI.get().then((res: any) => {
+      const fee = res?.data?.consultation_fee ?? res?.consultation_fee;
+      setGlobalFee(fee !== undefined && fee !== null ? parseFloat(String(fee)) : 500);
+    }).catch(() => setGlobalFee(500));
+  }, []);
 
   const {
     register,
@@ -33,7 +42,6 @@ export default function NewPatientPage() {
     defaultValues: {
       patient_type: "outpatient",
       gender: "male",
-      consultation_fee: 1500,
     },
   });
 
@@ -119,17 +127,18 @@ export default function NewPatientPage() {
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
               Consultation Fee (KSh)
-              <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 uppercase font-bold tracking-wider">
-                Auto-Billed
-              </span>
+              <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 uppercase font-bold tracking-wider">Auto-Billed</span>
             </label>
-            <input
-              type="number"
-              min={0}
-              {...register("consultation_fee")}
-              className={inputClass(!!errors.consultation_fee)}
-            />
-            <FieldError message={errors.consultation_fee?.message} />
+            <div className="w-full px-3 py-2 border border-slate-200 rounded-md bg-slate-50 text-sm flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-slate-400">
+                <Lock className="h-3.5 w-3.5" />
+                Set by clinic admin
+              </span>
+              <span className="text-primary-700 font-black text-base">
+                {globalFee !== null ? `KSh ${globalFee.toLocaleString()}` : "Loading..."}
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] text-slate-400">Auto-billed to this patient on registration. Change it in Admin Management.</p>
           </div>
 
           <div>

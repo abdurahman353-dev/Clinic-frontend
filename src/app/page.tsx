@@ -172,11 +172,13 @@ export default function Home() {
                         {activity.type === "appointment" && <Users className="h-4 w-4 text-primary-500" />}
                         {activity.type === "investigation" && <NotepadText className="h-4 w-4 text-purple-500" />}
                         {activity.type === "prescription" && <Calendar className="h-4 w-4 text-green-500" />}
+                        {activity.type === "vitals" && <Activity className="h-4 w-4 text-red-500" />}
+                        {activity.type === "billing" && <TrendingUp className="h-4 w-4 text-amber-500" />}
                       </div>
                     </div>
                     <div className="min-w-0 flex-1 pt-1.5">
                       <div className="text-sm text-slate-900 font-medium">
-                        {activity.patient}
+                        {activity.user}
                       </div>
                       <div className="text-xs text-slate-500 mt-0.5">
                         {activity.details}

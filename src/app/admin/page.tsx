@@ -20,7 +20,7 @@ import {
   Trash2,
   Lock
 } from "lucide-react";
-import { adminAPI } from "@/lib/api";
+import { adminAPI, settingsAPI } from "@/lib/api";
 import { toast } from "react-hot-toast";
 import { Modal } from "@/components/ui/Modal";
 import { Pagination } from "@/components/ui/Pagination";
@@ -43,6 +43,11 @@ export default function AdminManagementPage() {
     role: "admin"
   });
 
+  // Clinic Settings
+  const [consultationFee, setConsultationFee] = useState("");
+  const [isSavingFee, setIsSavingFee] = useState(false);
+  const [feeLoaded, setFeeLoaded] = useState(false);
+
   const fetchAdmins = async () => {
     setIsLoading(true);
     try {
@@ -56,8 +61,24 @@ export default function AdminManagementPage() {
     }
   };
 
+  const fetchSettings = async () => {
+    try {
+      const response = await settingsAPI.get();
+      // settingsAPI.get() already returns response.data from axios (in api.js)
+      // so response here is { data: { consultation_fee: "500" } }
+      const fee = response?.data?.consultation_fee ?? response?.consultation_fee;
+      setConsultationFee(fee !== undefined && fee !== null ? String(fee) : "500");
+      setFeeLoaded(true);
+    } catch (err: any) {
+      console.error("Failed to load clinic settings:", err);
+      setConsultationFee("500");
+      setFeeLoaded(true);
+    }
+  };
+
   useEffect(() => {
     fetchAdmins();
+    fetchSettings();
   }, [currentPage]);
 
   const handleToggleStatus = async (admin: any) => {
@@ -102,9 +123,62 @@ export default function AdminManagementPage() {
     admin.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleSaveFee = async () => {
+    const parsed = parseFloat(String(consultationFee));
+    if (isNaN(parsed) || parsed < 0) {
+      toast.error("Please enter a valid consultation fee (0 or more)");
+      return;
+    }
+    setIsSavingFee(true);
+    try {
+      await settingsAPI.update({ consultation_fee: parsed });
+      toast.success("Consultation fee updated! New patients will be billed KSh " + parsed.toLocaleString());
+    } catch (err) {
+      toast.error("Failed to update consultation fee");
+    } finally {
+      setIsSavingFee(false);
+    }
+  };
+
   return (
     <>
       <div className="p-6">
+        {/* ── Clinic Settings ──────────────────────────────────── */}
+        <div className="bg-gradient-to-r from-primary-50 to-blue-50 border border-primary-100 rounded-2xl p-6 mb-8 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <span className="h-7 w-7 bg-primary-600 rounded-lg flex items-center justify-center">
+                  <Shield className="h-4 w-4 text-white" />
+                </span>
+                Clinic Settings
+              </h2>
+              <p className="text-sm text-slate-500 mt-1">The consultation fee set here is automatically billed to every new patient on registration.</p>
+            </div>
+            <div className="flex items-center gap-3 min-w-[280px]">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">KSh</span>
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  placeholder={feeLoaded ? "" : "Loading..."}
+                  value={consultationFee}
+                  onChange={(e) => setConsultationFee(e.target.value)}
+                  className="w-full pl-12 pr-4 py-2.5 border border-primary-200 rounded-xl bg-white text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all shadow-sm"
+                />
+              </div>
+              <button
+                onClick={handleSaveFee}
+                disabled={isSavingFee}
+                className="inline-flex items-center px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl shadow-sm disabled:opacity-50 transition-all whitespace-nowrap"
+              >
+                {isSavingFee ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Fee"}
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Admin Management</h1>
