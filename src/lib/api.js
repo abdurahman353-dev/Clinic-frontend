@@ -293,8 +293,16 @@ export const prescriptionAPI = {
         const response = await apiClient.patch(`/visits/${visitId}/prescriptions/${id}`, data);
         return response.data;
     },
+    delete: async (visitId, id) => {
+        const response = await apiClient.delete(`/visits/${visitId}/prescriptions/${id}`);
+        return response.data;
+    },
     listGlobal: async (params = {}) => {
         const response = await apiClient.get('/prescriptions', { params });
+        return response.data;
+    },
+    deleteGlobal: async (id) => {
+        const response = await apiClient.delete(`/prescriptions/${id}`);
         return response.data;
     },
     storeStandalone: async (data) => {

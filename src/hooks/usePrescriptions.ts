@@ -105,6 +105,22 @@ export function usePrescriptions(patientId?: number, initialData: any[] = []) {
     }
   };
 
+  const deletePrescription = async (rxId: number) => {
+    try {
+      const existing = prescriptions.find(r => r.id === rxId);
+      if (!existing?.visit_id) throw new Error("Visit ID not found for prescription");
+
+      // Optimistic delete
+      setPrescriptions(p => p.filter(item => item.id !== rxId));
+
+      await prescriptionAPI.delete(existing.visit_id, rxId);
+      await fetchMedicines(); // Refresh stock
+    } catch (err: any) {
+      fetchPrescriptions(); // Restore on failure
+      throw err;
+    }
+  };
+
   return { 
     prescriptions, 
     meta,
@@ -115,6 +131,7 @@ export function usePrescriptions(patientId?: number, initialData: any[] = []) {
     fetchMedicines, 
     addPrescription,
     updatePrescription,
+    deletePrescription,
     setPrescriptions
   };
 }

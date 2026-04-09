@@ -1,8 +1,9 @@
 "use client";
 
-import { FileText, Loader2, Search, Calendar, User, Pill, Eye } from "lucide-react";
+import { FileText, Loader2, Search, Calendar, User, Pill, Eye, Trash2 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { prescriptionAPI } from "@/lib/api";
+import { toast } from "sonner";
 import Link from "next/link";
 import { Modal } from "@/components/ui/Modal";
 import { Pagination } from "@/components/ui/Pagination";

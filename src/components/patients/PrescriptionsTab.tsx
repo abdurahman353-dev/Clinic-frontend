@@ -5,6 +5,7 @@ import { Plus, Pill, Loader2, Edit2, CheckCircle2, Trash2, ArrowLeft, AlertTrian
 import { usePrescriptions } from "@/hooks/usePrescriptions";
 import { toast } from "sonner";
 import { Pagination } from "@/components/ui/Pagination";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface PrescriptionItem {
   medicine_id: string;
@@ -29,11 +30,14 @@ export default function PrescriptionsTab({
   initialData?: any[];
   isVisitPaid?: boolean;
 }): React.JSX.Element {
-  const { prescriptions, medicines, meta, isLoading, fetchPrescriptions, fetchMedicines, addPrescription, updatePrescription } = usePrescriptions(patientId, initialData);
+  const { prescriptions, medicines, meta, isLoading, fetchPrescriptions, fetchMedicines, addPrescription, updatePrescription, deletePrescription } = usePrescriptions(patientId, initialData);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isReversing, setIsReversing] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [originalItems, setOriginalItems] = useState<any[]>([]);
 
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<PrescriptionItem[]>([
@@ -139,16 +143,36 @@ export default function PrescriptionsTab({
       return;
     }
 
-    // Stock Validation
+    // Smart Stock Validation
     const overStockItem = items.find(item => {
       const med = medicines.find(m => m.id == item.medicine_id);
-      const stockQty = med?.stock?.quantity || 0;
-      return item.quantity > stockQty;
+      if (!med) return false;
+
+      // Calculate "Effective Stock" = Current Stock + What was already given (if editing)
+      let effectiveStock = med.stock?.quantity || 0;
+      
+      if (editingId) {
+        const originalItem = originalItems.find(oi => oi.medicine_id == item.medicine_id);
+        if (originalItem) {
+          effectiveStock += (originalItem.quantity || 0);
+        }
+      }
+
+      return item.quantity > effectiveStock;
     });
 
     if (overStockItem) {
-      const medName = medicines.find(m => m.id == overStockItem.medicine_id)?.name || "Unknown Medicine";
-      toast.error(`Quantity for ${medName} exceeds available stock`);
+      const med = medicines.find(m => m.id == overStockItem.medicine_id);
+      const medName = med?.name || "Unknown Medicine";
+      
+      // Calculate display stock for error message
+      let displayStock = med?.stock?.quantity || 0;
+      if (editingId) {
+        const originalItem = originalItems.find(oi => oi.medicine_id == overStockItem.medicine_id);
+        if (originalItem) displayStock += (originalItem.quantity || 0);
+      }
+
+      toast.error(`Quantity for ${medName} exceeds total available stock (${displayStock} available)`);
       return;
     }
 
@@ -195,6 +219,8 @@ export default function PrescriptionsTab({
     setEditingId(rx.id);
     setNotes(rx.notes || "");
     const rxItems = rx.items || [];
+    setOriginalItems(rxItems); // Store original items to allow smart stock validation
+    
     if (rxItems.length > 0) {
       setItems(rxItems.map((item: any) => ({
         medicine_id: item.medicine_id?.toString() || "",
@@ -211,9 +237,26 @@ export default function PrescriptionsTab({
 
   const handleAdd = () => {
     setEditingId(null);
+    setOriginalItems([]);
     setNotes("");
     setItems([{ medicine_id: "", dosage: "", frequency: "", duration: "", quantity: 1 }]);
     setShowForm(true);
+  };
+
+  const handleReverse = async () => {
+    if (!editingId) return;
+
+    // OPTIMISTIC CLOSURE
+    setIsConfirmOpen(false);
+    toast.success("Prescription reversed instantly!");
+    const idToDelete = editingId;
+    resetForm();
+
+    try {
+      await deletePrescription(idToDelete);
+    } catch (err: any) {
+      toast.error("Failed to reverse prescription.");
+    }
   };
 
   const isActive = (rx: any) => {
@@ -275,9 +318,25 @@ export default function PrescriptionsTab({
                         className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white"
                       >
                         <option value="">Select Medicine</option>
-                        {medicines.map((m: any) => (
-                          <option key={m.id} value={m.id}>{m.name} - KSh {m.unit_price}</option>
-                        ))}
+                        {medicines.map((m: any) => {
+                          const physicalStock = m.stock?.quantity || 0;
+                          let originalQty = 0;
+                          if (editingId) {
+                            const original = originalItems.find(oi => oi.medicine_id == m.id);
+                            if (original) originalQty = original.quantity || 0;
+                          }
+                          
+                          const totalAvailable = physicalStock + originalQty;
+                          const stockLabel = originalQty > 0
+                            ? `${physicalStock} in-stock + ${originalQty} prescribed`
+                            : `${physicalStock} in-stock`;
+
+                          return (
+                            <option key={m.id} value={m.id} disabled={totalAvailable <= 0}>
+                              {m.name} - KSh {m.unit_price} ({stockLabel})
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                     <div>
@@ -340,10 +399,18 @@ export default function PrescriptionsTab({
                         />
                         {(() => {
                           const med = medicines.find(m => m.id == item.medicine_id);
-                          if (med && med.stock?.quantity !== undefined && (Number(item.quantity) || 1) > med.stock.quantity) {
-                            return <p className="text-red-500 text-[10px] mt-1 font-semibold">Exceeds stock ({med.stock.quantity} left)</p>;
+                          if (!med || med.stock?.quantity === undefined) return null;
+                          
+                          let available = med.stock.quantity;
+                          if (editingId) {
+                            const original = originalItems.find(oi => oi.medicine_id == item.medicine_id);
+                            if (original) available += (original.quantity || 0);
                           }
-                          return null;
+
+                          if ((Number(item.quantity) || 1) > available) {
+                            return <p className="text-red-500 text-[10px] mt-1 font-semibold">Exceeds total available ({available} left)</p>;
+                          }
+                          return <p className="text-slate-400 text-[10px] mt-1 italic">Total available: {available}</p>;
                         })()}
                       </div>
                       {items.length > 1 && (
@@ -420,6 +487,19 @@ export default function PrescriptionsTab({
               >
                 Cancel
               </button>
+
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmOpen(true)}
+                  className="px-4 py-2 border border-red-200 shadow-sm text-sm font-medium rounded-lg text-red-600 bg-red-50 hover:bg-red-100 transition-colors flex items-center justify-center gap-1.5"
+                  title="Reverse Transaction"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Reverse
+                </button>
+              )}
+
               <button
                 type="submit"
                 disabled={isSubmitting || items.some(i => !i.medicine_id)}
@@ -433,6 +513,17 @@ export default function PrescriptionsTab({
             </div>
           </form>
         </div>
+
+        <ConfirmDialog
+          isOpen={isConfirmOpen}
+          onClose={() => setIsConfirmOpen(false)}
+          onConfirm={handleReverse}
+          title="Reverse Prescription"
+          message="Are you sure you want to reverse this prescription? All allocated medicine will be returned to stock, and the cashier charge will be erased."
+          confirmText="Yes, Reverse"
+          type="danger"
+          isLoading={isReversing}
+        />
       </div>
     );
   }
@@ -503,13 +594,15 @@ export default function PrescriptionsTab({
                       <div className="flex items-center gap-3">
                         <p className="text-sm text-slate-500 font-medium">Prescription #{rx.id}</p>
                         {!rx.is_cleared ? (
-                          <button
-                            onClick={() => handleEdit(rx)}
-                            className="text-primary-600 hover:text-primary-800 bg-primary-50 hover:bg-primary-100 p-1 rounded-md transition-colors"
-                            title="Edit Prescription"
-                          >
-                            <Edit2 className="h-3 w-3" />
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => handleEdit(rx)}
+                              className="text-primary-600 hover:text-primary-800 bg-primary-50 hover:bg-primary-100 p-1.5 rounded-md transition-colors"
+                              title="Edit Prescription"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         ) : (
                           <div className="flex items-center text-slate-400 gap-1 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
                             <CheckCircle2 className="h-2.5 w-2.5" />
@@ -520,7 +613,7 @@ export default function PrescriptionsTab({
                       <p className="text-xs text-slate-400 mt-0.5">{new Date(rx.created_at).toLocaleDateString()}</p>
                     </div>
                     {rx.notes && (
-                      <p className="text-xs text-slate-500 italic max-w-xs text-right bg-slate-50 p-2 rounded-md"><span className="font-semibold text-slate-700">Reason:</span> {rx.notes}</p>
+                      <p className="text-xs text-slate-500 italic max-w-[150px] text-right bg-slate-50 p-2 rounded-md"><span className="font-semibold text-slate-700">Reason:</span> {rx.notes}</p>
                     )}
                   </div>
 

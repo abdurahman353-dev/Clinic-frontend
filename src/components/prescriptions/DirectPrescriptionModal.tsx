@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Plus, Trash2, Loader2, Pill, User, CheckCircle2 } from "lucide-react";
 import { medicineAPI, stockAPI, prescriptionAPI } from "@/lib/api";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface Medicine {
   id: number;
@@ -36,10 +37,13 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
   const [patientName, setPatientName] = useState("");
   const [reason, setReason] = useState("");
   const [items, setItems] = useState<Item[]>([{ medicine_id: "", quantity: 1, dosage: "", frequency: "once a day", duration: "" }]);
+  const [originalItems, setOriginalItems] = useState<any[]>([]);
   const [medicines, setMedicines] = useState<Medicine[]>(cachedMedicines || []);
   const [stocks, setStocks] = useState<any[]>(cachedStocks || []);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingMedicines, setIsLoadingMedicines] = useState(!cachedMedicines);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isReversing, setIsReversing] = useState(false);
 
   const fetchData = async (silent = false) => {
     if (!silent) setIsLoadingMedicines(true);
@@ -76,6 +80,7 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
         setPatientName(prescription.patient_name || "");
         setReason(prescription.notes || "");
         if (prescription.items && prescription.items.length > 0) {
+          setOriginalItems(prescription.items);
           setItems(prescription.items.map((i: any) => ({
             medicine_id: i.medicine_id?.toString() || "",
             quantity: i.quantity || 1,
@@ -197,11 +202,19 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
       return;
     }
 
-    // Check stock
+    // Smart Stock Validation
     for (const item of items) {
       const stock = stocks.find(s => s.medicine_id === parseInt(item.medicine_id));
-      if (!stock || stock.quantity < item.quantity) {
-        toast.error(`Insufficient stock for ${medicines.find(m => m.id === parseInt(item.medicine_id))?.name}`);
+      if (!stock) continue;
+
+      let effectiveStock = stock.quantity;
+      if (prescription) {
+        const originalItem = originalItems.find(oi => oi.medicine_id == item.medicine_id);
+        if (originalItem) effectiveStock += (originalItem.quantity || 0);
+      }
+
+      if (effectiveStock < item.quantity) {
+        toast.error(`Insufficient stock for ${medicines.find(m => m.id === parseInt(item.medicine_id))?.name} (${effectiveStock} available)`);
         return;
       }
     }
@@ -236,6 +249,23 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
       // Background error notification would go here if needed
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleReverse = async () => {
+    if (!prescription) return;
+    
+    // OPTIMISTIC UI: Close instantly
+    setIsConfirmOpen(false);
+    toast.success("Prescription reversed instantly!");
+    onClose();
+
+    try {
+      await prescriptionAPI.deleteGlobal(prescription.id);
+      onSuccess();
+    } catch (err: any) {
+      console.error("Failed to reverse prescription", err);
+      toast.error("Failed to reverse prescription.");
     }
   };
 
@@ -316,10 +346,22 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
                         ) : (
                           medicines.map((m) => {
                             const stock = stocks.find(s => s.medicine_id === m.id);
-                            const stockQty = stock ? stock.quantity : 0;
+                            const physicalStock = stock ? stock.quantity : 0;
+                            
+                            let originalQty = 0;
+                            if (prescription) {
+                              const originalItem = originalItems.find(oi => oi.medicine_id == m.id);
+                              if (originalItem) originalQty = (originalItem.quantity || 0);
+                            }
+
+                            const totalAvailable = physicalStock + originalQty;
+                            const stockLabel = originalQty > 0
+                              ? `${physicalStock} in-stock + ${originalQty} prescribed`
+                              : `${physicalStock} in-stock`;
+
                             return (
-                              <option key={m.id} value={m.id.toString()} disabled={stockQty <= 0}>
-                                {m.name} - KSh {m.unit_price.toLocaleString()} ({stockQty} in stock)
+                              <option key={m.id} value={m.id.toString()} disabled={totalAvailable <= 0}>
+                                {m.name} - KSh {m.unit_price.toLocaleString()} ({stockLabel})
                               </option>
                             );
                           })
@@ -469,6 +511,18 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
           >
             Cancel
           </button>
+          
+          {prescription && (
+            <button
+              type="button"
+              onClick={() => setIsConfirmOpen(true)}
+              className="px-4 py-3 text-sm font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors flex items-center justify-center"
+              title="Reverse Transaction"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
@@ -485,6 +539,17 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        onConfirm={handleReverse}
+        title="Reverse Prescription"
+        message="Are you sure you want to reverse this prescription? All allocated medicine will be returned to stock, and the cashier charge will be erased."
+        confirmText="Yes, Reverse"
+        type="danger"
+        isLoading={isReversing}
+      />
     </div>
   );
 }

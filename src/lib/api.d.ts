@@ -45,7 +45,9 @@ declare module "@/lib/api" {
     list: (visitId: string | number) => Promise<any>;
     store: (visitId: string | number, data: any) => Promise<any>;
     update: (visitId: string | number, rxId: string | number, data: any) => Promise<any>;
+    delete: (visitId: string | number, rxId: string | number) => Promise<any>;
     listGlobal: (params?: any) => Promise<any>;
+    deleteGlobal: (id: string | number) => Promise<any>;
     storeStandalone: (data: any) => Promise<any>;
     updateStandalone: (id: string | number, data: any) => Promise<any>;
     get: (id: string | number) => Promise<any>;
