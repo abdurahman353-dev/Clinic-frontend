@@ -21,7 +21,9 @@ export default function PrescriptionsTab({
   isInitialLoaded,
   onLoadComplete,
   initialData = [],
-  isVisitPaid = false
+  isVisitPaid = false,
+  activeVisitId = null,
+  onStartNewVisit
 }: {
   patientId?: number;
   onTotalChange: (total: number) => void;
@@ -29,6 +31,8 @@ export default function PrescriptionsTab({
   onLoadComplete: () => void;
   initialData?: any[];
   isVisitPaid?: boolean;
+  activeVisitId?: number | null;
+  onStartNewVisit?: () => void;
 }): React.JSX.Element {
   const { prescriptions, medicines, meta, isLoading, fetchPrescriptions, fetchMedicines, addPrescription, updatePrescription, deletePrescription } = usePrescriptions(patientId, initialData);
   const [currentPage, setCurrentPage] = useState(1);
@@ -548,11 +552,8 @@ export default function PrescriptionsTab({
           <div className="flex-1">
             <h3 className="text-sm font-bold text-amber-900 leading-tight">Visit Closed (Fully Paid)</h3>
             <p className="text-xs text-amber-800 mt-1">
-              This visit is already finalized. To issue new prescriptions, please <button 
-                onClick={() => {
-                  const btn = document.querySelector('button[class*="bg-slate-900"]') as HTMLButtonElement;
-                  if (btn) btn.click();
-                }}
+              This visit is already finalized or no active visit exists. To issue new prescriptions, please <button 
+                onClick={onStartNewVisit}
                 className="font-black underline decoration-amber-300 hover:text-amber-950 transition-colors"
               >Start a New Visit</button> first.
             </p>
@@ -604,7 +605,7 @@ export default function PrescriptionsTab({
                     <div>
                       <div className="flex items-center gap-3">
                         <p className="text-sm text-slate-500 font-medium">Prescription #{rx.id}</p>
-                        {!rx.is_cleared ? (
+                        {!(rx.is_cleared || isVisitPaid || (activeVisitId && rx.visit_id && rx.visit_id !== activeVisitId)) ? (
                           <div className="flex items-center gap-1.5">
                             <button
                               onClick={() => handleEdit(rx)}
@@ -615,7 +616,7 @@ export default function PrescriptionsTab({
                             </button>
                           </div>
                         ) : (
-                          <div className="flex items-center text-slate-400 gap-1 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                          <div className="flex items-center text-slate-400 gap-1 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100" title="Locked by previous visit or payment">
                             <CheckCircle2 className="h-2.5 w-2.5" />
                             <span className="text-[8px] font-bold uppercase">Locked</span>
                           </div>

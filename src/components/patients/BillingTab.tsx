@@ -215,14 +215,15 @@ export default function BillingTab({ patientId }: { patientId: number }) {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const pendingResponse = await billingAPI.list({ status: 'pending,partial', patient_id: patientId });
+      const [pendingResponse, historyResponse, visitsResponse] = await Promise.all([
+        billingAPI.list({ status: 'pending,partial', patient_id: patientId }),
+        billingAPI.list({ status: 'paid', patient_id: patientId }),
+        visitAPI.list({ 'filter[patient_id]': patientId, include: 'bills.items' })
+      ]);
+
       const activeBills = (pendingResponse.data || []).filter((b: any) => parseFloat(b.balance_amount) > 0);
       setBills(activeBills);
-
-      const historyResponse = await billingAPI.list({ status: 'paid', patient_id: patientId });
       setHistoryBills(historyResponse.data || []);
-
-      const visitsResponse = await visitAPI.list({ 'filter[patient_id]': patientId, include: 'bills.items' });
       setVisits(visitsResponse.data || []);
     } catch (err) {
       console.error("Failed to fetch billing data", err);
@@ -251,16 +252,18 @@ export default function BillingTab({ patientId }: { patientId: number }) {
     e.preventDefault();
     if (!selectedBill) return;
 
-    setIsSubmitting(true);
+    // Optimistic UI closure
+    toast.success("Payment processed successfully! Registering...");
+    setIsPaymentModalOpen(false);
+    setBills(prev => prev.filter(b => b.id !== selectedBill.id));
+
     try {
       await paymentAPI.store(selectedBill.id, paymentData);
-      toast.success("Payment processed successfully!");
-      setIsPaymentModalOpen(false);
+      // Trigger background refetch without blocking UI loader
       fetchData();
     } catch (err) {
-      // Interceptor handles error
-    } finally {
-      setIsSubmitting(false);
+      toast.error("Failed to process payment, please refresh and try again.");
+      fetchData(); // Attempt state restore
     }
   };
 

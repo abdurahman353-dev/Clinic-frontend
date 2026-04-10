@@ -116,30 +116,34 @@ export default function Home() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         {/* Main Chart Area */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-bold text-slate-900">New Patients (Last 7 Days)</h2>
             <select className="text-sm border-slate-200 rounded-md shadow-sm focus:border-primary-500 focus:ring-primary-500">
               <option>Last 7 Days</option>
             </select>
           </div>
-          <div className="h-72 w-full flex items-end justify-between px-4 pb-4">
+          <div className="flex-1 w-full flex items-end justify-around px-2 sm:px-4 pb-0 pt-6">
             {data.attendance.map((day, i) => {
               const maxCount = Math.max(...data.attendance.map(d => d.count), 1);
+              // Calculate height percentage, give a tiny absolute minimum so "0" still shows a tiny blue slip for visual confirmation
               const height = (day.count / maxCount) * 100;
               return (
-                <div key={i} className="flex flex-col items-center gap-2 group flex-1 max-w-[50px]">
-                  <div className="relative w-full flex items-end justify-center h-48 bg-slate-50 rounded-t-lg">
+                <div key={i} className="flex flex-col items-center gap-2 group flex-1 h-full pt-4">
+                  <div className="relative w-full max-w-[12px] sm:max-w-[16px] flex items-end justify-center h-full bg-slate-50 rounded-full transition-colors group-hover:bg-slate-100 flex-1 border border-slate-100">
                     <div 
-                      className="w-8 bg-primary-500 rounded-t-sm transition-all duration-500 ease-out group-hover:bg-primary-600" 
-                      style={{ height: `${height}%` }}
+                      className="w-full bg-primary-500 transition-all duration-500 ease-out group-hover:bg-primary-600 rounded-full relative" 
+                      style={{ height: `max(${height}%, 4px)` }}
                     >
-                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                        {day.count}
+                      {/* Tooltip */}
+                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[11px] font-bold px-3 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap shadow-lg pointer-events-none">
+                        {day.count} Patients
+                        {/* Little triangle arrow at bottom of tooltip */}
+                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-slate-800"></div>
                       </div>
                     </div>
                   </div>
-                  <span className="text-xs font-medium text-slate-500">{day.day}</span>
+                  <span className="text-xs font-bold text-slate-400 group-hover:text-slate-700 transition-colors">{day.day}</span>
                 </div>
               );
             })}

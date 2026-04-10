@@ -25,37 +25,48 @@ export function useLabTests() {
   }, []);
 
   const addLabTest = async (data: any) => {
-    // Optimistic Update
     const tempId = Date.now();
     const tempItem = { ...data, id: tempId, isOptimistic: true };
-    setLabTests(prev => [...prev, tempItem].sort((a, b) => a.name.localeCompare(b.name)));
+    const sortAndCache = (tests: any[]) => {
+      const sorted = [...tests].sort((a, b) => a.name.localeCompare(b.name));
+      cachedLabTests = sorted;
+      return sorted;
+    };
+    
+    setLabTests(prev => sortAndCache([...prev, tempItem]));
 
     try {
       const res = await labTestAPI.store(data);
       if (res.data) {
-        setLabTests(prev => prev.map(item => item.id === tempId ? res.data : item).sort((a, b) => a.name.localeCompare(b.name)));
+        setLabTests(prev => sortAndCache(prev.map(item => item.id === tempId ? res.data : item)));
       }
       return res.data;
     } catch (err: any) {
-      setLabTests(prev => prev.filter(item => item.id !== tempId));
+      setLabTests(prev => sortAndCache(prev.filter(item => item.id !== tempId)));
       throw err;
     }
   };
 
   const updateLabTest = async (id: number, data: any) => {
     const originalItem = labTests.find(item => item.id === id);
+    const sortAndCache = (tests: any[]) => {
+      const sorted = [...tests].sort((a, b) => a.name.localeCompare(b.name));
+      cachedLabTests = sorted;
+      return sorted;
+    };
+
     // Optimistic Update
-    setLabTests(prev => prev.map(item => item.id === id ? { ...item, ...data } : item).sort((a, b) => a.name.localeCompare(b.name)));
+    setLabTests(prev => sortAndCache(prev.map(item => item.id === id ? { ...item, ...data } : item)));
 
     try {
       const res = await labTestAPI.update(id, data);
       if (res.data) {
-        setLabTests(prev => prev.map(item => item.id === id ? res.data : item).sort((a, b) => a.name.localeCompare(b.name)));
+        setLabTests(prev => sortAndCache(prev.map(item => item.id === id ? res.data : item)));
       }
       return res.data;
     } catch (err: any) {
       if (originalItem) {
-        setLabTests(prev => prev.map(item => item.id === id ? originalItem : item).sort((a, b) => a.name.localeCompare(b.name)));
+        setLabTests(prev => sortAndCache(prev.map(item => item.id === id ? originalItem : item)));
       }
       throw err;
     }
@@ -82,12 +93,17 @@ export function useLabTests() {
 
   const deleteLabTest = async (id: number) => {
     const originalTests = [...labTests];
-    setLabTests(prev => prev.filter(item => item.id !== id));
+    setLabTests(prev => {
+      const filtered = prev.filter(item => item.id !== id);
+      cachedLabTests = filtered;
+      return filtered;
+    });
 
     try {
       await labTestAPI.delete(id);
     } catch (err: any) {
       setLabTests(originalTests);
+      cachedLabTests = originalTests;
       throw err;
     }
   };

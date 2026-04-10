@@ -53,6 +53,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
 
   // New state for visit status
   const [isVisitPaid, setIsVisitPaid] = useState(false);
+  const [activeVisitId, setActiveVisitId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -66,7 +67,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
         const p = patientRes.data;
         setPatient(p);
         
-        // Determine if the MOST RECENT visit is paid
+        // Determine if the MOST RECENT visit is paid, or if they have no visits at all (force start visit)
         if (p.visits && p.visits.length > 0) {
           // Sort by creation date descending to get the latest visit
           const sortedVisits = [...p.visits].sort((a: any, b: any) => 
@@ -74,8 +75,10 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
           );
           const latestVisit = sortedVisits[0];
           setIsVisitPaid(latestVisit.status === 'paid');
+          setActiveVisitId(latestVisit.status !== 'paid' ? latestVisit.id : null);
         } else {
-          setIsVisitPaid(false);
+          setIsVisitPaid(true); // Force start visit for new patients too
+          setActiveVisitId(null);
         }
 
         // Populate individual tab states from the 'deep-loaded' patient object
@@ -125,8 +128,10 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
     
     setIsStartingVisit(true);
     try {
-      await visitAPI.store(visitData);
+      const res = await visitAPI.store(visitData);
       toast.success("Visit started! Consultation fee of KSh " + (globalFee ?? 0).toLocaleString() + " has been billed.");
+      setIsVisitPaid(false); // Instantly unlock tabs!
+      setActiveVisitId(res.data?.id || res.data?.visit?.id || null);
     } catch (err: any) {
       toast.error(err.message || "Failed to start visit. Please try again.");
       setIsVisitModalOpen(true);
@@ -172,13 +177,6 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Patients
         </Link>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsVisitModalOpen(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-slate-900 hover:bg-slate-800 focus:outline-none transition-all active:scale-95"
-          >
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Start New Visit
-          </button>
           <button
             onClick={() => router.push(`/patients/${unwrappedId}/record`)}
             className="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none transition-all active:scale-95"
@@ -303,6 +301,8 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
               isInitialLoaded={isVitalsLoaded}
               onLoadComplete={() => setIsVitalsLoaded(true)}
               isVisitPaid={isVisitPaid}
+              activeVisitId={activeVisitId}
+              onStartNewVisit={() => setIsVisitModalOpen(true)}
             />
           )}
           {activeTab === "investigations" && (
@@ -313,6 +313,8 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
               isInitialLoaded={isInvestigationsLoaded}
               onLoadComplete={() => setIsInvestigationsLoaded(true)}
               isVisitPaid={isVisitPaid}
+              activeVisitId={activeVisitId}
+              onStartNewVisit={() => setIsVisitModalOpen(true)}
             />
           )}
           {activeTab === "prescriptions" && (
@@ -323,6 +325,8 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
               isInitialLoaded={isPrescriptionsLoaded}
               onLoadComplete={() => setIsPrescriptionsLoaded(true)}
               isVisitPaid={isVisitPaid}
+              activeVisitId={activeVisitId}
+              onStartNewVisit={() => setIsVisitModalOpen(true)}
             />
           )}
           {activeTab === "billing" && (

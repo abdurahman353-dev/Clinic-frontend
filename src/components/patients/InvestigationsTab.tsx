@@ -18,7 +18,9 @@ export default function InvestigationsTab({
   isInitialLoaded,
   onLoadComplete,
   initialData = [],
-  isVisitPaid = false
+  isVisitPaid = false,
+  activeVisitId = null,
+  onStartNewVisit
 }: {
   patientId?: number;
   onTotalChange: (total: number) => void;
@@ -26,6 +28,8 @@ export default function InvestigationsTab({
   onLoadComplete: () => void;
   initialData?: any[];
   isVisitPaid?: boolean;
+  activeVisitId?: number | null;
+  onStartNewVisit?: () => void;
 }): React.JSX.Element {
   const { investigations, meta, isLoading, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations } = useInvestigations(patientId, initialData);
   const [currentPage, setCurrentPage] = useState(1);
@@ -462,13 +466,17 @@ export default function InvestigationsTab({
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Category</label>
                 <select
-                  value={requestForm.type}
+                  value={selectedTests.length > 1 ? "multiple" : (selectedTests.length === 1 ? selectedTests[0].type : requestForm.type)}
                   onChange={e => setRequestForm({ ...requestForm, type: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  disabled={selectedTests.length > 0 || (!!editingId && searchTerm !== "")}
+                  className={`w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
+                    selectedTests.length > 0 || (!!editingId && searchTerm !== "") ? 'bg-slate-50 text-slate-500 cursor-not-allowed border-dashed' : ''
+                  }`}
                 >
                   <option value="lab">Laboratory (Blood, Urine, etc.)</option>
                   <option value="radiology">Radiology (X-Ray, MRI, Ultrasound)</option>
                   <option value="procedure">Clinical Procedure</option>
+                  {selectedTests.length > 1 && <option value="multiple">Determined dynamically</option>}
                 </select>
               </div>
 
@@ -726,11 +734,8 @@ export default function InvestigationsTab({
           <div className="flex-1">
             <h3 className="text-sm font-bold text-amber-900 leading-tight">Visit Closed (Fully Paid)</h3>
             <p className="text-xs text-amber-800 mt-1">
-              This visit is already finalized. To request tests, please <button 
-                onClick={() => {
-                  const btn = document.querySelector('button[class*="bg-slate-900"]') as HTMLButtonElement;
-                  if (btn) btn.click();
-                }}
+              This visit is already finalized or no active visit exists. To request tests, please <button 
+                onClick={onStartNewVisit}
                 className="font-black underline decoration-amber-300 hover:text-amber-950 transition-colors"
               >Start a New Visit</button> first.
             </p>
@@ -803,7 +808,7 @@ export default function InvestigationsTab({
                       {test.status}
                     </span>
                     <div className="flex items-center justify-end gap-2 text-xs">
-                      {test.status !== 'completed' && !test.is_cleared && (
+                      {test.status !== 'completed' && !(test.is_cleared || isVisitPaid || (activeVisitId && test.visit_id && test.visit_id !== activeVisitId)) && (
                         <>
                           <button
                             onClick={() => handleEditRequest(test)}
@@ -820,10 +825,10 @@ export default function InvestigationsTab({
                           </button>
                         </>
                       )}
-                      {test.is_cleared && (
-                        <div className="flex items-center text-slate-400 gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                      {(test.is_cleared || isVisitPaid || (activeVisitId && test.visit_id && test.visit_id !== activeVisitId)) && (
+                        <div className="flex items-center text-slate-400 gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-100" title="Locked by previous visit or payment">
                           <CheckCircle2 className="h-3 w-3 text-slate-400" />
-                          <span className="font-medium">Cleared &amp; Locked</span>
+                          <span className="font-medium">Locked</span>
                         </div>
                       )}
                     </div>

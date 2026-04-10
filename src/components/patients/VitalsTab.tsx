@@ -12,7 +12,9 @@ export default function VitalsTab({
   isInitialLoaded,
   onLoadComplete,
   initialData = [],
-  isVisitPaid = false
+  isVisitPaid = false,
+  activeVisitId = null,
+  onStartNewVisit
 }: {
   patientId?: number;
   onTotalChange: (total: number) => void;
@@ -20,6 +22,8 @@ export default function VitalsTab({
   onLoadComplete: () => void;
   initialData?: any[];
   isVisitPaid?: boolean;
+  activeVisitId?: number | null;
+  onStartNewVisit?: () => void;
 }): React.JSX.Element {
   const { vitals, meta, isLoading, addVital, updateVital, fetchVitals, setVitals } = useVitals(patientId, initialData);
   const [currentPage, setCurrentPage] = useState(1);
@@ -360,11 +364,8 @@ export default function VitalsTab({
           <div className="flex-1">
             <h3 className="text-sm font-bold text-amber-900 leading-tight">Visit Closed (Fully Paid)</h3>
             <p className="text-xs text-amber-800 mt-1">
-              This visit is already finalized. To record new vitals, please <button 
-                onClick={() => {
-                  const btn = document.querySelector('button[class*="bg-slate-900"]') as HTMLButtonElement;
-                  if (btn) btn.click();
-                }}
+              This visit is already finalized or no active visit exists. To record new vitals, please <button 
+                onClick={onStartNewVisit}
                 className="font-black underline decoration-amber-300 hover:text-amber-950 transition-colors"
               >Start a New Visit</button> first.
             </p>
@@ -457,7 +458,7 @@ export default function VitalsTab({
                           {row.notes || '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          {!row.is_cleared ? (
+                          {!(row.is_cleared || isVisitPaid || (activeVisitId && row.visit_id && row.visit_id !== activeVisitId)) ? (
                             <button
                               onClick={() => handleEdit(row)}
                               className="text-slate-400 hover:text-primary-600 transition-colors p-1"
@@ -465,7 +466,7 @@ export default function VitalsTab({
                               <Edit2 className="h-4 w-4" />
                             </button>
                           ) : (
-                            <div className="flex items-center justify-end text-slate-400 gap-1 opacity-60 pointer-events-none px-2 py-1">
+                            <div className="flex items-center justify-end text-slate-400 gap-1 opacity-60 pointer-events-none px-2 py-1" title="Locked by previous visit or payment">
                               <CheckCircle2 className="h-3 w-3" />
                               <span className="text-[10px] font-bold uppercase">Locked</span>
                             </div>

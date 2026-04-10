@@ -264,10 +264,12 @@ export default function StockManagement() {
   }, [summary]);
 
   const availableCategories = useMemo(() => {
-    const defaults = ["Antibiotics", "Analgesics", "Consumables", "Cardiovascular"];
+    // If we just mapped from existing medicines, the user wouldn't see newly created empty categories
+    // until an item is added. However, the user wants immediate drops when they delete a category.
+    // So we exclusively rely on active loaded categories.
     const existing = Array.from(new Set(medicines.map((m: any) => m.category).filter(Boolean)));
     const current = formData.category ? [formData.category] : [];
-    return Array.from(new Set([...defaults, ...existing, ...current]));
+    return Array.from(new Set([...existing, ...current]));
   }, [medicines, formData.category]);
 
   const filteredCategories = availableCategories.filter(cat => 
