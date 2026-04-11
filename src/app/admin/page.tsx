@@ -21,7 +21,7 @@ import {
   Lock
 } from "lucide-react";
 import { adminAPI, settingsAPI } from "@/lib/api";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { Modal } from "@/components/ui/Modal";
 import { Pagination } from "@/components/ui/Pagination";
 
@@ -103,16 +103,23 @@ export default function AdminManagementPage() {
       return;
     }
 
+    // INSTANT FEEL: Close modal and show success toast immediately
+    setIsAddModalOpen(false);
+    toast.success("Administrator account is being created...");
+    
+    // Clear form
+    const dataToSubmit = { ...formData };
+    setFormData({ name: "", email: "", password: "", password_confirmation: "", role: "admin" });
+
     setIsSubmitting(true);
     try {
-      await adminAPI.createAdmin(formData);
-      toast.success("Administrator account created successfully");
-      setIsAddModalOpen(false);
-      setFormData({ name: "", email: "", password: "", password_confirmation: "", role: "admin" });
+      await adminAPI.createAdmin(dataToSubmit);
+      toast.success("Account confirmed and active!");
       fetchAdmins();
     } catch (error: any) {
-      const msg = error.response?.data?.message || "Failed to create administrator";
-      toast.error(msg);
+      // Error is already handled by the API interceptor toast (sonner)
+      // We just refresh the list to be sure
+      fetchAdmins();
     } finally {
       setIsSubmitting(false);
     }
@@ -397,40 +404,40 @@ export default function AdminManagementPage() {
                 {/* <option value="super-admin">Super Admin</option> */}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+            <div className="relative">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Password *</label>
               <input
                 required
                 type={showPassword ? "text" : "password"}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 sm:text-sm pr-10"
                 placeholder="••••••••"
               />
               <button
                 type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+                className="absolute right-3 top-[32px] flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Confirm Password</label>
+            <div className="relative">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Confirm Password *</label>
               <input
                 required
-                type={showPassword ? "text" : "password_confirmation"}
+                type={showPassword ? "text" : "password"}
                 value={formData.password_confirmation}
                 onChange={(e) => setFormData({ ...formData, password_confirmation: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 sm:text-sm pr-10"
                 placeholder="••••••••"
               />
               <button
                 type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+                className="absolute right-3 top-[32px] flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
           </div>

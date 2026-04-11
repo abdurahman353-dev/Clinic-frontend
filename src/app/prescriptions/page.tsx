@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Loader2, Search, Calendar, User, Pill, Eye, Trash2 } from "lucide-react";
+import { FileText, Loader2, Search, Calendar, User, Pill, Eye, Trash2, CheckCircle2, History } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { prescriptionAPI } from "@/lib/api";
 import { toast } from "sonner";
@@ -170,18 +170,56 @@ export default function PrescriptionsPage() {
                         >
                           <Eye className="h-4 w-4" />
                         </button>
-                        {!rx.patient_id && !rx.is_cleared && (
-                           <button
-                             onClick={() => handleEdit(rx)}
-                             className="text-primary-600 hover:text-primary-800 transition-colors"
-                             title="Edit Purchase"
-                           >
-                              <FileText className="h-4 w-4" />
-                           </button>
-                        )}
-                        {rx.patient_id && (
-                          <Link href={`/patients/${rx.patient_id}?tab=prescriptions`} className="text-primary-600 hover:text-primary-700 font-semibold">
-                            History
+                        
+                        {!rx.patient_id ? (
+                          // Walk-in logic: Robust lock check across all potential payment indicators
+                          (() => {
+                            const status = (rx.status || "").toLowerCase();
+                            const pStatus = (rx.payment_status || "").toLowerCase();
+                            const bStatus = (rx.bill_status || "").toLowerCase();
+                            const iStatus = (rx.invoice_status || "").toLowerCase();
+                            const billStatus = (rx.bill?.status || "").toLowerCase();
+                            const invStatus = (rx.invoice?.status || "").toLowerCase();
+                            
+                            const paidIndicators = ['paid', 'completed', 'billed', 'settled', 'collected', 'dispensed'];
+                            const isPaid = 
+                              rx.is_cleared || 
+                              rx.is_paid ||
+                              paidIndicators.includes(status) ||
+                              paidIndicators.includes(pStatus) ||
+                              paidIndicators.includes(bStatus) ||
+                              paidIndicators.includes(iStatus) ||
+                              paidIndicators.includes(billStatus) ||
+                              paidIndicators.includes(invStatus);
+
+                            if (isPaid) {
+                              return (
+                                <div className="flex items-center text-emerald-600 gap-1 bg-emerald-50 px-2 py-1 rounded border border-emerald-100" title="Locked: Paid/Cleared">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  <span className="text-[10px] font-bold uppercase">Locked</span>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <button
+                                onClick={() => handleEdit(rx)}
+                                className="text-primary-600 hover:text-primary-800 transition-colors"
+                                title="Edit Purchase"
+                              >
+                                <FileText className="h-4 w-4" />
+                              </button>
+                            );
+                          })()
+                        ) : (
+                          // In-patient logic: Always show History button (editing locked inside History if paid)
+                          <Link 
+                            href={`/patients/${rx.patient_id}?tab=prescriptions`} 
+                            className="inline-flex items-center gap-1.5 text-primary-600 hover:text-primary-700 font-bold bg-primary-50 px-2 py-1 rounded border border-primary-100 transition-all hover:scale-105 shadow-sm"
+                            title="View Patient History"
+                          >
+                            <History className="h-3.5 w-3.5" />
+                            <span className="text-[10px] uppercase">History</span>
                           </Link>
                         )}
                       </div>

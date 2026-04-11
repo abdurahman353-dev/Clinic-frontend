@@ -234,6 +234,26 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
       }))
     };
 
+    // Safety check: Prevent saving if the prescription is already paid/billed
+    const currentStatus = (prescription?.status || "").toLowerCase();
+    const currentBillStatus = (prescription?.bill_status || prescription?.bill?.status || "").toLowerCase();
+    const currentPaymentStatus = (prescription?.payment_status || "").toLowerCase();
+    const currentInvStatus = (prescription?.invoice?.status || "").toLowerCase();
+    const paidIndicators = ['paid', 'completed', 'billed', 'settled', 'collected', 'dispensed'];
+    
+    if (prescription && (
+      paidIndicators.includes(currentStatus) || 
+      paidIndicators.includes(currentBillStatus) ||
+      paidIndicators.includes(currentPaymentStatus) ||
+      paidIndicators.includes(currentInvStatus) ||
+      prescription.is_paid ||
+      prescription.is_cleared
+    )) {
+      toast.error("This prescription is locked because it has already been paid or processed.");
+      onClose();
+      return;
+    }
+
     // INSTANT SAVE / OPTIMISTIC UI
     onClose();
     toast.success(prescription ? "Changes saved instantly!" : "Prescription saved instantly!");
@@ -293,6 +313,27 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Patient Info */}
           <div className="space-y-4">
+            {prescription && (() => {
+               const currentStatus = (prescription?.status || "").toLowerCase();
+               const currentBillStatus = (prescription?.bill_status || prescription?.bill?.status || "").toLowerCase();
+               const currentInvStatus = (prescription?.invoice?.status || "").toLowerCase();
+               const paidIndicators = ['paid', 'completed', 'billed', 'settled', 'collected', 'dispensed'];
+               
+               const isPaid = paidIndicators.includes(currentStatus) || 
+                              paidIndicators.includes(currentBillStatus) ||
+                              paidIndicators.includes(currentInvStatus) ||
+                              prescription?.is_paid || prescription?.is_cleared;
+               if (!isPaid) return null;
+               return (
+                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3 text-emerald-800 animate-pulse">
+                   <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                   <div>
+                     <p className="text-sm font-bold">Payment Received</p>
+                     <p className="text-[10px] font-medium opacity-80">This record is locked for editing and deletion.</p>
+                   </div>
+                 </div>
+               );
+            })()}
             <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
               <User className="h-4 w-4 text-primary-500" />
               Patient Name
@@ -506,31 +547,58 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
             Cancel
           </button>
           
-          {prescription && (
-            <button
-              type="button"
-              onClick={() => setIsConfirmOpen(true)}
-              className="px-4 py-3 text-sm font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors flex items-center justify-center"
-              title="Reverse Transaction"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          )}
+          {prescription && (() => {
+            const currentStatus = (prescription?.status || "").toLowerCase();
+            const currentBillStatus = (prescription?.bill_status || prescription?.bill?.status || "").toLowerCase();
+            const currentInvStatus = (prescription?.invoice?.status || "").toLowerCase();
+            const paidIndicators = ['paid', 'completed', 'billed', 'settled', 'collected', 'dispensed'];
+            
+            const isPaid = paidIndicators.includes(currentStatus) || 
+                           paidIndicators.includes(currentBillStatus) ||
+                           paidIndicators.includes(currentInvStatus) ||
+                           prescription?.is_paid || prescription?.is_cleared;
+            
+            return (
+              <button
+                type="button"
+                onClick={() => setIsConfirmOpen(true)}
+                disabled={isPaid}
+                className="px-4 py-3 text-sm font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 disabled:opacity-30 disabled:grayscale transition-colors flex items-center justify-center"
+                title={isPaid ? "Locked: Payment Received" : "Reverse Transaction"}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            );
+          })()}
 
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="flex-[2] px-4 py-3 text-sm font-bold text-white bg-primary-600 rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-primary-500/20"
-          >
-            {isSubmitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : prescription ? (
-              <CheckCircle2 className="h-4 w-4" />
-            ) : (
-              <Plus className="h-4 w-4 stroke-[3]" />
-            )}
-            {prescription ? 'Save Changes' : 'Complete Prescription'}
-          </button>
+          {(() => {
+            const currentStatus = (prescription?.status || "").toLowerCase();
+            const currentBillStatus = (prescription?.bill_status || prescription?.bill?.status || "").toLowerCase();
+            const currentInvStatus = (prescription?.invoice?.status || "").toLowerCase();
+            const paidIndicators = ['paid', 'completed', 'billed', 'settled', 'collected', 'dispensed'];
+            
+            const isPaid = paidIndicators.includes(currentStatus) || 
+                           paidIndicators.includes(currentBillStatus) ||
+                           paidIndicators.includes(currentInvStatus) ||
+                           prescription?.is_paid || prescription?.is_cleared;
+            
+            return (
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting || isPaid}
+                className="flex-[2] px-4 py-3 text-sm font-bold text-white bg-primary-600 rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-primary-500/20"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : prescription ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <Plus className="h-4 w-4 stroke-[3]" />
+                )}
+                {prescription ? (isPaid ? 'Locked' : 'Save Changes') : 'Complete Prescription'}
+              </button>
+            );
+          })()}
         </div>
       </div>
 
