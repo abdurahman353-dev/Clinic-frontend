@@ -62,6 +62,56 @@ export default function VitalsTab({
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const getViolation = (key: string, value: string) => {
+    if (!value) return null;
+    const num = parseFloat(value);
+    if (isNaN(num) && key !== 'blood_pressure') return null;
+
+    switch (key) {
+      case 'blood_pressure':
+        const parts = value.split('/');
+        if (parts.length === 2 && parts[0] && parts[1]) {
+          const sys = parseFloat(parts[0]);
+          const dia = parseFloat(parts[1]);
+          if (!isNaN(sys) && !isNaN(dia)) {
+            if (sys < 90 || dia < 60) return "Low (Hypotension)";
+            if (sys >= 140 || dia >= 90) return "High (Hypertension)";
+            if (sys >= 120 || dia >= 80) return "Elevated";
+          }
+        }
+        return null;
+      case 'pulse_rate':
+        if (num < 60) return "Low (Bradycardia)";
+        if (num > 100) return "High (Tachycardia)";
+        return null;
+      case 'respiratory_rate':
+        if (num < 12) return "Low (Bradypnea)";
+        if (num > 20) return "High (Tachypnea)";
+        return null;
+      case 'oxygen_saturation':
+        if (num < 95) return "Low (Hypoxemia)";
+        return null;
+      case 'temperature':
+        if (num <= 45) {
+          if (num < 36.1) return "Low Temp (Hypothermia)";
+          if (num >= 37.3 && num < 38) return "Elevated Temp";
+          if (num >= 38) return "High Temp (Fever)";
+        } else {
+          if (num < 97) return "Low Temp (Hypothermia)";
+          if (num >= 99 && num < 100.4) return "Elevated Temp";
+          if (num >= 100.4) return "High Temp (Fever)";
+        }
+        return null;
+      case 'bmi':
+        if (num < 18.5) return "Underweight";
+        if (num >= 25 && num < 30) return "Overweight";
+        if (num >= 30) return "Obese";
+        return null;
+      default:
+        return null;
+    }
+  };
+
   const calculateBmi = () => {
     if (formData.weight && formData.height) {
       const w = parseFloat(formData.weight);
@@ -194,8 +244,11 @@ export default function VitalsTab({
                     placeholder="e.g. 120/80"
                     value={formData.blood_pressure}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${getViolation('blood_pressure', formData.blood_pressure) ? 'border-red-300 bg-red-50 text-red-900 focus:ring-red-500 focus:border-red-500' : 'border-slate-300'}`}
                   />
+                  {getViolation('blood_pressure', formData.blood_pressure) && (
+                    <p className="mt-1 text-[10px] font-bold text-red-600 uppercase tracking-wider">{getViolation('blood_pressure', formData.blood_pressure)}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Pulse Rate (bpm)</label>
@@ -206,8 +259,11 @@ export default function VitalsTab({
                     min="0"
                     value={formData.pulse_rate}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${getViolation('pulse_rate', formData.pulse_rate) ? 'border-red-300 bg-red-50 text-red-900 focus:ring-red-500 focus:border-red-500' : 'border-slate-300'}`}
                   />
+                  {getViolation('pulse_rate', formData.pulse_rate) && (
+                    <p className="mt-1 text-[10px] font-bold text-red-600 uppercase tracking-wider">{getViolation('pulse_rate', formData.pulse_rate)}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Respiratory Rate (/min)</label>
@@ -218,8 +274,11 @@ export default function VitalsTab({
                     min="0"
                     value={formData.respiratory_rate}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${getViolation('respiratory_rate', formData.respiratory_rate) ? 'border-red-300 bg-red-50 text-red-900 focus:ring-red-500 focus:border-red-500' : 'border-slate-300'}`}
                   />
+                  {getViolation('respiratory_rate', formData.respiratory_rate) && (
+                    <p className="mt-1 text-[10px] font-bold text-red-600 uppercase tracking-wider">{getViolation('respiratory_rate', formData.respiratory_rate)}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">SpO2 Oxygen (%)</label>
@@ -231,8 +290,11 @@ export default function VitalsTab({
                     max="100"
                     value={formData.oxygen_saturation}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${getViolation('oxygen_saturation', formData.oxygen_saturation) ? 'border-red-300 bg-red-50 text-red-900 focus:ring-red-500 focus:border-red-500' : 'border-slate-300'}`}
                   />
+                  {getViolation('oxygen_saturation', formData.oxygen_saturation) && (
+                    <p className="mt-1 text-[10px] font-bold text-red-600 uppercase tracking-wider">{getViolation('oxygen_saturation', formData.oxygen_saturation)}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -254,8 +316,11 @@ export default function VitalsTab({
                     placeholder="e.g. 37.0"
                     value={formData.temperature}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${getViolation('temperature', formData.temperature) ? 'border-red-300 bg-red-50 text-red-900 focus:ring-red-500 focus:border-red-500' : 'border-slate-300'}`}
                   />
+                  {getViolation('temperature', formData.temperature) && (
+                    <p className="mt-1 text-[10px] font-bold text-red-600 uppercase tracking-wider">{getViolation('temperature', formData.temperature)}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Weight (kg)</label>
@@ -291,8 +356,11 @@ export default function VitalsTab({
                     placeholder="Auto-calculated"
                     value={formData.bmi}
                     readOnly
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm bg-slate-50 text-slate-500 sm:text-sm"
+                    className={`w-full px-3 py-2 border rounded-lg shadow-sm sm:text-sm ${getViolation('bmi', formData.bmi) ? 'border-red-300 bg-red-50 text-red-900 font-bold' : 'border-slate-300 bg-slate-50 text-slate-500'}`}
                   />
+                  {getViolation('bmi', formData.bmi) && (
+                    <p className="mt-1 text-[10px] font-bold text-red-600 uppercase tracking-wider">{getViolation('bmi', formData.bmi)}</p>
+                  )}
                 </div>
               </div>
             </div>
