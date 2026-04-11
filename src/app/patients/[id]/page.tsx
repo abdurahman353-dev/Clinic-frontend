@@ -179,9 +179,9 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push(`/patients/${unwrappedId}/record`)}
-            className="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none transition-all active:scale-95"
+            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:outline-none transition-all active:scale-95"
           >
-            <ClipboardList className="h-4 w-4 mr-2 text-slate-500" />
+            <ClipboardList className="h-4 w-4 mr-2" />
             Patient Record
           </button>
         </div>

@@ -5,6 +5,7 @@ import { X, Plus, Trash2, Loader2, Pill, User, CheckCircle2 } from "lucide-react
 import { medicineAPI, stockAPI, prescriptionAPI } from "@/lib/api";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 interface Medicine {
   id: number;
@@ -327,46 +328,39 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
                     {/* Medicine Select */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-slate-500 uppercase px-1">Medicine *</label>
-                      <select
-                        required
-                        value={item.medicine_id.toString()}
-                        onChange={(e) => updateItem(index, "medicine_id", e.target.value)}
-                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all outline-none text-sm text-slate-900"
-                      >
-                        <option value="">Select Medicine</option>
-                        {isLoadingMedicines ? (
-                          <>
-                            {item.medicine_id && item.medicine_name && (
-                              <option value={item.medicine_id.toString()}>
-                                {item.medicine_name} - [Loading...]
-                              </option>
-                            )}
-                            <option disabled>Loading inventory...</option>
-                          </>
-                        ) : (
-                          medicines.map((m) => {
-                            const stock = stocks.find(s => s.medicine_id === m.id);
-                            const physicalStock = stock ? stock.quantity : 0;
-                            
-                            let originalQty = 0;
-                            if (prescription) {
-                              const originalItem = originalItems.find(oi => oi.medicine_id == m.id);
-                              if (originalItem) originalQty = (originalItem.quantity || 0);
-                            }
+                      {(() => {
+                        const parsedOptions = isLoadingMedicines ? [
+                          ...(item.medicine_id && item.medicine_name ? [{ value: item.medicine_id.toString(), label: `${item.medicine_name} - [Loading...]` }] : []),
+                          { value: "", label: "Loading inventory...", disabled: true }
+                        ] : medicines.map((m) => {
+                          const stock = stocks.find(s => s.medicine_id === m.id);
+                          const physicalStock = stock ? stock.quantity : 0;
+                          let originalQty = 0;
+                          if (prescription) {
+                            const originalItem = originalItems.find(oi => oi.medicine_id == m.id);
+                            if (originalItem) originalQty = (originalItem.quantity || 0);
+                          }
+                          const totalAvailable = physicalStock + originalQty;
+                          const stockLabel = originalQty > 0
+                            ? `${physicalStock} in-stock + ${originalQty} prescribed`
+                            : `${physicalStock} in-stock`;
 
-                            const totalAvailable = physicalStock + originalQty;
-                            const stockLabel = originalQty > 0
-                              ? `${physicalStock} in-stock + ${originalQty} prescribed`
-                              : `${physicalStock} in-stock`;
+                          return {
+                            value: m.id.toString(),
+                            label: `${m.name} - KSh ${m.unit_price.toLocaleString()} (${stockLabel})`,
+                            disabled: totalAvailable <= 0
+                          };
+                        });
 
-                            return (
-                              <option key={m.id} value={m.id.toString()} disabled={totalAvailable <= 0}>
-                                {m.name} - KSh {m.unit_price.toLocaleString()} ({stockLabel})
-                              </option>
-                            );
-                          })
-                        )}
-                      </select>
+                        return (
+                          <SearchableSelect
+                            options={parsedOptions}
+                            value={item.medicine_id.toString()}
+                            onChange={(val) => updateItem(index, "medicine_id", val)}
+                            placeholder="Select Medicine"
+                          />
+                        );
+                      })()}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

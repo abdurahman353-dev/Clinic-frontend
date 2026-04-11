@@ -6,6 +6,7 @@ import { usePrescriptions } from "@/hooks/usePrescriptions";
 import { toast } from "sonner";
 import { Pagination } from "@/components/ui/Pagination";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 interface PrescriptionItem {
   medicine_id: string;
@@ -320,14 +321,8 @@ export default function PrescriptionsTab({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Medicine *</label>
-                      <select
-                        required
-                        value={item.medicine_id}
-                        onChange={(e) => updateItem(index, 'medicine_id', e.target.value)}
-                        className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white"
-                      >
-                        <option value="">Select Medicine</option>
-                        {medicines.map((m: any) => {
+                      {(() => {
+                        const options = medicines.map((m: any) => {
                           const physicalStock = m.stock?.quantity || 0;
                           let originalQty = 0;
                           if (editingId) {
@@ -340,13 +335,22 @@ export default function PrescriptionsTab({
                             ? `${physicalStock} in-stock + ${originalQty} prescribed`
                             : `${physicalStock} in-stock`;
 
-                          return (
-                            <option key={m.id} value={m.id} disabled={totalAvailable <= 0}>
-                              {m.name} - KSh {m.unit_price} ({stockLabel})
-                            </option>
-                          );
-                        })}
-                      </select>
+                          return {
+                            value: m.id.toString(),
+                            label: `${m.name} - KSh ${m.unit_price} (${stockLabel})`,
+                            disabled: totalAvailable <= 0
+                          };
+                        });
+
+                        return (
+                          <SearchableSelect
+                            options={options}
+                            value={item.medicine_id.toString()}
+                            onChange={(val) => updateItem(index, 'medicine_id', val)}
+                            placeholder="Select Medicine"
+                          />
+                        );
+                      })()}
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Dose *</label>

@@ -151,7 +151,7 @@ const ThermalReceipt = ({ bill }: { bill: any }) => {
 };
 
 export default function CashierPage() {
-  const [activeTab, setActiveTab] = useState<'pending' | 'history'>('history');
+  const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending');
   const [bills, setBills] = useState<any[]>([]);
   const [historyBills, setHistoryBills] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -343,18 +343,18 @@ export default function CashierPage() {
       {/* Tabs */}
       <div className="flex gap-4 border-b border-slate-200">
         <button
-          onClick={() => setActiveTab('history')}
-          className={`flex items-center gap-2 px-1 py-4 text-sm font-medium border-b-2 transition-all ${activeTab === 'history' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-        >
-          Payment History
-          {historyCount > 0 && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-xs border border-slate-200">{historyCount}</span>}
-        </button>
-        <button
           onClick={() => setActiveTab('pending')}
           className={`flex items-center gap-2 px-1 py-4 text-sm font-medium border-b-2 transition-all ${activeTab === 'pending' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
         >
           Unpaid Invoices
           {pendingCount > 0 && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-xs border border-slate-200">{pendingCount}</span>}
+        </button>
+        <button
+          onClick={() => setActiveTab('history')}
+          className={`flex items-center gap-2 px-1 py-4 text-sm font-medium border-b-2 transition-all ${activeTab === 'history' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+        >
+          Payment History
+          {historyCount > 0 && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-xs border border-slate-200">{historyCount}</span>}
         </button>
       </div>
 
