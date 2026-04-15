@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import React, { use, useState, useEffect, Fragment } from "react";
 import { patientAPI } from "@/lib/api";
 import { printHtml } from "@/lib/print";
 import {
@@ -56,6 +56,7 @@ export default function ModernPatientRecord({ params }: { params: Promise<{ id: 
       icon: <Activity className="h-4 w-4" />,
       iconHtml: "💉",
       details: `BP: ${v.blood_pressure || "-"} | Pulse: ${v.pulse || "-"} | Temp: ${v.temperature || "-"}°C | Wt: ${v.weight || "-"}kg | BMI: ${v.bmi || "-"}`,
+      reason: v.notes || "",
     })),
     ...(patient.investigations || [])
       .filter((i: any) => i.status === "completed")
@@ -64,7 +65,8 @@ export default function ModernPatientRecord({ params }: { params: Promise<{ id: 
         type: "INVESTIGATION",
         icon: <Microscope className="h-4 w-4" />,
         iconHtml: "🔬",
-        details: `${i.name.toUpperCase()}: ${i.result}${i.notes ? ` | Reason: ${i.notes}` : ''}`,
+        details: `${i.name.toUpperCase()}: ${i.result}`,
+        reason: i.notes || "",
       })),
     ...(patient.prescriptions || []).map((p: any) => ({
       date: p.created_at,
@@ -73,7 +75,8 @@ export default function ModernPatientRecord({ params }: { params: Promise<{ id: 
       iconHtml: "💊",
       details: p.items
         .map((item: any) => `${item.medicine} [${item.dosage || "N/A"}] (Qty: ${item.quantity})`)
-        .join("; ") + (p.notes ? ` | Reason: ${p.notes}` : ''),
+        .join("; "),
+      reason: p.notes || "",
     })),
   ].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -83,11 +86,11 @@ export default function ModernPatientRecord({ params }: { params: Promise<{ id: 
     const rowsHtml = clinicalRecords.length > 0
       ? clinicalRecords.map(record => `
           <tr>
-            <td style="padding:10px 16px;vertical-align:top;border-bottom:1px solid #f1f5f9;">
+            <td style="padding:10px 16px;vertical-align:top;border-bottom:1px solid #f1f5f9;width:100px;">
               <p style="font-weight:700;color:#0f172a;font-size:12px;margin:0">${new Date(record.date).toLocaleDateString("en-GB")}</p>
               <p style="font-size:9px;color:#94a3b8;font-weight:700;margin:2px 0 0">${new Date(record.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
             </td>
-            <td style="padding:10px 16px;vertical-align:top;border-bottom:1px solid #f1f5f9;">
+            <td style="padding:10px 16px;vertical-align:top;border-bottom:1px solid #f1f5f9;width:140px;">
               <span style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;color:#475569;">
                 ${record.iconHtml} ${record.type}
               </span>
@@ -95,9 +98,12 @@ export default function ModernPatientRecord({ params }: { params: Promise<{ id: 
             <td style="padding:10px 16px;vertical-align:top;border-bottom:1px solid #f1f5f9;font-size:12px;color:#475569;line-height:1.6;">
               ${record.details}
             </td>
+            <td style="padding:10px 16px;vertical-align:top;border-bottom:1px solid #f1f5f9;font-size:11px;color:#64748b;font-style:italic;">
+              ${record.reason || "-"}
+            </td>
           </tr>`)
         .join("")
-      : `<tr><td colspan="3" style="padding:40px;text-align:center;color:#cbd5e1;font-style:italic;font-weight:700;">No clinical history records found.</td></tr>`;
+      : `<tr><td colspan="4" style="padding:40px;text-align:center;color:#cbd5e1;font-style:italic;font-weight:700;">No clinical history records found.</td></tr>`;
 
     const html = `
       <div style="max-width:860px;margin:0 auto;padding:40px 48px;background:white;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;">
@@ -162,6 +168,7 @@ export default function ModernPatientRecord({ params }: { params: Promise<{ id: 
                 <th style="padding:10px 16px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#94a3b8;width:100px;">Date</th>
                 <th style="padding:10px 16px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#94a3b8;width:140px;">Category</th>
                 <th style="padding:10px 16px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#94a3b8;">Clinical Observations</th>
+                <th style="padding:10px 16px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#94a3b8;width:180px;">Reason</th>
               </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
@@ -283,6 +290,7 @@ export default function ModernPatientRecord({ params }: { params: Promise<{ id: 
                 <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 w-28">Date</th>
                 <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 w-40">Category</th>
                 <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400">Clinical Observations</th>
+                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 w-48">Reason</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -302,11 +310,12 @@ export default function ModernPatientRecord({ params }: { params: Promise<{ id: 
                       </div>
                     </td>
                     <td className="px-6 py-5 align-top text-xs text-slate-600 font-medium leading-relaxed">{record.details}</td>
+                    <td className="px-6 py-5 align-top text-[11px] text-slate-500 font-semibold italic leading-relaxed">{record.reason || "-"}</td>
                   </tr>
                 ))
                 : (
                   <tr>
-                    <td colSpan={3} className="px-6 py-12 text-center text-slate-300 italic font-bold text-sm">
+                    <td colSpan={4} className="px-6 py-12 text-center text-slate-300 italic font-bold text-sm">
                       No clinical history records found for this patient.
                     </td>
                   </tr>

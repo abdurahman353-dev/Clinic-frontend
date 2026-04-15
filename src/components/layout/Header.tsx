@@ -52,10 +52,12 @@ export function Header() {
         <Breadcrumb /></div>
       
       <div className="flex items-center gap-4">
-        <Link href="/stock" className={`p-1.5 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 ${bellColorClass} ${bellBgClass} ${bellAnimationClass}`} title={stockAlertStatus !== 'none' ? `Stock Alert: ${stockAlertStatus}` : "Notifications"}>
-          <span className="sr-only">View notifications</span>
-          <Bell className="h-5 w-5" />
-        </Link>
+        {user?.roles?.includes('super-admin') && (
+          <Link href="/stock" className={`p-1.5 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 ${bellColorClass} ${bellBgClass} ${bellAnimationClass}`} title={stockAlertStatus !== 'none' ? `Stock Alert: ${stockAlertStatus}` : "Notifications"}>
+            <span className="sr-only">View notifications</span>
+            <Bell className="h-5 w-5" />
+          </Link>
+        )}
         
         <div className="relative">
           <button 
