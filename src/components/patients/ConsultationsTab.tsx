@@ -121,9 +121,27 @@ export default function ConsultationsTab({
     if (lastLoadedId.current !== patientId) {
       const savedSession = localStorage.getItem(storageKey);
       if (savedSession) {
-        const { perm, form, locks } = JSON.parse(savedSession);
+        const { perm, form, locks, visit_id: savedVisitId } = JSON.parse(savedSession);
+        
+        // Always restore permanent history
         if (perm) setPermHistory(perm);
-        if (form) setFormData(form);
+
+        // ONLY restore encounter details if it's the SAME visit
+        if (savedVisitId === activeVisitId && form) {
+          setFormData(form);
+        } else {
+          // Reset encounter details for new visit
+          setFormData({
+            symptoms: "",
+            symptoms_duration: "",
+            previous_treatments: "",
+            diagnosis: "",
+            assessment: "",
+            plan: "",
+            follow_up_date: ""
+          });
+        }
+
         if (locks) {
           setIsPermLocked(locks.perm);
           setIsVisitLocked(locks.visit);
@@ -149,12 +167,15 @@ export default function ConsultationsTab({
       const currentSession = {
         perm: permHistory,
         form: formData,
-        locks: { perm: isPermLocked, visit: isVisitLocked }
+        locks: { perm: isPermLocked, visit: isVisitLocked },
+        visit_id: activeVisitId // Tag the draft with the specific visit ID
       };
       
       // BLANK GUARD: Don't let an accidental initial-blank-render wipe a good vault
+      // For new visits, we allow saving so the visit_id updates
+      const isNewVisit = lastLoadedId.current === patientId;
       const hasContent = permHistory.chronic_illnesses || permHistory.allergies || formData.symptoms;
-      if (lastLoadedId.current === patientId && hasContent) {
+      if (isNewVisit && (hasContent || activeVisitId)) {
         localStorage.setItem(storageKey, JSON.stringify(currentSession));
       }
     }
