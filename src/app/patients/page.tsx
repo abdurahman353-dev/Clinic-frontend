@@ -175,7 +175,7 @@ export default function PatientsList() {
                           <Link href={`/patients/${patient.db_id}`} className="text-sm font-medium text-slate-900 hover:text-primary-600">
                             {patient.name}
                           </Link>
-                          <div className="text-sm text-slate-500"> {patient.age || '?'} yrs, {patient.gender}</div>
+                          <div className="text-sm text-slate-500"> {patient.id || '#'} &bull; {patient.age || '?'} yrs, {patient.gender}</div>
                         </div>
                       </div>
                     </td>

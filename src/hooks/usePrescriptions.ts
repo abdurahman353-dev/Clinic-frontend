@@ -37,7 +37,7 @@ export function usePrescriptions(patientId?: number, initialData: any[] = []) {
 
   const fetchMedicines = useCallback(async () => {
     try {
-        const res = await medicineAPI.list({ limit: 100 });
+        const res = await medicineAPI.list({ per_page: -1 });
         setMedicines(res.data || []);
     } catch (err) {
         console.error("Failed to load medicines", err);

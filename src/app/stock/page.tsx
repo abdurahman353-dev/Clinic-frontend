@@ -62,8 +62,8 @@ export default function StockManagement() {
     unit: "tablets",
     dosage_form: "tablet",
     initial_stock: "",
-    minimum_stock: "50",
-    reorder_level: "100",
+    minimum_stock: "",
+    reorder_level: "",
     batch_number: "",
     expiry_date: ""
   });
@@ -128,7 +128,7 @@ export default function StockManagement() {
     setEditingId(null);
     setFormData({
       name: "", category: "Antibiotics", unit_price: "", description: "", size: "", unit: "tablets",
-      dosage_form: "tablet", initial_stock: "", minimum_stock: "50", reorder_level: "100", batch_number: "", expiry_date: ""
+      dosage_form: "tablet", initial_stock: "", minimum_stock: "", reorder_level: "", batch_number: "", expiry_date: ""
     });
 
     try {
@@ -170,7 +170,7 @@ export default function StockManagement() {
     setEditingId(null);
     setFormData({
       name: "", category: "Antibiotics", unit_price: "", description: "", size: "", unit: "tablets",
-      dosage_form: "tablet", initial_stock: "", minimum_stock: "50", reorder_level: "100", batch_number: "", expiry_date: ""
+      dosage_form: "tablet", initial_stock: "", minimum_stock: "", reorder_level: "", batch_number: "", expiry_date: ""
     });
     setIsAddItemModalOpen(true);
   };

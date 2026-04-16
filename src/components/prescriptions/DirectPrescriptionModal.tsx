@@ -50,8 +50,8 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
     if (!silent) setIsLoadingMedicines(true);
     try {
       const [medsRes, stocksRes] = await Promise.all([
-        medicineAPI.list(),
-        stockAPI.list()
+        medicineAPI.list({ per_page: -1 }),
+        stockAPI.list({ per_page: -1 })
       ]);
       const newMeds = medsRes.data || [];
       const newStocks = stocksRes.data || [];
@@ -265,9 +265,9 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
         await prescriptionAPI.storeStandalone(data);
       }
       onSuccess();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to save direct prescription", err);
-      // Background error notification would go here if needed
+      toast.error(err?.response?.data?.error || err?.response?.data?.message || err?.message || "Failed to save prescription.");
     } finally {
       setIsSubmitting(false);
     }
@@ -476,9 +476,11 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
                           type="number"
                           required
                           min="1"
+                          readOnly
+                          title="Quantity is auto-calculated"
                           value={item.quantity}
                           onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value))}
-                          className="w-full px-4 py-3 bg-blue-50/50 border border-blue-100 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all outline-none text-sm font-bold text-primary-900"
+                          className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all outline-none text-sm font-bold text-primary-900 cursor-not-allowed"
                         />
                       </div>
                     </div>

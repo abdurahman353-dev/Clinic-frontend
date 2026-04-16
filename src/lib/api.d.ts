@@ -31,6 +31,13 @@ declare module "@/lib/api" {
     listGlobal: (params?: any) => Promise<any>;
   }
 
+  export interface ConsultationAPI {
+    list: (visitId: string | number) => Promise<any>;
+    store: (visitId: string | number, data: any) => Promise<any>;
+    update: (visitId: string | number, id: string | number, data: any) => Promise<any>;
+    listGlobal: (params?: any) => Promise<any>;
+  }
+
   export interface InvestigationAPI {
     list: (visitId: string | number) => Promise<any>;
     store: (visitId: string | number, data: any) => Promise<any>;
@@ -116,6 +123,7 @@ declare module "@/lib/api" {
   export const visitAPI: VisitAPI;
   export const vitalAPI: VitalAPI;
   export const investigationAPI: InvestigationAPI;
+  export const consultationAPI: ConsultationAPI;
   export const prescriptionAPI: PrescriptionAPI;
   export const medicineAPI: MedicineAPI;
   export const stockAPI: StockAPI;

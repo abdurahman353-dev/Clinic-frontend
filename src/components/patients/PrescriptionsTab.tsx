@@ -412,9 +412,11 @@ export default function PrescriptionsTab({
                         <input
                           type="number"
                           min="1"
+                          readOnly
+                          title="Quantity is auto-calculated"
                           value={Number.isNaN(item.quantity) ? "" : item.quantity}
                           onChange={(e) => updateItem(index, 'quantity', e.target.value === "" ? "" : parseInt(e.target.value, 10) as any)}
-                          className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-slate-50 font-bold text-primary-700"
+                          className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-slate-100 font-bold text-primary-700 cursor-not-allowed"
                         />
                         {(() => {
                           const med = medicines.find(m => m.id == item.medicine_id);

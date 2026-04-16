@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, User as UserIcon, Calendar, Phone, Mail, Droplet, AlertTriangle, FileText, Activity, ClipboardList, PlusCircle } from "lucide-react";
+import { ArrowLeft, User as UserIcon, Calendar, Phone, Mail, Droplet, AlertTriangle, FileText, Activity, ClipboardList, PlusCircle, Stethoscope, Users } from "lucide-react";
 import Link from "next/link";
 import { patientAPI, visitAPI, settingsAPI } from "@/lib/api";
 import { Modal } from "@/components/ui/Modal";
@@ -10,8 +10,8 @@ import { toast } from "sonner";
 import VitalsTab from "@/components/patients/VitalsTab";
 import InvestigationsTab from "@/components/patients/InvestigationsTab";
 import PrescriptionsTab from "@/components/patients/PrescriptionsTab";
+import ConsultationsTab from "@/components/patients/ConsultationsTab";
 import BillingTab from "@/components/patients/BillingTab";
-import { Suspense } from "react";
 import { printHtml } from "@/lib/print";
 
 function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
@@ -42,7 +42,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
 
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab && ["vitals", "investigations", "prescriptions"].includes(tab)) {
+    if (tab && ["vitals", "consultations", "investigations", "prescriptions"].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -56,63 +56,64 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const [isVisitPaid, setIsVisitPaid] = useState(false);
   const [activeVisitId, setActiveVisitId] = useState<number | null>(null);
 
-  useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        // Fetch patient and all historical data in parallel for instant tab switching
-        // We now include 'visits' to check if the latest one is already paid
-        const [patientRes] = await Promise.all([
-          patientAPI.get(unwrappedId, { include: 'vitalSigns,investigations,prescriptions.items,visits' })
-        ]);
-        
-        const p = patientRes.data;
-        setPatient(p);
-        
-        // Determine if the MOST RECENT visit is paid, or if they have no visits at all (force start visit)
-        if (p.visits && p.visits.length > 0) {
-          // Sort by creation date descending to get the latest visit
-          const sortedVisits = [...p.visits].sort((a: any, b: any) => 
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-          const latestVisit = sortedVisits[0];
-          setIsVisitPaid(latestVisit.status === 'paid');
-          setActiveVisitId(latestVisit.status !== 'paid' ? latestVisit.id : null);
-        } else {
-          setIsVisitPaid(true); // Force start visit for new patients too
-          setActiveVisitId(null);
-        }
-
-        // Populate individual tab states from the 'deep-loaded' patient object
-        if (p.vitals) {
-           setVitalsData(p.vitals);
-           setVitalsTotal(p.vitals.length);
-           setIsVitalsLoaded(true);
-        }
-        if (p.investigations) {
-           setInvestigationsData(p.investigations);
-           setInvestigationsTotal(p.investigations.length);
-           setIsInvestigationsLoaded(true);
-        }
-        if (p.prescriptions) {
-           setPrescriptionsData(p.prescriptions);
-           setPrescriptionsTotal(p.prescriptions.length);
-           setIsPrescriptionsLoaded(true);
-        }
-
-      } catch (err: any) {
-        setErrorMsg(err.message || "Failed to load patient data");
-      } finally {
-        setIsLoading(false);
+  const fetchPatient = useCallback(async () => {
+    try {
+      // Fetch patient and all historical data in parallel for instant tab switching
+      // We now include 'visits' to check if the latest one is already paid
+      const [patientRes] = await Promise.all([
+        patientAPI.get(unwrappedId, { include: 'vitalSigns,investigations,prescriptions.items,visits' })
+      ]);
+      
+      const p = patientRes.data;
+      setPatient(p);
+      
+      // Determine if the MOST RECENT visit is paid, or if they have no visits at all (force start visit)
+      if (p.visits && p.visits.length > 0) {
+        // Sort by creation date descending to get the latest visit
+        const sortedVisits = [...p.visits].sort((a: any, b: any) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        const latestVisit = sortedVisits[0];
+        setIsVisitPaid(latestVisit.status === 'paid');
+        setActiveVisitId(latestVisit.status !== 'paid' ? latestVisit.id : null);
+      } else {
+        setIsVisitPaid(true); // Force start visit for new patients too
+        setActiveVisitId(null);
       }
-    };
-    fetchAllData();
+
+      // Populate individual tab states from the 'deep-loaded' patient object
+      if (p.vitals) {
+         setVitalsData(p.vitals);
+         setVitalsTotal(p.vitals.length);
+         setIsVitalsLoaded(true);
+      }
+      if (p.investigations) {
+         setInvestigationsData(p.investigations);
+         setInvestigationsTotal(p.investigations.length);
+         setIsInvestigationsLoaded(true);
+      }
+      if (p.prescriptions) {
+         setPrescriptionsData(p.prescriptions);
+         setPrescriptionsTotal(p.prescriptions.length);
+         setIsPrescriptionsLoaded(true);
+      }
+
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to load patient data");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [unwrappedId]);
+
+  useEffect(() => {
+    fetchPatient();
 
     // Load the global clinic consultation fee
     settingsAPI.get().then((res: any) => {
       const fee = res?.data?.consultation_fee ?? res?.consultation_fee;
       setGlobalFee(fee !== undefined && fee !== null ? parseFloat(String(fee)) : 500);
     }).catch(() => setGlobalFee(500));
-  }, [unwrappedId]);
+  }, [fetchPatient]);
 
   const handleStartVisit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -335,6 +336,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
 
   const tabs = [
     { id: "vitals", label: "Vitals", icon: Activity, count: vitalsTotal },
+    { id: "consultations", label: "Consultations", icon: Stethoscope },
     { id: "investigations", label: "Investigations", icon: FileText, count: investigationsTotal },
     { id: "prescriptions", label: "Prescriptions", icon: Droplet, count: prescriptionsTotal },
     { id: "billing", label: "Billing & Invoices", icon: FileText },
@@ -353,13 +355,6 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
           >
             <ClipboardList className="h-4 w-4 mr-2" />
             Patient Record
-          </button>
-          <button
-            onClick={() => router.push(`/patients/${unwrappedId}/history-form`)}
-            className="inline-flex items-center px-4 py-2 border border-slate-200 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none transition-all active:scale-95"
-          >
-            <FileText className="h-4 w-4 mr-2 text-primary-600" />
-            History Form
           </button>
         </div>
       </div>
@@ -488,7 +483,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`
-                  w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm flex items-center justify-center
+                  flex-1 py-4 px-1 text-center border-b-2 font-medium text-sm flex items-center justify-center
                   ${activeTab === tab.id
                     ? "border-primary-500 text-primary-600"
                     : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
@@ -518,6 +513,16 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
               onTotalChange={setVitalsTotal}
               isInitialLoaded={isVitalsLoaded}
               onLoadComplete={() => setIsVitalsLoaded(true)}
+              isVisitPaid={isVisitPaid}
+              activeVisitId={activeVisitId}
+              onStartNewVisit={() => setIsVisitModalOpen(true)}
+            />
+          )}
+          {activeTab === "consultations" && (
+            <ConsultationsTab 
+              patientId={patient.db_id}
+              patient={patient}
+              onPatientUpdate={fetchPatient}
               isVisitPaid={isVisitPaid}
               activeVisitId={activeVisitId}
               onStartNewVisit={() => setIsVisitModalOpen(true)}

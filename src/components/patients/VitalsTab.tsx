@@ -41,7 +41,6 @@ export default function VitalsTab({
     weight: "",
     height: "",
     bmi: "",
-    notes: "",
     rbs: "",
     cost: ""
   });
@@ -108,6 +107,11 @@ export default function VitalsTab({
         if (num >= 25 && num < 30) return "Overweight";
         if (num >= 30) return "Obese";
         return null;
+      case 'rbs':
+        if (num < 4.0 || (num > 30 && num < 70)) return "Low (Hypoglycemia)";
+        if ((num >= 7.8 && num < 11.1) || (num >= 140 && num < 200)) return "Elevated";
+        if ((num >= 11.1 && num <= 30) || num >= 200) return "High (Hyperglycemia)";
+        return null;
       default:
         return null;
     }
@@ -127,7 +131,7 @@ export default function VitalsTab({
   const resetForm = () => {
     setFormData({
       vital_type: "routine", blood_pressure: "", pulse_rate: "", temperature: "",
-      respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: "", rbs: "", cost: ""
+      respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", rbs: "", cost: ""
     });
     setEditingId(null);
     setShowForm(false);
@@ -137,7 +141,7 @@ export default function VitalsTab({
     setEditingId(null);
     setFormData({
       vital_type: "routine", blood_pressure: "", pulse_rate: "", temperature: "",
-      respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", notes: "", rbs: "", cost: ""
+      respiratory_rate: "", oxygen_saturation: "", weight: "", height: "", bmi: "", rbs: "", cost: ""
     });
     setShowForm(true);
   };
@@ -154,7 +158,6 @@ export default function VitalsTab({
       weight: vital.weight || "",
       height: vital.height || "",
       bmi: vital.bmi || "",
-      notes: vital.notes || "",
       rbs: vital.rbs || "",
       cost: vital.cost || ""
     });
@@ -327,13 +330,17 @@ export default function VitalsTab({
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">RBS (Random Blood Sugar)</label>
                   <input
-                    type="text"
+                    type="number"
+                    step="0.1"
                     name="rbs"
                     placeholder="e.g. 5.6"
                     value={formData.rbs}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${getViolation('rbs', formData.rbs) ? 'border-red-300 bg-red-50 text-red-900 focus:ring-red-500 focus:border-red-500' : 'border-slate-300'}`}
                   />
+                  {getViolation('rbs', formData.rbs) && (
+                    <p className="mt-1 text-[10px] font-bold text-red-600 uppercase tracking-wider">{getViolation('rbs', formData.rbs)}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Weight (kg)</label>
@@ -378,19 +385,8 @@ export default function VitalsTab({
               </div>
             </div>
 
-            {/* Notes & Billing */}
+            {/* Billing */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Clinical Notes</label>
-                <textarea
-                  name="notes"
-                  rows={3}
-                  value={formData.notes}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                  placeholder="Any additional observations..."
-                />
-              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Vitals Service Charge (KES)</label>
                 <div className="relative mt-1 rounded-lg shadow-sm">
@@ -425,7 +421,12 @@ export default function VitalsTab({
                 className="inline-flex items-center px-5 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 transition-colors active:scale-[0.98]"
               >
                 {isSubmitting
-                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
+                  ? (
+                    <span className="flex items-center">
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </span>
+                  )
                   : editingId ? "Save Changes" : "Save Vitals"
                 }
               </button>
@@ -507,7 +508,6 @@ export default function VitalsTab({
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Temp / SpO2 / RR / RBS</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Wt / Ht / BMI</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Vitals Charge (KES)</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Clinical Notes</th>
                       <th className="relative px-6 py-3"><span className="sr-only">Edit</span></th>
                     </tr>
                   </thead>
@@ -531,13 +531,10 @@ export default function VitalsTab({
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-slate-600">
                           {row.weight ? row.weight + 'kg' : '-'} &bull; {row.height ? row.height + 'cm' : '-'}<br />
-                          <span className="text-xs text-slate-500">BMI: {row.bmi || '-'}</span>
+                          <span className="text-xs text-slate-500">BMI: {row.bmi || '-'} &bull; RBS: {row.rbs || '-'}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-slate-900 font-bold">
                           {row.cost ? `KSh ${row.cost}` : '-'}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate" title={row.notes}>
-                          {row.notes || '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           {!(row.is_cleared || isVisitPaid || (activeVisitId && row.visit_id && row.visit_id !== activeVisitId)) ? (
@@ -562,7 +559,7 @@ export default function VitalsTab({
             </div>
           </div>
 
-          <Pagination
+          <Pagination 
             meta={meta}
             onPageChange={(page) => setCurrentPage(page)}
           />

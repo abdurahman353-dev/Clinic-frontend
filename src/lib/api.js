@@ -196,6 +196,25 @@ export const vitalAPI = {
     }
 };
 
+export const consultationAPI = {
+    list: async (visitId) => {
+        const response = await apiClient.get(`/visits/${visitId}/consultations`);
+        return response.data;
+    },
+    store: async (visitId, data) => {
+        const response = await apiClient.post(`/visits/${visitId}/consultations`, data);
+        return response.data;
+    },
+    update: async (visitId, id, data) => {
+        const response = await apiClient.patch(`/visits/${visitId}/consultations/${id}`, data);
+        return response.data;
+    },
+    listGlobal: async (params = {}) => {
+        const response = await apiClient.get('/consultations', { params });
+        return response.data;
+    }
+};
+
 export const investigationAPI = {
     list: async (visitId) => {
         const response = await apiClient.get(`/visits/${visitId}/investigations`);
