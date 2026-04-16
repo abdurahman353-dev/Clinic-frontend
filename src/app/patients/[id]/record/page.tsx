@@ -55,7 +55,7 @@ export default function ModernPatientRecord({ params }: { params: Promise<{ id: 
       type: "VITALS",
       icon: <Activity className="h-4 w-4" />,
       iconHtml: "💉",
-      details: `BP: ${v.blood_pressure || "-"} | Pulse: ${v.pulse || "-"} | Temp: ${v.temperature || "-"}°C | Wt: ${v.weight || "-"}kg | BMI: ${v.bmi || "-"}`,
+      details: `BP: ${v.blood_pressure || "-"} | Pulse: ${v.pulse_rate || "-"} | Temp: ${v.temperature || "-"}°C | Wt: ${v.weight || "-"}kg | BMI: ${v.bmi || "-"}`,
       reason: v.notes || "",
     })),
     ...(patient.investigations || [])
