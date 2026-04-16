@@ -12,6 +12,7 @@ import InvestigationsTab from "@/components/patients/InvestigationsTab";
 import PrescriptionsTab from "@/components/patients/PrescriptionsTab";
 import BillingTab from "@/components/patients/BillingTab";
 import { Suspense } from "react";
+import { printHtml } from "@/lib/print";
 
 function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -140,6 +141,175 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
     }
   };
 
+  const handlePrintHistoryForm = () => {
+    if (!patient) return;
+
+    const latestVital = vitalsData?.[0] || {};
+    const today = new Date().toLocaleDateString("en-GB");
+
+    const html = `
+      <div style="padding: 20px; color: #1e293b; max-width: 800px; margin: 0 auto;">
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <img src="/wafaa_logo.jpeg" alt="Clinic Logo" style="height: 60px; width: 60px; object-fit: contain;" />
+            <div>
+              <h1 style="font-size: 22px; font-weight: 900; color: #1e40af; margin: 0; letter-spacing: -0.5px;">WAFAA</h1>
+              <p style="font-size: 14px; font-weight: 700; color: #64748b; margin: 0; text-transform: uppercase;">Medical Clinic</p>
+              <p style="font-size: 10px; color: #94a3b8; margin: 0; font-weight: 600;">MAJENGO, MOMBASA</p>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <p style="font-size: 11px; font-weight: 700; color: #64748b;">DATE: <span style="border-bottom: 1px dotted #cbd5e1; min-width: 120px; display: inline-block;">${today}</span></p>
+          </div>
+        </div>
+
+        <h2 style="text-align: center; font-size: 18px; font-weight: 900; color: #1e3a8a; text-transform: uppercase; margin-bottom: 25px; letter-spacing: 1px;">Patient Medical History Form</h2>
+
+        <!-- Patient Info Section -->
+        <div style="margin-bottom: 20px;">
+          <h3 style="font-size: 12px; font-weight: 900; color: #1e40af; text-transform: uppercase; margin-bottom: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px;">Patient Information</h3>
+          <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+            <tr>
+              <td style="padding: 6px 0; border-bottom: 1px solid #f1f5f9; width: 50%;">
+                <span style="font-weight: 600; color: #64748b;">Full Name:</span> 
+                <span style="margin-left: 5px; font-weight: 700;">${patient.name}</span>
+              </td>
+              <td style="padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
+                <span style="font-weight: 600; color: #64748b;">Phone Number:</span> 
+                <span style="margin-left: 5px; font-weight: 700;">${patient.phone}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
+                <span style="font-weight: 600; color: #64748b;">Date of Birth:</span> 
+                <span style="margin-left: 5px; font-weight: 700;">${patient.dob || "N/A"}</span>
+              </td>
+              <td style="padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
+                <span style="font-weight: 600; color: #64748b;">Email:</span> 
+                <span style="margin-left: 5px; font-weight: 700;">${patient.email || "N/A"}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
+                <span style="font-weight: 600; color: #64748b;">Gender:</span> 
+                <span style="margin-left: 10px;">
+                  [${patient.gender === 'male' ? '✓' : ' '}] Male &nbsp; 
+                  [${patient.gender === 'female' ? '✓' : ' '}] Female &nbsp; 
+                  [${patient.gender !== 'male' && patient.gender !== 'female' ? '✓' : ' '}] Other
+                </span>
+              </td>
+              <td style="padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
+                <span style="font-weight: 600; color: #64748b;">Emergency Contact:</span> 
+                <span style="margin-left: 5px; font-weight: 700;">${patient.next_of_kin || "N/A"} (${patient.next_of_kin_phone || ""})</span>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Vitals Section -->
+        <div style="margin-bottom: 20px;">
+          <h3 style="font-size: 12px; font-weight: 900; color: #1e40af; text-transform: uppercase; margin-bottom: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px;">Vitals:</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 11px;">
+            <div style="line-height: 2;">
+              <div>B.P: <span style="border-bottom: 1px solid #cbd5e1; min-width: 100px; display: inline-block; font-weight: 700;">${latestVital.blood_pressure || ""}</span> mmHg</div>
+              <div>P.R: <span style="border-bottom: 1px solid #cbd5e1; min-width: 100px; display: inline-block; font-weight: 700;">${latestVital.pulse_rate || ""}</span> bpm</div>
+              <div>RR: <span style="border-bottom: 1px solid #cbd5e1; min-width: 100px; display: inline-block; font-weight: 700;">${latestVital.respiratory_rate || ""}</span> /min</div>
+            </div>
+            <div style="line-height: 2;">
+              <div>TEMP: <span style="border-bottom: 1px solid #cbd5e1; min-width: 100px; display: inline-block; font-weight: 700;">${latestVital.temperature || ""}</span> °C</div>
+              <div>SPO2: <span style="border-bottom: 1px solid #cbd5e1; min-width: 100px; display: inline-block; font-weight: 700;">${latestVital.oxygen_saturation || ""}</span> %</div>
+              <div>RBS: <span style="border-bottom: 1px solid #cbd5e1; min-width: 100px; display: inline-block; font-weight: 700;">${latestVital.rbs || ""}</span> mmol/L</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Medical History Section (Manual) -->
+        <div style="margin-bottom: 20px;">
+          <h3 style="font-size: 12px; font-weight: 900; color: #1e40af; text-transform: uppercase; margin-bottom: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px;">Medical History</h3>
+          <div style="font-size: 11px; line-height: 1.8;">
+            <div style="margin-bottom: 10px;">
+              <div style="display: flex; gap: 20px;">
+                <span>• Do you have any chronic illnesses?</span>
+                <span>[ ] Yes &nbsp; [ ] No</span>
+              </div>
+              <div style="border-bottom: 1px solid #f1f5f9; min-height: 20px; color: #94a3b8; font-style: italic; font-size: 9px;">(if yes, please specify)</div>
+            </div>
+            <div style="margin-bottom: 10px;">
+              <div style="display: flex; gap: 20px;">
+                <span>• Have you had any major surgeries?</span>
+                <span>[ ] Yes &nbsp; [ ] No</span>
+              </div>
+              <div style="border-bottom: 1px solid #f1f5f9; min-height: 20px; color: #94a3b8; font-style: italic; font-size: 9px;">(if yes, please specify)</div>
+            </div>
+            <div style="margin-bottom: 10px;">
+              <div style="display: flex; gap: 20px;">
+                <span>• Are you currently taking any medications?</span>
+                <span>[ ] Yes &nbsp; [ ] No</span>
+              </div>
+              <div style="border-bottom: 1px solid #f1f5f9; min-height: 20px; color: #94a3b8; font-style: italic; font-size: 9px;">Medication Name:</div>
+            </div>
+            <div style="margin-bottom: 10px;">
+              <div style="display: flex; gap: 20px;">
+                <span>• Do you have any allergies?</span>
+                <span>[ ] Yes &nbsp; [ ] No</span>
+                <span style="font-weight: 700; color: #ef4444; margin-left: 20px;">${patient.allergies ? `Current: ${patient.allergies}` : ""}</span>
+              </div>
+              <div style="border-bottom: 1px solid #f1f5f9; min-height: 20px; color: #94a3b8; font-style: italic; font-size: 9px;">(if yes, please specify)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Family Medical History row -->
+        <div style="margin-bottom: 20px;">
+          <h3 style="font-size: 12px; font-weight: 900; color: #1e40af; text-transform: uppercase; margin-bottom: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px;">Family Medical History</h3>
+          <p style="font-size: 10px; margin-bottom: 8px; font-weight: 600; color: #64748b;">Do any of your immediate family members have a history of the following?</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 11px;">
+            <span>[ ] Heart disease</span>
+            <span>[ ] High blood pressure</span>
+            <span>[ ] Other: ________________</span>
+            <span>[ ] Diabetes</span>
+            <span>[ ] Cancer</span>
+          </div>
+        </div>
+
+        <!-- Reason for Today's Visit Section (Manual) -->
+        <div style="margin-bottom: 20px;">
+          <h3 style="font-size: 12px; font-weight: 900; color: #1e40af; text-transform: uppercase; margin-bottom: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px;">Reason for Today's Visit</h3>
+          <div style="font-size: 11px; line-height: 2.5;">
+            <div style="border-bottom: 1px solid #cbd5e1;">• Symptoms/Concerns: </div>
+            <div style="border-bottom: 1px solid #cbd5e1;">• Duration of Symptoms: </div>
+            <div style="border-bottom: 1px solid #cbd5e1;">• Previous Treatments (if any): </div>
+          </div>
+        </div>
+
+        <!-- Doctor's Notes Section (Manual) -->
+        <div style="margin-bottom: 20px;">
+          <h3 style="font-size: 12px; font-weight: 900; color: #1e40af; text-transform: uppercase; margin-bottom: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px;">Doctor's Notes</h3>
+          <div style="font-size: 11px; line-height: 2.5;">
+            <div style="border-bottom: 1px solid #cbd5e1;">• Initial Assessment: </div>
+            <div style="border-bottom: 1px solid #cbd5e1;">• Recommended Tests/Treatments: </div>
+            <div style="display: flex; align-items: baseline; gap: 10px; border-bottom: 1px solid #cbd5e1;">
+              <span>• Follow-up Appointment:</span>
+              <span style="font-size: 10px;">[ ] Yes &nbsp; [ ] No &nbsp; Date: ________________</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="margin-top: 40px; text-align: center; border-top: 1px solid #f1f5f9; pt-20px;">
+          <div style="display: flex; justify-content: center; gap: 30px; font-size: 10px; font-weight: 700; color: #64748b;">
+            <span>📧 wafaamedicalclinic@gmail.com</span>
+            <span>📞 Telephone: 071052377 / 0799032632</span>
+          </div>
+          <p style="font-size: 8px; color: #94a3b8; margin-top: 10px; letter-spacing: 2px; text-transform: uppercase; font-weight: 900;">Official Medical Documentation - Wafaa Med-Cloud</p>
+        </div>
+      </div>
+    `;
+
+    printHtml(html, "A4");
+  };
+
   if (isLoading) {
     return (
       <div className="p-6 md:p-8 max-w-7xl mx-auto flex justify-center items-center min-h-[50vh]">
@@ -183,6 +353,13 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
           >
             <ClipboardList className="h-4 w-4 mr-2" />
             Patient Record
+          </button>
+          <button
+            onClick={() => router.push(`/patients/${unwrappedId}/history-form`)}
+            className="inline-flex items-center px-4 py-2 border border-slate-200 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none transition-all active:scale-95"
+          >
+            <FileText className="h-4 w-4 mr-2 text-primary-600" />
+            History Form
           </button>
         </div>
       </div>
@@ -252,12 +429,53 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
           </div>
 
           {patient.allergies && (
-            <div className="mt-4 p-3 bg-red-50 rounded-lg flex items-start text-red-800 border-l-4 border-red-500">
-              <AlertTriangle className="h-5 w-5 mr-2 shrink-0 text-red-500" />
+            <div className="mt-4 p-4 bg-red-50 rounded-xl flex items-start text-red-800 border border-red-100 shadow-sm">
+              <AlertTriangle className="h-5 w-5 mr-3 shrink-0 text-red-500" />
               <div>
-                <p className="text-sm font-semibold">Known Allergies:</p>
-                <p className="text-sm mt-0.5">{patient.allergies}</p>
+                <p className="text-xs font-black uppercase tracking-widest text-red-600 mb-1">Critical Allergy Alert:</p>
+                <p className="text-sm font-bold leading-relaxed">{patient.allergies}</p>
               </div>
+            </div>
+          )}
+
+          {/* Clinical History Banner */}
+          {(patient.chronic_illnesses || patient.family_history) && (
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {patient.chronic_illnesses && (
+                <div className="p-4 bg-blue-50/50 rounded-xl flex items-start text-blue-900 border border-blue-100 shadow-sm hover:bg-blue-50 transition-colors">
+                  <Activity className="h-5 w-5 mr-3 shrink-0 text-blue-500" />
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-1">Past Medical History:</p>
+                    <p className="text-sm font-semibold leading-relaxed line-clamp-2">{patient.chronic_illnesses}</p>
+                  </div>
+                </div>
+              )}
+              {patient.family_history && (
+                <div className="p-4 bg-indigo-50/50 rounded-xl flex items-start text-indigo-900 border border-indigo-100 shadow-sm hover:bg-indigo-50 transition-colors">
+                  <Users className="h-5 w-5 mr-3 shrink-0 text-indigo-500" />
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-1">Family Medical History:</p>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {(() => {
+                        try {
+                          const fh = JSON.parse(patient.family_history);
+                          const flags = [];
+                          if (fh.heart_disease) flags.push("Heart Disease");
+                          if (fh.high_bp) flags.push("Hypertension");
+                          if (fh.diabetes) flags.push("Diabetes");
+                          if (fh.cancer) flags.push("Cancer");
+                          
+                          return flags.length > 0 ? flags.map(f => (
+                            <span key={f} className="text-[9px] px-2 py-0.5 bg-indigo-200/50 text-indigo-700 rounded-full font-bold uppercase">{f}</span>
+                          )) : <span className="text-sm font-semibold italic text-slate-400">Recorded</span>;
+                        } catch (e) {
+                          return <p className="text-sm font-semibold leading-relaxed line-clamp-2">{patient.family_history}</p>;
+                        }
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -170,6 +170,10 @@ export const visitAPI = {
     store: async (data) => {
         const response = await apiClient.post('/visits', data);
         return response.data;
+    },
+    update: async (id, data) => {
+        const response = await apiClient.put(`/visits/${id}`, data);
+        return response.data;
     }
 };
 
