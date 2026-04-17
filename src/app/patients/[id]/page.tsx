@@ -453,6 +453,26 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
                     <div className="flex flex-wrap gap-2 mt-1">
                       {(() => {
                         try {
+                          // Handle modern object structure
+                          if (typeof patient.family_history === 'object' && patient.family_history !== null) {
+                            const fh = patient.family_history;
+                            const conditions = fh.conditions || [];
+                            const notes = fh.notes || "";
+                            
+                            return (
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap gap-2">
+                                  {conditions.map((c: string) => (
+                                    <span key={c} className="text-[9px] px-2 py-0.5 bg-indigo-200/50 text-indigo-700 rounded-full font-bold uppercase">{c}</span>
+                                  ))}
+                                  {conditions.length === 0 && !notes && <span className="text-sm font-semibold italic text-slate-400">No conditions recorded</span>}
+                                </div>
+                                {notes && <p className="text-[11px] text-indigo-600/70 italic leading-snug">"{notes}"</p>}
+                              </div>
+                            );
+                          }
+
+                          // Handle legacy string parsing
                           const fh = JSON.parse(patient.family_history);
                           const flags = [];
                           if (fh.heart_disease) flags.push("Heart Disease");
@@ -464,7 +484,10 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
                             <span key={f} className="text-[9px] px-2 py-0.5 bg-indigo-200/50 text-indigo-700 rounded-full font-bold uppercase">{f}</span>
                           )) : <span className="text-sm font-semibold italic text-slate-400">Recorded</span>;
                         } catch (e) {
-                          return <p className="text-sm font-semibold leading-relaxed line-clamp-2">{patient.family_history}</p>;
+                          // Fallback for simple strings
+                          return typeof patient.family_history === 'string' 
+                            ? <p className="text-sm font-semibold leading-relaxed line-clamp-2">{patient.family_history}</p>
+                            : <span className="text-sm font-semibold italic text-slate-400">Family History Recorded</span>;
                         }
                       })()}
                     </div>

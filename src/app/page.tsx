@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, Activity, NotepadText, TrendingUp, Calendar, Clock, Plus, Loader2 } from "lucide-react";
+import { Users, Activity, NotepadText, TrendingUp, Calendar, Clock, Plus, Loader2, Pill } from "lucide-react";
 import Link from "next/link";
 import { dashboardAPI } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -34,6 +34,10 @@ export default function Home() {
     };
 
     fetchDashboardData();
+
+    // POLING: Refresh dashboard every 60 seconds for real-time feel
+    const interval = setInterval(fetchDashboardData, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   if (isLoading) {
@@ -93,7 +97,7 @@ export default function Home() {
             return true;
           })
           .map((stat, i) => {
-          const IconMap: { [key: string]: any } = { Users, Activity, NotepadText, TrendingUp };
+          const IconMap: { [key: string]: any } = { Users, Activity, NotepadText, TrendingUp, Pill };
           const Icon = IconMap[stat.icon] || Activity;
           return (
             <div key={i} className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow">

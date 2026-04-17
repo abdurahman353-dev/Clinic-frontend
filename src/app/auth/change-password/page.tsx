@@ -35,13 +35,13 @@ export default function ForceChangePasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.current_password === formData.password) {
-        toast.error("New password cannot be the same as the current password");
-        return;
-    }
     if (formData.password !== formData.password_confirmation) {
       toast.error("New passwords do not match");
       return;
+    }
+    if (formData.current_password === formData.password) {
+        toast.error("New password cannot be the same as the current password");
+        return;
     }
 
     setIsSubmitting(true);

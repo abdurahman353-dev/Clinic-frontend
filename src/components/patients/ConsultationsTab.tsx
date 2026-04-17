@@ -29,6 +29,7 @@ import {
 import { consultationAPI, patientAPI } from "@/lib/api"; 
 import { toast } from "sonner";
 import { Pagination } from "@/components/ui/Pagination";
+import { useAuth } from "@/context/AuthContext";
 
 export default function ConsultationsTab({
   patientId,
@@ -45,6 +46,9 @@ export default function ConsultationsTab({
   activeVisitId?: number | null;
   onStartNewVisit?: () => void;
 }): React.JSX.Element {
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('super-admin');
+
   const [consultations, setConsultations] = useState<any[]>([]);
   const [meta, setMeta] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -446,6 +450,9 @@ export default function ConsultationsTab({
       {/* ─── SECTION 1: PERMANENT MEDICAL HISTORY ─── */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+          {!isAdmin && (
+            <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500 z-50" />
+          )}
           <div className="flex items-center gap-2">
             <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
               <ShieldCheck className="h-5 w-5" />
@@ -466,7 +473,7 @@ export default function ConsultationsTab({
             )}
             <button 
               onClick={handleUpdatePermanentHistory}
-              disabled={isUpdatingPatient || isVisitPaid || isPermLocked}
+              disabled={isUpdatingPatient || isVisitPaid || isPermLocked || !isAdmin}
               className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-xl text-xs font-black uppercase tracking-widest border border-blue-100 hover:bg-blue-100 transition-all shadow-sm active:scale-95 disabled:opacity-50"
             >
               {isUpdatingPatient ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : <Save className="h-3.5 w-3.5 mr-2" />}
@@ -475,7 +482,7 @@ export default function ConsultationsTab({
           </div>
         </div>
 
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className={`p-6 grid grid-cols-1 md:grid-cols-2 gap-8 ${!isAdmin ? "opacity-70 pointer-events-none" : ""}`}>
           {/* Lifetime Records */}
           <div className="space-y-5">
             <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-2">
@@ -609,7 +616,7 @@ export default function ConsultationsTab({
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {isVisitLocked && !isVisitPaid && (
+            {isVisitLocked && !isVisitPaid && isAdmin && (
               <button 
                 onClick={() => setIsVisitLocked(false)}
                 className="inline-flex items-center px-4 py-2 bg-white text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-200 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
@@ -662,7 +669,7 @@ export default function ConsultationsTab({
              </div>
           </div>
         ) : (
-          <form onSubmit={handleSaveConsultation} className="p-8 space-y-8">
+          <form onSubmit={handleSaveConsultation} className={`p-8 space-y-8 ${!isAdmin ? "opacity-60 pointer-events-none" : ""}`}>
             
             {/* Vitals Reference Table (Small) */}
             <div className="bg-slate-50 rounded-2xl border border-slate-100 p-4 grid grid-cols-2 md:grid-cols-6 gap-4">
@@ -812,11 +819,13 @@ export default function ConsultationsTab({
             <div className="flex justify-end pt-4 border-t border-slate-50">
               <button 
                 type="submit"
-                disabled={isSubmitting || isVisitLocked}
+                disabled={isSubmitting || isVisitLocked || !isAdmin}
                 className="inline-flex items-center px-10 py-4 bg-primary-600 text-white rounded-2xl font-bold shadow-2xl shadow-primary-200 hover:bg-primary-700 transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <><Loader2 className="h-5 w-5 mr-3 animate-spin" /> Digitizing Record...</>
+                ) : !isAdmin ? (
+                   <><ShieldCheck className="h-5 w-5 mr-3" /> Admin Only Area</>
                 ) : isVisitLocked ? (
                   <><ShieldCheck className="h-5 w-5 mr-3" /> Record Locked</>
                 ) : (

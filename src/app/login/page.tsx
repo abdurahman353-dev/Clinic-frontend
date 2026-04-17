@@ -45,7 +45,11 @@ export default function LoginPage() {
       setToken(token);
       setUser(user);
 
-      window.location.href = "/";
+      if (user.must_change_password) {
+        window.location.href = "/auth/change-password";
+      } else {
+        window.location.href = "/";
+      }
     } catch (err: unknown) {
       const e = err as { message?: string };
       setErrorMsg(e.message || "Failed to login");

@@ -22,6 +22,7 @@ declare module "@/lib/api" {
   export interface VisitAPI {
     list: (params?: any) => Promise<any>;
     store: (data: any) => Promise<any>;
+    update: (id: string | number, data: any) => Promise<any>;
   }
 
   export interface VitalAPI {

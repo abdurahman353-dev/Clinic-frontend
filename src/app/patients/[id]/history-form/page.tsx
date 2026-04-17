@@ -58,10 +58,24 @@ export default function HistoryFormPage({ params }: { params: Promise<{ id: stri
         // Parse family history if it exists
         let famHistory = { heart_disease: false, high_bp: false, diabetes: false, cancer: false, other: "" };
         if (p.family_history) {
-          try {
-            famHistory = JSON.parse(p.family_history);
-          } catch (e) {
-            famHistory.other = p.family_history;
+          const raw = p.family_history;
+          // Handle modern object structure
+          if (typeof raw === 'object' && raw !== null) {
+            const conditions = raw.conditions || [];
+            famHistory = {
+               heart_disease: conditions.includes("Heart Disease"),
+               high_bp: conditions.includes("Hypertension"),
+               diabetes: conditions.includes("Diabetes"),
+               cancer: conditions.includes("Cancer"),
+               other: raw.notes || ""
+            };
+          } else {
+            // Handle legacy string parsing
+            try {
+              famHistory = JSON.parse(raw);
+            } catch (e) {
+              famHistory.other = raw;
+            }
           }
         }
 
@@ -120,7 +134,15 @@ export default function HistoryFormPage({ params }: { params: Promise<{ id: stri
         major_surgeries: formData.major_surgeries,
         current_medications: formData.current_medications,
         allergies: formData.allergies,
-        family_history: JSON.stringify(formData.family_history)
+        family_history: {
+          notes: formData.family_history.other,
+          conditions: [
+            ...(formData.family_history.heart_disease ? ["Heart Disease"] : []),
+            ...(formData.family_history.high_bp ? ["Hypertension"] : []),
+            ...(formData.family_history.diabetes ? ["Diabetes"] : []),
+            ...(formData.family_history.cancer ? ["Cancer"] : []),
+          ]
+        }
       });
 
       // 2. Update Visit Level Clinic Data (if a visit exists)
