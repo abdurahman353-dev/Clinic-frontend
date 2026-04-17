@@ -5,6 +5,7 @@ export function useStock() {
   const [medicines, setMedicines] = useState<any[]>([]);
   const [meta, setMeta] = useState<any>(null);
   const [summary, setSummary] = useState<any>(null);
+  const [allCategories, setAllCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -20,6 +21,15 @@ export function useStock() {
       setErrorMsg(err.message || "Failed to load medicines and stock");
     } finally {
       setIsLoading(false);
+    }
+  }, []);
+
+  const fetchAllCategories = useCallback(async () => {
+    try {
+      const cats = await medicineAPI.categories();
+      setAllCategories(Array.isArray(cats) ? cats : []);
+    } catch {
+      // silently fail
     }
   }, []);
 
@@ -124,5 +134,5 @@ export function useStock() {
     }
   };
 
-  return { medicines, meta, summary, isLoading, errorMsg, fetchMedicines, addMedicine, updateMedicine, addStock, adjustStock, updateCategory, deleteCategory, setMedicines };
+  return { medicines, meta, summary, allCategories, isLoading, errorMsg, fetchMedicines, fetchAllCategories, addMedicine, updateMedicine, addStock, adjustStock, updateCategory, deleteCategory, setMedicines };
 }

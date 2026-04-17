@@ -13,7 +13,12 @@ export function Sidebar() {
   const { user } = useAuth();
   const [stockStatus, setStockStatus] = useState<'normal' | 'low' | 'critical'>('normal');
 
+  const isAdmin = user?.roles?.includes('super-admin');
+
   useEffect(() => {
+    // Only check stock status for super-admins
+    if (!isAdmin) return;
+
     const checkStock = async () => {
       try {
         const response = await stockAPI.list();
@@ -42,9 +47,7 @@ export function Sidebar() {
     checkStock();
     const interval = setInterval(checkStock, 60000); // Check every minute
     return () => clearInterval(interval);
-  }, []);
-
-  const isAdmin = user?.roles?.includes('super-admin');
+  }, [isAdmin]);
 
   const navItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },

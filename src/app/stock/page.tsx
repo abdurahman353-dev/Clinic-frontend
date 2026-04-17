@@ -25,7 +25,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 
 export default function StockManagement() {
-  const { medicines, meta, summary, isLoading, fetchMedicines, addMedicine, updateMedicine, addStock, adjustStock, updateCategory, deleteCategory } = useStock();
+  const { medicines, meta, summary, allCategories, isLoading, fetchMedicines, fetchAllCategories, addMedicine, updateMedicine, addStock, adjustStock, updateCategory, deleteCategory } = useStock();
   const { user } = useAuth();
   const router = useRouter();
   
@@ -98,7 +98,8 @@ export default function StockManagement() {
       return;
     }
     loadStock();
-  }, [loadStock, user, router]);
+    fetchAllCategories();
+  }, [loadStock, fetchAllCategories, user, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -264,13 +265,10 @@ export default function StockManagement() {
   }, [summary]);
 
   const availableCategories = useMemo(() => {
-    // If we just mapped from existing medicines, the user wouldn't see newly created empty categories
-    // until an item is added. However, the user wants immediate drops when they delete a category.
-    // So we exclusively rely on active loaded categories.
-    const existing = Array.from(new Set(medicines.map((m: any) => m.category).filter(Boolean)));
+    // Use server-fetched full list; also include currently selected category in case it's new
     const current = formData.category ? [formData.category] : [];
-    return Array.from(new Set([...existing, ...current]));
-  }, [medicines, formData.category]);
+    return Array.from(new Set([...allCategories, ...current]));
+  }, [allCategories, formData.category]);
 
   const filteredCategories = availableCategories.filter(cat => 
     cat.toLowerCase().includes(categorySearch.toLowerCase())

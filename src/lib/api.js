@@ -366,6 +366,10 @@ export const medicineAPI = {
     deleteCategory: async (name) => {
         const response = await apiClient.post('/medicines/category/delete', { name });
         return response.data;
+    },
+    categories: async () => {
+        const response = await apiClient.get('/medicines/categories');
+        return response.data;
     }
 };
 
