@@ -1,13 +1,21 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Bell, Search, UserCircle, LogOut, User } from "lucide-react";
+import { Bell, Search, UserCircle, LogOut, User, Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useStock } from "@/hooks/useStock";
 import Link from "next/link";
 import { Breadcrumb } from "./Breadcrumb";
 
-export function Header() {
+export function Header({ 
+  toggleMobile, 
+  toggleCollapse, 
+  isCollapsed 
+}: { 
+  toggleMobile?: () => void;
+  toggleCollapse?: () => void;
+  isCollapsed?: boolean;
+}) {
   const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { medicines, fetchMedicines } = useStock();
@@ -48,8 +56,21 @@ export function Header() {
 
   return (
     <header className="h-16 bg-surface border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 lg:px-8 shadow-sm">
-      <div className="flex-1 min-w-0">
-        <Breadcrumb /></div>
+      <div className="flex items-center flex-1 min-w-0">
+        <button 
+          onClick={toggleMobile} 
+          className="mr-2 md:hidden text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded p-1.5 transition-colors"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <button 
+          onClick={toggleCollapse} 
+          className="mr-4 hidden md:flex text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded p-1.5 transition-colors"
+        >
+          {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+        </button>
+        <Breadcrumb />
+      </div>
       
       <div className="flex items-center gap-4">
         {user?.roles?.includes('super-admin') && (

@@ -20,6 +20,7 @@ declare module "@/lib/api" {
   }
 
   export interface VisitAPI {
+    update(id: any, arg1: { symptoms: string; symptoms_duration: string; previous_treatments: string; initial_assessment: string; recommended_treatment: string; }): unknown;
     list: (params?: any) => Promise<any>;
     store: (data: any) => Promise<any>;
     update: (id: string | number, data: any) => Promise<any>;

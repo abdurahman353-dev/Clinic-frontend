@@ -1,13 +1,22 @@
+"use client";
+
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { useAuth } from "@/context/AuthContext";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  useEffect(() => {
+    // Close mobile menu on route change
+    setIsMobileOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (!isLoading && user?.must_change_password && pathname !== "/auth/change-password") {
@@ -24,14 +33,31 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900">
-      <Sidebar />
+    <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900 relative">
+      <Sidebar 
+        isMobileOpen={isMobileOpen} 
+        setIsMobileOpen={setIsMobileOpen}
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
+      />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header />
+        <Header 
+          toggleMobile={() => setIsMobileOpen(!isMobileOpen)}
+          toggleCollapse={() => setIsCollapsed(!isCollapsed)}
+          isCollapsed={isCollapsed}
+        />
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>
+
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 z-20 md:hidden" 
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
     </div>
   );
 }
