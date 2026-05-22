@@ -408,11 +408,13 @@ export default function CashierPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-red-600">KSh {parseFloat(bill.balance_amount).toLocaleString()}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium border ${bill.status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
+                        <span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-semibold border uppercase ${
+                          bill.status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
                           bill.status === 'partial' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                            'bg-slate-50 text-slate-700 border-slate-200'
-                          }`}>
-                          {bill.status.toUpperCase()}
+                          bill.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                          'bg-slate-50 text-slate-700 border-slate-200'
+                        }`}>
+                          {bill.status}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -475,9 +477,24 @@ export default function CashierPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-xs font-semibold text-slate-700 uppercase bg-slate-100 px-2 py-0.5 rounded w-max inline-block">
-                            {bill.payment_method === 'mpesa' ? 'M-PESA' : bill.payment_method || 'CASH'}
-                          </span>
+                          {(() => {
+                            const method = (bill.payment_method || 'cash').toLowerCase();
+                            let classes = 'bg-slate-100 text-slate-600 border-slate-200';
+                            if (method === 'mpesa') {
+                              classes = 'bg-emerald-50 text-emerald-700 border-emerald-100';
+                            } else if (method === 'cash') {
+                              classes = 'bg-indigo-50 text-indigo-700 border-indigo-100';
+                            } else if (method === 'card') {
+                              classes = 'bg-blue-50 text-blue-700 border-blue-100';
+                            } else if (method === 'insurance') {
+                              classes = 'bg-purple-50 text-purple-700 border-purple-100';
+                            }
+                            return (
+                              <span className={`text-xs font-semibold uppercase px-2 py-0.5 rounded w-max inline-block border ${classes}`}>
+                                {method === 'mpesa' ? 'M-PESA' : method}
+                              </span>
+                            );
+                          })()}
                           {bill.transaction_reference && (
                             <span className="text-xs text-slate-500 font-mono tracking-wider">{bill.transaction_reference}</span>
                           )}

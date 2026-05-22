@@ -321,7 +321,13 @@ export default function BillingTab({ patientId }: { patientId: number }) {
               <div key={bill.id} className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
                 <div className="flex justify-between items-start mb-2">
                   <span className="text-xs font-mono text-slate-400">INV #{bill.id}</span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-orange-50 text-orange-700 border border-orange-100">Pending</span>
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase border ${
+                    bill.status === 'partial'
+                      ? 'bg-blue-50 text-blue-700 border-blue-100'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}>
+                    {bill.status || 'pending'}
+                  </span>
                 </div>
                 <div className="mb-4">
                   <p className="text-xs text-slate-500">Amount Due</p>

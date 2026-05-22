@@ -50,12 +50,9 @@ export default function PrescriptionsTab({
   ]);
 
   useEffect(() => {
-    // Skip initial fetch if data was pre-loaded by the parent
-    if (!isInitialLoaded || currentPage > 1) {
-      fetchPrescriptions({ page: currentPage }).then(() => {
-        if (!isInitialLoaded) onLoadComplete();
-      });
-    }
+    fetchPrescriptions({ page: currentPage }).then(() => {
+      if (!isInitialLoaded) onLoadComplete();
+    });
     fetchMedicines();
   }, [fetchPrescriptions, fetchMedicines, currentPage, isInitialLoaded, onLoadComplete]);
 

@@ -80,12 +80,9 @@ export default function InvestigationsTab({
   });
 
   useEffect(() => {
-    // Skip initial fetch if parent already provided data for the first page
-    if (!isInitialLoaded || currentPage > 1) {
-      fetchInvestigations({ page: currentPage }).then(() => {
-        if (!isInitialLoaded) onLoadComplete();
-      });
-    }
+    fetchInvestigations({ page: currentPage }).then(() => {
+      if (!isInitialLoaded) onLoadComplete();
+    });
     fetchLabTests();
   }, [fetchInvestigations, fetchLabTests, currentPage, isInitialLoaded, onLoadComplete]);
 
