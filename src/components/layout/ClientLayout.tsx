@@ -31,6 +31,10 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     return null;
   }
 
+  if (pathname === "/auth/change-password") {
+    return <>{children}</>;
+  }
+
   return <DashboardLayout>{children}</DashboardLayout>;
 }
 

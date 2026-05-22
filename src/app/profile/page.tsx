@@ -51,6 +51,12 @@ export default function ProfilePage() {
         return;
       }
 
+      if (formData.password && formData.current_password === formData.password) {
+        setMessage({ text: "New password cannot be the same as the current password", type: "error" });
+        setIsSubmitting(false);
+        return;
+      }
+
       // Exclude password if empty
       const payload: any = { name: formData.name, email: formData.email };
       if (formData.password.trim()) {
