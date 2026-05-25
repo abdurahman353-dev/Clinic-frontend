@@ -26,7 +26,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const [activeTab, setActiveTab] = useState(initialTab);
-  
+
   // New Visit State
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
   const [globalFee, setGlobalFee] = useState<number | null>(null);
@@ -63,14 +63,14 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
       const [patientRes] = await Promise.all([
         patientAPI.get(unwrappedId, { include: 'vitalSigns,investigations,prescriptions.items,visits' })
       ]);
-      
+
       const p = patientRes.data;
       setPatient(p);
-      
+
       // Determine if the MOST RECENT visit is paid, or if they have no visits at all (force start visit)
       if (p.visits && p.visits.length > 0) {
         // Sort by creation date descending to get the latest visit
-        const sortedVisits = [...p.visits].sort((a: any, b: any) => 
+        const sortedVisits = [...p.visits].sort((a: any, b: any) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
         const latestVisit = sortedVisits[0];
@@ -83,19 +83,19 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
 
       // Populate individual tab states from the 'deep-loaded' patient object
       if (p.vitals) {
-         setVitalsData(p.vitals);
-         setVitalsTotal(p.vitals.length);
-         setIsVitalsLoaded(true);
+        setVitalsData(p.vitals);
+        setVitalsTotal(p.vitals.length);
+        setIsVitalsLoaded(true);
       }
       if (p.investigations) {
-         setInvestigationsData(p.investigations);
-         setInvestigationsTotal(p.investigations.length);
-         setIsInvestigationsLoaded(true);
+        setInvestigationsData(p.investigations);
+        setInvestigationsTotal(p.investigations.length);
+        setIsInvestigationsLoaded(true);
       }
       if (p.prescriptions) {
-         setPrescriptionsData(p.prescriptions);
-         setPrescriptionsTotal(p.prescriptions.length);
-         setIsPrescriptionsLoaded(true);
+        setPrescriptionsData(p.prescriptions);
+        setPrescriptionsTotal(p.prescriptions.length);
+        setIsPrescriptionsLoaded(true);
       }
 
     } catch (err: any) {
@@ -117,9 +117,9 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
 
   const handleStartVisit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const visitData = { 
-      patient_id: patient.db_id, 
+
+    const visitData = {
+      patient_id: patient.db_id,
       doctor_id: (typeof window !== 'undefined' ? JSON.parse(sessionStorage.getItem("admin_user") || localStorage.getItem("admin_user") || "{}") : {})?.id,
       reason: "General Consultation",
       // consultation_fee is ignored by backend — it always uses the global setting
@@ -127,7 +127,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
 
     setIsVisitModalOpen(false);
     toast.success("Starting new visit... A consultation bill is being generated.");
-    
+
     setIsStartingVisit(true);
     try {
       const res = await visitAPI.store(visitData);
@@ -359,7 +359,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto">
         {/* Patient Header */}
         <div className="p-6 border-b border-slate-200">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
@@ -458,7 +458,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
                             const fh = patient.family_history;
                             const conditions = fh.conditions || [];
                             const notes = fh.notes || "";
-                            
+
                             return (
                               <div className="space-y-2">
                                 <div className="flex flex-wrap gap-2">
@@ -479,13 +479,13 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
                           if (fh.high_bp) flags.push("Hypertension");
                           if (fh.diabetes) flags.push("Diabetes");
                           if (fh.cancer) flags.push("Cancer");
-                          
+
                           return flags.length > 0 ? flags.map(f => (
                             <span key={f} className="text-[9px] px-2 py-0.5 bg-indigo-200/50 text-indigo-700 rounded-full font-bold uppercase">{f}</span>
                           )) : <span className="text-sm font-semibold italic text-slate-400">Recorded</span>;
                         } catch (e) {
                           // Fallback for simple strings
-                          return typeof patient.family_history === 'string' 
+                          return typeof patient.family_history === 'string'
                             ? <p className="text-sm font-semibold leading-relaxed line-clamp-2">{patient.family_history}</p>
                             : <span className="text-sm font-semibold italic text-slate-400">Family History Recorded</span>;
                         }
@@ -516,9 +516,8 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
                 <tab.icon className={`mr-2 h-4 w-4 ${activeTab === tab.id ? "text-primary-500" : "text-slate-400"}`} />
                 {tab.label}
                 {tab.count !== undefined && (
-                  <span className={`ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    activeTab === tab.id ? 'bg-primary-100 text-primary-700' : 'bg-slate-100 text-slate-500'
-                  }`}>
+                  <span className={`ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${activeTab === tab.id ? 'bg-primary-100 text-primary-700' : 'bg-slate-100 text-slate-500'
+                    }`}>
                     {tab.count}
                   </span>
                 )}
@@ -529,7 +528,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
 
         {/* Tab Content Placeholder */}
         <div className="p-6 bg-slate-50 min-h-[400px]">
-           {activeTab === "vitals" && (
+          {activeTab === "vitals" && (
             <VitalsTab
               patientId={patient.db_id}
               initialData={vitalsData}
@@ -542,7 +541,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
             />
           )}
           {activeTab === "consultations" && (
-            <ConsultationsTab 
+            <ConsultationsTab
               patientId={patient.db_id}
               patient={patient}
               onPatientUpdate={fetchPatient}
@@ -631,9 +630,9 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
 export default function PatientDetailPage(props: any) {
   return (
     <Suspense fallback={
-       <div className="p-6 md:p-8 max-w-7xl mx-auto flex justify-center items-center min-h-[50vh]">
-         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-       </div>
+      <div className="p-6 md:p-8 max-w-7xl mx-auto flex justify-center items-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+      </div>
     }>
       <PatientDetailContent {...props} />
     </Suspense>
