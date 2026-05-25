@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { salesAPI } from "@/lib/api";
-import { 
-  TrendingUp, 
-  DollarSign, 
-  Users, 
-  Calendar, 
-  Download, 
-  Filter, 
+import {
+  TrendingUp,
+  DollarSign,
+  Users,
+  Calendar,
+  Download,
+  Filter,
   Loader2,
   ChevronRight,
   Stethoscope,
@@ -18,13 +18,13 @@ import {
   HeartPulse,
   X
 } from "lucide-react";
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -150,22 +150,22 @@ export default function SalesDashboard() {
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
             <Calendar className="h-4 w-4 text-slate-400 mr-2" />
-            <input 
-              type="date" 
+            <input
+              type="date"
               value={filters.from_date}
-              onChange={(e) => setFilters({...filters, from_date: e.target.value})}
-              className="text-sm border-none focus:ring-0 p-0 text-slate-700" 
+              onChange={(e) => setFilters({ ...filters, from_date: e.target.value })}
+              className="text-sm border-none focus:ring-0 p-0 text-slate-700"
             />
             <span className="mx-2 text-slate-300">to</span>
-            <input 
-              type="date" 
+            <input
+              type="date"
               value={filters.to_date}
-              onChange={(e) => setFilters({...filters, to_date: e.target.value})}
-              className="text-sm border-none focus:ring-0 p-0 text-slate-700" 
+              onChange={(e) => setFilters({ ...filters, to_date: e.target.value })}
+              className="text-sm border-none focus:ring-0 p-0 text-slate-700"
             />
           </div>
-          
-          <button 
+
+          <button
             onClick={handleExport}
             className="inline-flex items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-emerald-700 shadow-sm transition-colors"
           >
@@ -177,118 +177,41 @@ export default function SalesDashboard() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <SummaryCard 
-          title="Total Revenue" 
-          value={`KSh ${Number(summary.grand_total || 0).toLocaleString()}`} 
+        <SummaryCard
+          title="Total Revenue"
+          value={`KSh ${Number(summary.grand_total || 0).toLocaleString()}`}
           subtext={`${summary.transaction_count || 0} Transactions`}
           icon={<DollarSign className="h-6 w-6 text-emerald-600" />}
           color="emerald"
         />
-        <SummaryCard 
-          title="Consultations" 
-          value={`KSh ${Number(summary.consultation_total || 0).toLocaleString()}`} 
+        <SummaryCard
+          title="Consultations"
+          value={`KSh ${Number(summary.consultation_total || 0).toLocaleString()}`}
           subtext="Professional Fees"
           icon={<Stethoscope className="h-6 w-6 text-blue-600" />}
           color="blue"
         />
-        <SummaryCard 
-          title="Laboratory" 
-          value={`KSh ${Number(summary.investigation_total || 0).toLocaleString()}`} 
+        <SummaryCard
+          title="Laboratory"
+          value={`KSh ${Number(summary.investigation_total || 0).toLocaleString()}`}
           subtext="Lab & Radiology"
           icon={<FlaskConical className="h-6 w-6 text-purple-600" />}
           color="purple"
         />
-        <SummaryCard 
-          title="Prescriptions" 
-          value={`KSh ${Number(summary.medicine_total || 0).toLocaleString()}`} 
+        <SummaryCard
+          title="Prescriptions"
+          value={`KSh ${Number(summary.medicine_total || 0).toLocaleString()}`}
           subtext="Pharmacy Sales"
           icon={<Pill className="h-6 w-6 text-pink-600" />}
           color="pink"
         />
-        <SummaryCard 
-          title="Vitals" 
-          value={`KSh ${Number(summary.vitals_total || 0).toLocaleString()}`} 
+        <SummaryCard
+          title="Vitals"
+          value={`KSh ${Number(summary.vitals_total || 0).toLocaleString()}`}
           subtext="Nursing Services"
           icon={<HeartPulse className="h-6 w-6 text-orange-600" />}
           color="orange"
         />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Chart */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="font-bold text-slate-900 flex items-center">
-              <TrendingUp className="h-5 w-5 mr-2 text-primary-600" />
-              Daily Revenue Trend
-            </h3>
-          </div>
-          
-          <div className="h-[350px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={dailyData}>
-                <defs>
-                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis 
-                  dataKey="date" 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{fill: '#64748b', fontSize: 12}}
-                  dy={10}
-                  tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
-                />
-                <YAxis 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{fill: '#64748b', fontSize: 12}}
-                  tickFormatter={(val) => `KSh ${val >= 1000 ? (val/1000) + 'k' : val}`}
-                />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                  formatter={(value) => [`KSh ${Number(value).toLocaleString()}`, 'Revenue']}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="total" 
-                  stroke="#0ea5e9" 
-                  strokeWidth={3}
-                  fillOpacity={1} 
-                  fill="url(#colorTotal)" 
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Revenue Distribution */}
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-          <h3 className="font-bold text-slate-900 mb-6 flex items-center">
-            <Activity className="h-5 w-5 mr-2 text-slate-600" />
-            Revenue Mix
-          </h3>
-          
-          <div className="space-y-6">
-            <ProgressBar label="Consultations" amount={summary.consultation_total} total={summary.grand_total} color="bg-blue-500" />
-            <ProgressBar label="Laboratory" amount={summary.investigation_total} total={summary.grand_total} color="bg-purple-500" />
-            <ProgressBar label="Prescriptions" amount={summary.medicine_total} total={summary.grand_total} color="bg-pink-500" />
-            <ProgressBar label="Vitals" amount={summary.vitals_total} total={summary.grand_total} color="bg-orange-500" />
-          </div>
-
-          <div className="mt-12 p-4 bg-slate-50 rounded-lg border border-slate-100">
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Performance Data</h4>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-slate-700">Daily Average</span>
-              <span className="text-sm font-bold text-slate-900">
-                KSh {Number(data.daily.length > 0 ? summary.grand_total / data.daily.length : 0).toLocaleString(undefined, {maximumFractionDigits: 0})}
-              </span>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Detailed Table */}
@@ -322,7 +245,7 @@ export default function SalesDashboard() {
                   <td className="px-6 py-4 text-slate-600">KSh {Number(day.vitals).toLocaleString()}</td>
                   <td className="px-6 py-4 font-bold text-slate-900">KSh {Number(day.total).toLocaleString()}</td>
                   <td className="px-6 py-4 text-right">
-                    <button 
+                    <button
                       onClick={() => handleViewDaily(day.date)}
                       className="text-primary-600 hover:text-primary-700 font-medium"
                     >
@@ -333,6 +256,83 @@ export default function SalesDashboard() {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Chart */}
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="font-bold text-slate-900 flex items-center">
+              <TrendingUp className="h-5 w-5 mr-2 text-primary-600" />
+              Daily Revenue Trend
+            </h3>
+          </div>
+
+          <div className="h-[350px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={dailyData}>
+                <defs>
+                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.1} />
+                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  dy={10}
+                  tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  tickFormatter={(val) => `KSh ${val >= 1000 ? (val / 1000) + 'k' : val}`}
+                />
+                <Tooltip
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                  formatter={(value) => [`KSh ${Number(value).toLocaleString()}`, 'Revenue']}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="total"
+                  stroke="#0ea5e9"
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#colorTotal)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Revenue Distribution */}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+          <h3 className="font-bold text-slate-900 mb-6 flex items-center">
+            <Activity className="h-5 w-5 mr-2 text-slate-600" />
+            Revenue Mix
+          </h3>
+
+          <div className="space-y-6">
+            <ProgressBar label="Consultations" amount={summary.consultation_total} total={summary.grand_total} color="bg-blue-500" />
+            <ProgressBar label="Laboratory" amount={summary.investigation_total} total={summary.grand_total} color="bg-purple-500" />
+            <ProgressBar label="Prescriptions" amount={summary.medicine_total} total={summary.grand_total} color="bg-pink-500" />
+            <ProgressBar label="Vitals" amount={summary.vitals_total} total={summary.grand_total} color="bg-orange-500" />
+          </div>
+
+          <div className="mt-12 p-4 bg-slate-50 rounded-lg border border-slate-100">
+            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Performance Data</h4>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-slate-700">Daily Average</span>
+              <span className="text-sm font-bold text-slate-900">
+                KSh {Number(data.daily.length > 0 ? summary.grand_total / data.daily.length : 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -365,34 +365,53 @@ export default function SalesDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {selectedDayBills.map((bill: any) => (
-                    <tr key={bill.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-slate-900">{bill.patient?.name}</div>
-                        <div className="text-xs text-slate-400">{bill.patient?.patient_id}</div>
+                  {Object.values(selectedDayBills.reduce((acc: any, bill: any) => {
+                    const pid = bill.patient?.patient_id || 'unknown';
+                    if (!acc[pid]) {
+                      acc[pid] = {
+                        patient: bill.patient,
+                        consultation_fee: 0,
+                        vitals_total: 0,
+                        investigation_total: 0,
+                        medicine_total: 0,
+                        grand_total: 0
+                      };
+                    }
+                    acc[pid].consultation_fee += Number(bill.consultation_fee || 0);
+                    acc[pid].vitals_total += Number(bill.vitals_total || 0);
+                    acc[pid].investigation_total += Number(bill.investigation_total || 0);
+                    acc[pid].medicine_total += Number(bill.medicine_total || 0);
+                    acc[pid].grand_total += Number(bill.grand_total || 0);
+                    return acc;
+                  }, {})).map((groupedBill: any, index: number) => (
+                    <tr key={index} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-4">
+                        <div className="font-bold text-slate-900">{groupedBill.patient?.name}</div>
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{groupedBill.patient?.patient_id}</div>
                       </td>
-                      <td className="px-4 py-3 text-right text-slate-600">KSh {Number(bill.consultation_fee).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right text-slate-600">KSh {Number(bill.vitals_total).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right text-slate-600">KSh {Number(bill.investigation_total).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right text-slate-600">KSh {Number(bill.medicine_total).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right font-bold text-slate-900 underline decoration-slate-200 underline-offset-4">
-                        KSh {Number(bill.grand_total).toLocaleString()}
+                      <td className="px-4 py-4 text-right text-slate-500 font-medium">KSh {Number(groupedBill.consultation_fee).toLocaleString()}</td>
+                      <td className="px-4 py-4 text-right text-slate-500 font-medium">KSh {Number(groupedBill.vitals_total).toLocaleString()}</td>
+                      <td className="px-4 py-4 text-right text-slate-500 font-medium">KSh {Number(groupedBill.investigation_total).toLocaleString()}</td>
+                      <td className="px-4 py-4 text-right text-slate-500 font-medium">KSh {Number(groupedBill.medicine_total).toLocaleString()}</td>
+                      <td className="px-4 py-4 text-right font-black text-slate-900">
+                        KSh {Number(groupedBill.grand_total).toLocaleString()}
                       </td>
                     </tr>
                   ))}
-                  <tr className="bg-slate-50 font-bold">
-                    <td className="px-4 py-3">TOTALS</td>
-                    <td className="px-4 py-3 text-right">KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.consultation_fee), 0).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right">KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.vitals_total), 0).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right">KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.investigation_total), 0).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right">KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.medicine_total), 0).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right text-primary-600">
-                      KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.grand_total), 0).toLocaleString()}
+                  <tr className="bg-slate-50/80 font-black border-t border-slate-200">
+                    <td className="px-4 py-5 text-slate-900 uppercase tracking-widest text-xs">TOTALS</td>
+                    <td className="px-4 py-5 text-right text-slate-900">KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.consultation_fee || 0), 0).toLocaleString()}</td>
+                    <td className="px-4 py-5 text-right text-slate-900">KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.vitals_total || 0), 0).toLocaleString()}</td>
+                    <td className="px-4 py-5 text-right text-slate-900">KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.investigation_total || 0), 0).toLocaleString()}</td>
+                    <td className="px-4 py-5 text-right text-slate-900">KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.medicine_total || 0), 0).toLocaleString()}</td>
+                    <td className="px-4 py-5 text-right text-primary-600 text-base">
+                      KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.grand_total || 0), 0).toLocaleString()}
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
+
           )}
         </div>
       </Modal>
@@ -427,7 +446,7 @@ function SummaryCard({ title, value, subtext, icon, color }: any) {
 
 function ProgressBar({ label, amount, total, color }: any) {
   const percentage = total > 0 ? (amount / total) * 100 : 0;
-  
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-xs sm:text-sm">
@@ -435,8 +454,8 @@ function ProgressBar({ label, amount, total, color }: any) {
         <span className="font-bold text-slate-900">{percentage.toFixed(1)}%</span>
       </div>
       <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-        <div 
-          className={`h-full ${color} transition-all duration-1000 ease-out`} 
+        <div
+          className={`h-full ${color} transition-all duration-1000 ease-out`}
           style={{ width: `${percentage}%` }}
         />
       </div>
