@@ -500,7 +500,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
 
         {/* Tabs */}
         <div className="border-b border-slate-200">
-          <nav className="flex -mb-px" aria-label="Tabs">
+          <nav className="flex -mb-px overflow-x-auto" aria-label="Tabs">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
