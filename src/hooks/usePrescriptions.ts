@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect } from "react";
 import { prescriptionAPI, medicineAPI, visitAPI } from "@/lib/api";
 
-export function usePrescriptions(patientId?: number, initialData: any[] = []) {
+export function usePrescriptions(patientId?: number, initialData: any[] = [], propActiveVisitId?: number | null) {
   const [prescriptions, setPrescriptions] = useState<any[]>(initialData);
   const [meta, setMeta] = useState<any>(initialData.length > 0 ? { total: initialData.length, per_page: initialData.length, current_page: 1, last_page: 1 } : null);
   const [medicines, setMedicines] = useState<any[]>([]); // To populate the dropdown
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [activeVisitId, setActiveVisitId] = useState<number | null>(null);
+  const [activeVisitId, setActiveVisitId] = useState<number | null>(propActiveVisitId || null);
 
   // Sync internal state if initialData from props changes
   useEffect(() => {
@@ -16,6 +16,13 @@ export function usePrescriptions(patientId?: number, initialData: any[] = []) {
       setMeta({ total: initialData.length, per_page: initialData.length, current_page: 1, last_page: 0 }); 
     }
   }, [initialData]);
+
+  // Sync active visit ID from prop
+  useEffect(() => {
+    if (propActiveVisitId !== undefined) {
+      setActiveVisitId(propActiveVisitId);
+    }
+  }, [propActiveVisitId]);
 
   const fetchPrescriptions = useCallback(async (params: any = {}) => {
     if (!patientId) return;
@@ -58,7 +65,7 @@ export function usePrescriptions(patientId?: number, initialData: any[] = []) {
         const recentVisit = visitsResponse.data?.[0];
         const isRecent = recentVisit && (new Date().getTime() - new Date(recentVisit.created_at).getTime()) < 24 * 60 * 60 * 1000;
         
-        if (recentVisit && isRecent && recentVisit.status !== 'completed' && recentVisit.status !== 'paid') {
+        if (recentVisit && isRecent && recentVisit.status !== 'paid') {
           visitId = recentVisit.id;
         } else {
           throw new Error("No active visit found for today. Please start a new visit from the Patient Profile before adding records.");

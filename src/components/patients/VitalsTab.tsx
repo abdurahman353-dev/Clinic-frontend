@@ -25,7 +25,7 @@ export default function VitalsTab({
   activeVisitId?: number | null;
   onStartNewVisit?: () => void;
 }): React.JSX.Element {
-  const { vitals, meta, isLoading, addVital, updateVital, fetchVitals, setVitals } = useVitals(patientId, initialData);
+  const { vitals, meta, isLoading, addVital, updateVital, fetchVitals, setVitals } = useVitals(patientId, initialData, activeVisitId);
   const [currentPage, setCurrentPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -168,21 +168,20 @@ export default function VitalsTab({
     e.preventDefault();
     setIsSubmitting(true);
 
-    const originalFormData = { ...formData };
-    resetForm();
-
     try {
       if (editingId) {
         const vitalToEdit = vitals.find(v => v.id === editingId);
         if (!vitalToEdit) throw new Error("Vital record not found");
-        await updateVital(vitalToEdit.visit_id, editingId, originalFormData);
+        await updateVital(vitalToEdit.visit_id, editingId, formData);
         toast.success("Vitals updated successfully");
       } else {
-        await addVital(originalFormData);
+        await addVital(formData);
         toast.success("Vitals recorded successfully");
       }
+      resetForm();
     } catch (err: any) {
-      // handled by api.js interceptor
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || "Failed to record vitals";
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }

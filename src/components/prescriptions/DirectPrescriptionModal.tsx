@@ -254,17 +254,16 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
       return;
     }
 
-    // INSTANT SAVE / OPTIMISTIC UI
-    onClose();
-    toast.success(prescription ? "Changes saved instantly!" : "Prescription saved instantly!");
-
     try {
       if (prescription) {
         await prescriptionAPI.updateStandalone(prescription.id, data);
+        toast.success("Changes saved successfully!");
       } else {
         await prescriptionAPI.storeStandalone(data);
+        toast.success("Prescription saved successfully!");
       }
       onSuccess();
+      onClose();
     } catch (err: any) {
       console.error("Failed to save direct prescription", err);
       toast.error(err?.response?.data?.error || err?.response?.data?.message || err?.message || "Failed to save prescription.");
