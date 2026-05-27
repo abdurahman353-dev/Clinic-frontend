@@ -40,18 +40,18 @@ export default function ForceChangePasswordPage() {
       return;
     }
     if (formData.current_password === formData.password) {
-        toast.error("New password cannot be the same as the current password");
-        return;
+      toast.error("New password cannot be the same as the current password");
+      return;
     }
 
     setIsSubmitting(true);
     try {
       const response = await authAPI.updateProfile(formData);
       toast.success("Password updated successfully. You can now access the system.");
-      
+
       // Update local user state (must_change_password will be false in response)
       setUser(response.user);
-      
+
       // Small delay for toast before redirect
       setTimeout(() => {
         window.location.href = "/";
@@ -94,11 +94,11 @@ export default function ForceChangePasswordPage() {
                     required
                     type={showCurrentPassword ? "text" : "password"}
                     value={formData.current_password}
-                    onChange={(e) => setFormData({...formData, current_password: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, current_password: e.target.value })}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all outline-none text-sm pr-12"
                     placeholder="Enter current password"
                   />
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
@@ -117,11 +117,11 @@ export default function ForceChangePasswordPage() {
                     required
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all outline-none text-sm pr-12"
                     placeholder="At least 8 characters"
                   />
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
@@ -138,11 +138,11 @@ export default function ForceChangePasswordPage() {
                     required
                     type={showConfirmPassword ? "text" : "password"}
                     value={formData.password_confirmation}
-                    onChange={(e) => setFormData({...formData, password_confirmation: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, password_confirmation: e.target.value })}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all outline-none text-sm pr-12"
                     placeholder="Repeat new password"
                   />
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
@@ -162,7 +162,7 @@ export default function ForceChangePasswordPage() {
                 {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
                 Activate My Account
               </button>
-              
+
               <button
                 type="button"
                 onClick={logout}
@@ -173,7 +173,7 @@ export default function ForceChangePasswordPage() {
             </div>
           </form>
         </div>
-        
+
         <p className="text-center text-slate-400 text-xs mt-8 font-medium italic">
           &copy; 2026 Professional Clinic Management System. All rights reserved.
         </p>
