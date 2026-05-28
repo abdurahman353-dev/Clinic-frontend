@@ -103,23 +103,15 @@ export default function AdminManagementPage() {
       return;
     }
 
-    // INSTANT FEEL: Close modal and show success toast immediately
-    setIsAddModalOpen(false);
-    toast.success("Administrator account is being created...");
-
-    // Clear form
-    const dataToSubmit = { ...formData };
-    setFormData({ name: "", email: "", password: "", password_confirmation: "", role: "admin" });
-
     setIsSubmitting(true);
     try {
-      await adminAPI.createAdmin(dataToSubmit);
-      toast.success("Account confirmed and active!");
+      await adminAPI.createAdmin(formData);
+      toast.success("Administrator account created successfully!");
+      setIsAddModalOpen(false);
+      setFormData({ name: "", email: "", password: "", password_confirmation: "", role: "admin" });
       fetchAdmins();
     } catch (error: any) {
-      // Error is already handled by the API interceptor toast (sonner)
-      // We just refresh the list to be sure
-      fetchAdmins();
+      // Error toast handled by api.js interceptor
     } finally {
       setIsSubmitting(false);
     }
@@ -404,7 +396,7 @@ export default function AdminManagementPage() {
                 {/* <option value="super-admin">Super Admin</option> */}
               </select>
             </div>
-            <div className="relative">
+            <div className="col-span-2 relative">
               <label className="block text-sm font-medium text-slate-700 mb-1">Password *</label>
               <input
                 required
@@ -422,7 +414,7 @@ export default function AdminManagementPage() {
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <div className="relative">
+            <div className="col-span-2 relative">
               <label className="block text-sm font-medium text-slate-700 mb-1">Confirm Password *</label>
               <input
                 required
