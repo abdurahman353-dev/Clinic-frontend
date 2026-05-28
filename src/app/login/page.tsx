@@ -27,6 +27,7 @@ export default function LoginPage() {
     if (!parsed.success) {
       const firstError = parsed.error.issues[0]?.message || "Invalid input";
       setErrorMsg(firstError);
+      toast.error(firstError);
       setIsLoading(false);
       return;
     }
@@ -52,7 +53,9 @@ export default function LoginPage() {
       }
     } catch (err: unknown) {
       const e = err as { message?: string };
-      setErrorMsg(e.message || "Failed to login");
+      const errMsg = e.message || "Failed to login";
+      setErrorMsg(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsLoading(false);
     }
