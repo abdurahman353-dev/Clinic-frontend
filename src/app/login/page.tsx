@@ -148,7 +148,7 @@ export default function LoginPage() {
               </div>
 
               <div className="flex items-center justify-between">
-                <div className="flex items-center">
+                {/* <div className="flex items-center">
                   <input
                     id="remember-me"
                     name="remember-me"
@@ -160,7 +160,7 @@ export default function LoginPage() {
                   <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-900">
                     Remember me
                   </label>
-                </div>
+                </div> */}
 
                 <div className="text-sm">
                   <a href="/forgot-password" onClick={(e) => { e.preventDefault(); window.location.href = '/forgot-password'; }} className="font-medium text-primary-600 hover:text-primary-500">
