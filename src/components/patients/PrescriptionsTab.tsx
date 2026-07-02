@@ -35,7 +35,7 @@ export default function PrescriptionsTab({
   activeVisitId?: number | null;
   onStartNewVisit?: () => void;
 }): React.JSX.Element {
-  const { prescriptions, medicines, meta, isLoading, fetchPrescriptions, fetchMedicines, addPrescription, updatePrescription, deletePrescription } = usePrescriptions(patientId, initialData);
+  const { prescriptions, medicines, meta, isLoading, fetchPrescriptions, fetchMedicines, addPrescription, updatePrescription, deletePrescription } = usePrescriptions(patientId, initialData, activeVisitId);
   const [currentPage, setCurrentPage] = useState(1);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isReversing, setIsReversing] = useState(false);
@@ -200,23 +200,22 @@ export default function PrescriptionsTab({
       })
     };
 
-    // Optimistic UI Updates
-    setShowForm(false);
-    toast.success(editingId ? "Prescription updated successfully!" : "Prescription saved instantly!");
-
     try {
       if (editingId) {
         await updatePrescription(editingId, dataToSave);
+        toast.success("Prescription updated successfully!");
       } else {
         await addPrescription(dataToSave);
+        toast.success("Prescription saved successfully!");
       }
 
+      setShowForm(false);
       setEditingId(null);
       setNotes("");
       setItems([{ medicine_id: "", dosage: "", frequency: "", duration: "", quantity: 1 }]);
     } catch (err: any) {
-      // API error caught visually, background refresh restores state
-      // handled by api.js interceptor
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || "Failed to save prescription";
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }

@@ -31,7 +31,7 @@ export default function InvestigationsTab({
   activeVisitId?: number | null;
   onStartNewVisit?: () => void;
 }): React.JSX.Element {
-  const { investigations, meta, isLoading, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations } = useInvestigations(patientId, initialData);
+  const { investigations, meta, isLoading, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations } = useInvestigations(patientId, initialData, activeVisitId);
   const [currentPage, setCurrentPage] = useState(1);
   const { labTests, isLoadingLabTests, fetchLabTests, addLabTest, updateLabTest, bulkAddLabTests, deleteLabTest } = useLabTests();
 
@@ -116,41 +116,36 @@ export default function InvestigationsTab({
 
     setIsSubmitting(true);
 
-    const commonNotes = requestForm.notes;
-    const diagnosis = requestForm.diagnosis;
-    const originalSelectedTests = [...selectedTests];
-    const originalRequestForm = { ...requestForm };
-
-    resetRequestForm();
-
     try {
       if (editingId) {
         await updateInvestigation(editingId, {
-          name: originalRequestForm.name,
-          type: originalRequestForm.type,
-          notes: originalRequestForm.notes,
-          cost: originalRequestForm.cost,
-          diagnosis: originalRequestForm.diagnosis
+          name: requestForm.name,
+          type: requestForm.type,
+          notes: requestForm.notes,
+          cost: requestForm.cost,
+          diagnosis: requestForm.diagnosis
         });
         toast.success("Investigation updated successfully");
       } else {
-        const testsToRequest = originalSelectedTests.length > 0
-          ? originalSelectedTests
-          : [{ name: originalRequestForm.name, type: originalRequestForm.type, cost: originalRequestForm.cost }];
+        const testsToRequest = selectedTests.length > 0
+          ? selectedTests
+          : [{ name: requestForm.name, type: requestForm.type, cost: requestForm.cost }];
 
         await Promise.all(testsToRequest.map(test =>
           addInvestigation({
             name: test.name,
             type: test.type,
-            notes: commonNotes,
+            notes: requestForm.notes,
             cost: test.cost || test.default_cost,
-            diagnosis
+            diagnosis: requestForm.diagnosis
           })
         ));
         toast.success(`${testsToRequest.length} investigation(s) requested successfully`);
       }
+      resetRequestForm();
     } catch (err: any) {
-      // handled by api.js
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || "Failed to request investigation";
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -183,14 +178,13 @@ export default function InvestigationsTab({
     if (!selectedInvId) return;
     setIsSubmitting(true);
 
-    const originalResult = { ...resultForm };
-    resetResultForm();
-
     try {
-      await updateInvestigation(selectedInvId, originalResult);
+      await updateInvestigation(selectedInvId, resultForm);
       toast.success("Test result uploaded successfully");
+      resetResultForm();
     } catch (err: any) {
-      // handled by api.js
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || "Failed to upload result";
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
