@@ -43,6 +43,8 @@ apiClient.interceptors.response.use(
                 if (!window.location.pathname.includes('/login')) {
                     toast.error("Session expired. Please login again.");
                     window.location.href = '/login';
+                } else {
+                    toast.error(message || "Incorrect email or password");
                 }
             }
         } else if (status === 422) {
