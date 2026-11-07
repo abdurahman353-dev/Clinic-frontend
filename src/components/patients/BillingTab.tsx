@@ -190,11 +190,12 @@ export const ThermalReceipt = ({ bill, title = "WAFAA MEDICAL", subtitle = "Qual
   );
 };
 
-export default function BillingTab({ patientId }: { patientId: number }) {
+export default function BillingTab({ patientId, isActive = true }: { patientId: number; isActive?: boolean }) {
   const [bills, setBills] = useState<any[]>([]);
   const [historyBills, setHistoryBills] = useState<any[]>([]);
   const [visits, setVisits] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasFetched, setHasFetched] = useState(false);
 
   // Modals
   const [selectedBill, setSelectedBill] = useState<any>(null);
@@ -225,6 +226,7 @@ export default function BillingTab({ patientId }: { patientId: number }) {
       setBills(activeBills);
       setHistoryBills(historyResponse.data || []);
       setVisits(visitsResponse.data || []);
+      setHasFetched(true);
     } catch (err) {
       console.error("Failed to fetch billing data", err);
     } finally {
@@ -233,8 +235,10 @@ export default function BillingTab({ patientId }: { patientId: number }) {
   }, [patientId]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (isActive && !hasFetched && patientId) {
+      fetchData();
+    }
+  }, [isActive, hasFetched, patientId, fetchData]);
 
   const handleOpenPayment = (bill: any) => {
     setSelectedBill(bill);

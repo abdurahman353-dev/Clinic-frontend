@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Plus, CheckCircle2, Clock, Loader2, FileText, Edit2, X, Search, ArrowLeft, AlertTriangle, ListChecks } from "lucide-react";
 import { useInvestigations } from "@/hooks/useInvestigations";
@@ -49,6 +49,18 @@ export default function InvestigationsTab({
   const [bulkInvestigationNotes, setBulkInvestigationNotes] = useState("");
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [labTestToDelete, setLabTestToDelete] = useState<any>(null);
+  const searchDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchDropdownRef.current && !searchDropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const [requestForm, setRequestForm] = useState({
     name: "",
@@ -81,11 +93,11 @@ export default function InvestigationsTab({
   });
 
   useEffect(() => {
-    if (initialData.length === 0 || currentPage > 1) {
+    if (currentPage > 1) {
       fetchInvestigations({ page: currentPage });
     }
     fetchLabTests();
-  }, [fetchInvestigations, fetchLabTests, currentPage, initialData.length]);
+  }, [fetchInvestigations, fetchLabTests, currentPage]);
 
   useEffect(() => {
     if (meta?.total !== undefined) {
@@ -412,128 +424,135 @@ export default function InvestigationsTab({
 
           <form onSubmit={handleRequestSubmit} className="p-6 space-y-6">
             {/* Investigation Name */}
-            <div className="relative">
+            <div ref={searchDropdownRef} className="relative">
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-sm font-medium text-slate-700">Investigation Name *</label>
-                {/* <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsNewLabTestModalOpen(true)}
-                    className="text-xs text-primary-600 hover:text-primary-700 font-medium inline-flex items-center"
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Add New Type
-                  </button>
-                  <span className="text-slate-300">|</span>
-                  <Link
-                    href="/investigations"
-                    className="text-xs text-slate-500 hover:text-slate-700 font-medium inline-flex items-center"
-                  >
-                    Manage Types
-                  </Link>
-                </div> */}
+                <label className="block text-sm font-semibold text-slate-700">Investigation Name *</label>
+                {selectedTests.length > 0 && !editingId && (
+                  <span className="text-xs text-primary-600 font-semibold bg-primary-50 px-2 py-0.5 rounded-full border border-primary-100">
+                    {selectedTests.length} selected
+                  </span>
+                )}
               </div>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-slate-400" />
+
+              {/* Clean search input container */}
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <Search className="h-4 w-4" />
                 </div>
                 <input
                   required={!editingId && selectedTests.length === 0}
                   type="text"
-                  value={searchTerm || (selectedTests.length > 0 ? selectedTests.map(t => t.name).join(", ") : "")}
+                  value={editingId ? (searchTerm || requestForm.name) : searchTerm}
                   onChange={(e) => {
                     const val = e.target.value;
-                    if (selectedTests.length > 0 && val === "") {
-                      setSelectedTests([]);
-                      setSearchTerm("");
-                    } else {
-                      setSearchTerm(val);
-                    }
+                    setSearchTerm(val);
                     if (editingId) setRequestForm({ ...requestForm, name: val });
                     setIsDropdownOpen(true);
                   }}
                   onFocus={() => setIsDropdownOpen(true)}
-                  className={`w-full pl-10 pr-10 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${selectedTests.length > 0 ? 'bg-primary-50/30' : ''}`}
-                  placeholder={editingId ? "Investigation name..." : "Search or type investigation name... (Bulk allowed)"}
+                  className="w-full pl-10 pr-10 py-2.5 bg-white border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-sm text-slate-900 placeholder:text-slate-400 transition-all"
+                  placeholder={
+                    editingId
+                      ? "Investigation name..."
+                      : selectedTests.length > 0
+                      ? "Search to add another test..."
+                      : "Search or type investigation name... (Multi-select allowed)"
+                  }
                   autoComplete="off"
                 />
 
-                {(searchTerm || selectedTests.length > 0) && (
+                {(searchTerm || (editingId && requestForm.name)) && (
                   <button
                     type="button"
                     onClick={() => {
                       setSearchTerm("");
-                      setSelectedTests([]);
                       if (editingId) setRequestForm({ ...requestForm, name: "" });
                     }}
-                    className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600 p-1"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                    title="Clear"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 )}
 
-                {!editingId && selectedTests.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5 p-2 bg-slate-50 border border-dashed border-slate-200 rounded-lg">
-                    {selectedTests.map(test => (
-                      <span
-                        key={test.id}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white text-primary-700 text-[11px] font-semibold border border-primary-200 shadow-sm"
-                      >
-                        {test.name}
-                        <button
-                          type="button"
-                          onClick={() => removeSelectedTest(test.id)}
-                          className="p-0.5 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors"
-                        >
-                          <X className="h-2.5 w-2.5" />
-                        </button>
-                      </span>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedTests([])}
-                      className="text-[10px] text-slate-400 hover:text-red-500 ml-auto px-1"
-                    >
-                      Clear All
-                    </button>
-                  </div>
-                )}
-
+                {/* Dropdown list positioned right beneath the input */}
                 {isDropdownOpen && (
-                  <div className="absolute z-50 mt-1 w-full bg-white shadow-lg max-h-48 rounded-lg py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm border border-slate-200">
+                  <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white shadow-xl max-h-56 rounded-xl py-1 text-sm border border-slate-200 overflow-y-auto focus:outline-none ring-1 ring-black/5 divide-y divide-slate-100">
                     {filteredLabTests.length > 0 ? (
-                      filteredLabTests.map((test) => (
-                        <div
-                          key={test.id}
-                          className="cursor-pointer select-none relative py-2 pl-3 pr-2 hover:bg-slate-50 transition-colors flex items-center justify-between group"
-                          onClick={() => selectLabTest(test)}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <span className="block truncate font-medium text-slate-900">{test.name}</span>
-                              <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded ml-2 whitespace-nowrap">KSh {test.default_cost}</span>
-                            </div>
-                            <p className="text-[10px] text-slate-400 uppercase tracking-tight">{test.type}</p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingLabTest({ ...test });
-                              setIsEditLabTestModalOpen(true);
-                            }}
-                            className="ml-2 p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-md opacity-0 group-hover:opacity-100 transition-all"
+                      filteredLabTests.map((test) => {
+                        const isAlreadySelected = selectedTests.some(t => t.id === test.id);
+                        return (
+                          <div
+                            key={test.id}
+                            className={`cursor-pointer select-none py-2 px-3 hover:bg-primary-50/60 transition-colors flex items-center justify-between group ${
+                              isAlreadySelected ? 'bg-primary-50/40 text-primary-700 font-medium' : 'text-slate-800'
+                            }`}
+                            onClick={() => selectLabTest(test)}
                           >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      ))
+                            <div className="flex-1 min-w-0 pr-2">
+                              <div className="flex items-center justify-between">
+                                <span className="truncate font-medium">{test.name}</span>
+                                <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded ml-2 whitespace-nowrap">
+                                  KSh {Number(test.default_cost || 0).toLocaleString()}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">{test.type}</p>
+                            </div>
+                            {isAlreadySelected && (
+                              <span className="text-[11px] font-semibold text-primary-600 bg-primary-100/70 px-1.5 py-0.5 rounded mr-1">
+                                Added
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })
                     ) : (
-                      <div className="py-2 px-3 text-slate-500 text-sm">No matches. You can still type the name manually.</div>
+                      <div className="py-3 px-4 text-slate-500 text-xs text-center">
+                        No library matches for &quot;{searchTerm}&quot;. You can still type custom name.
+                      </div>
                     )}
                   </div>
                 )}
               </div>
+
+              {/* Selected Tests Chips Area - Clean, separate, beautiful below input */}
+              {!editingId && selectedTests.length > 0 && (
+                <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Selected Investigations ({selectedTests.length})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTests([])}
+                      className="text-xs font-semibold text-red-500 hover:text-red-700 hover:underline transition-colors"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedTests.map(test => (
+                      <span
+                        key={test.id}
+                        className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg bg-white text-primary-800 text-xs font-medium border border-primary-200 shadow-sm"
+                      >
+                        <span>{test.name}</span>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-100">
+                          KSh {Number(test.default_cost || 0).toLocaleString()}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeSelectedTest(test.id)}
+                          className="p-0.5 hover:bg-red-50 hover:text-red-600 text-slate-400 rounded-full transition-colors"
+                          title="Remove test"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

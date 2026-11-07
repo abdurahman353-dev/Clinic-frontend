@@ -579,7 +579,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
             />
           </div>
           <div className={activeTab === "billing" ? "" : "hidden"}>
-            <BillingTab patientId={patient.db_id} />
+            <BillingTab patientId={patient.db_id} isActive={activeTab === "billing"} />
           </div>
         </div>
       </div>

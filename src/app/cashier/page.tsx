@@ -19,7 +19,8 @@ import {
   Clock,
   ChevronRight,
   FileText,
-  History
+  History,
+  X
 } from "lucide-react";
 import { billingAPI, paymentAPI, visitAPI } from "@/lib/api";
 import { Modal } from "@/components/ui/Modal";
@@ -150,11 +151,15 @@ const ThermalReceipt = ({ bill }: { bill: any }) => {
   );
 };
 
+// Global in-memory cache for Cashier so it opens INSTANTLY in 0ms
+let cachedPendingBills: { data: any[]; meta: any } | null = null;
+let cachedHistoryBills: { data: any[]; meta: any } | null = null;
+
 export default function CashierPage() {
   const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending');
-  const [bills, setBills] = useState<any[]>([]);
-  const [historyBills, setHistoryBills] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [bills, setBills] = useState<any[]>(cachedPendingBills?.data || []);
+  const [historyBills, setHistoryBills] = useState<any[]>(cachedHistoryBills?.data || []);
+  const [isLoading, setIsLoading] = useState(!cachedPendingBills);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedBill, setSelectedBill] = useState<any>(null);
@@ -165,8 +170,8 @@ export default function CashierPage() {
 
   const [pendingPage, setPendingPage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
-  const [pendingMeta, setPendingMeta] = useState<any>(null);
-  const [historyMeta, setHistoryMeta] = useState<any>(null);
+  const [pendingMeta, setPendingMeta] = useState<any>(cachedPendingBills?.meta || null);
+  const [historyMeta, setHistoryMeta] = useState<any>(cachedHistoryBills?.meta || null);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -186,7 +191,7 @@ export default function CashierPage() {
   });
 
   const fetchBills = useCallback(async () => {
-    if (bills.length === 0) setIsLoading(true);
+    if (!cachedPendingBills && bills.length === 0) setIsLoading(true);
     else setIsFetching(true);
     try {
       const response = await billingAPI.list({ 
@@ -196,18 +201,23 @@ export default function CashierPage() {
         page: pendingPage,
         summarize: true
       });
-      setBills(response.data || []);
-      setPendingMeta(response.meta || null);
+      const data = response.data || [];
+      const meta = response.meta || null;
+      setBills(data);
+      setPendingMeta(meta);
+      if (!debouncedSearchTerm && pendingPage === 1) {
+        cachedPendingBills = { data, meta };
+      }
     } catch (err) {
       console.error("Failed to fetch bills", err);
     } finally {
       setIsLoading(false);
       setIsFetching(false);
     }
-  }, [debouncedSearchTerm, pendingPage]);
+  }, [debouncedSearchTerm, pendingPage, bills.length]);
 
   const fetchHistory = useCallback(async () => {
-    if (historyBills.length === 0) setIsLoading(true);
+    if (!cachedHistoryBills && historyBills.length === 0) setIsLoading(true);
     else setIsFetching(true);
     try {
       const response = await billingAPI.list({ 
@@ -217,15 +227,20 @@ export default function CashierPage() {
         page: historyPage,
         summarize: true
       });
-      setHistoryBills(response.data || []);
-      setHistoryMeta(response.meta || null);
+      const data = response.data || [];
+      const meta = response.meta || null;
+      setHistoryBills(data);
+      setHistoryMeta(meta);
+      if (!debouncedSearchTerm && historyPage === 1) {
+        cachedHistoryBills = { data, meta };
+      }
     } catch (err) {
       console.error("Failed to fetch history", err);
     } finally {
       setIsLoading(false);
       setIsFetching(false);
     }
-  }, [debouncedSearchTerm, historyPage]);
+  }, [debouncedSearchTerm, historyPage, historyBills.length]);
 
   useEffect(() => {
     if (activeTab === 'pending') fetchBills();
@@ -296,6 +311,8 @@ export default function CashierPage() {
     }
 
     setIsSubmitting(true);
+    cachedPendingBills = null;
+    cachedHistoryBills = null;
     try {
       if (selectedBill.visit_id) {
         await paymentAPI.payVisit(selectedBill.visit_id, paymentData);
@@ -327,16 +344,25 @@ export default function CashierPage() {
           <p className="text-sm text-slate-500 mt-1">Invoice generation and payment processing.</p>
         </div>
         <div className="relative max-w-sm w-full">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-slate-400" />
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <Search className="h-4 w-4" />
           </div>
           <input
             type="text"
             placeholder="Search patient or bill..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-all"
+            className="block w-full pl-10 pr-9 py-2 border border-slate-300 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all bg-white"
           />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+              title="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
 

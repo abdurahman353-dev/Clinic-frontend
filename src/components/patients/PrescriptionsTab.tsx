@@ -47,11 +47,11 @@ export default function PrescriptionsTab({
   ]);
 
   useEffect(() => {
-    if (initialData.length === 0 || currentPage > 1) {
+    if (currentPage > 1) {
       fetchPrescriptions({ page: currentPage });
     }
     fetchMedicines();
-  }, [fetchPrescriptions, fetchMedicines, currentPage, initialData.length]);
+  }, [fetchPrescriptions, fetchMedicines, currentPage]);
 
   useEffect(() => {
     if (meta?.total !== undefined) {
