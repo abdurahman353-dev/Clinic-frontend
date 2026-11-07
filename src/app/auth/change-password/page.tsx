@@ -57,7 +57,10 @@ export default function ForceChangePasswordPage() {
         window.location.href = "/";
       }, 1500);
     } catch (error: any) {
-      const msg = error.response?.data?.message || "Failed to update password";
+      const msg = error.response?.data?.errors?.current_password?.[0]
+        || error.response?.data?.errors?.password?.[0]
+        || error.response?.data?.message
+        || "Failed to update password";
       toast.error(msg);
     } finally {
       setIsSubmitting(false);

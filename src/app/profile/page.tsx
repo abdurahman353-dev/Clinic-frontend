@@ -45,24 +45,36 @@ export default function ProfilePage() {
     setMessage({ text: "", type: "" });
     
     try {
-      if (formData.password && formData.password !== formData.password_confirmation) {
-        setMessage({ text: "New passwords do not match", type: "error" });
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (formData.password && formData.current_password === formData.password) {
-        setMessage({ text: "New password cannot be the same as the current password", type: "error" });
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Exclude password if empty
       const payload: any = { name: formData.name, email: formData.email };
+
       if (formData.password.trim()) {
-         payload.current_password = formData.current_password;
-         payload.password = formData.password;
-         payload.password_confirmation = formData.password_confirmation;
+        if (!formData.current_password) {
+          setMessage({ text: "Please enter your current password to set a new password", type: "error" });
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (formData.password.length < 8) {
+          setMessage({ text: "New password must be at least 8 characters", type: "error" });
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (formData.password !== formData.password_confirmation) {
+          setMessage({ text: "New passwords do not match", type: "error" });
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (formData.current_password === formData.password) {
+          setMessage({ text: "New password cannot be the same as the current password", type: "error" });
+          setIsSubmitting(false);
+          return;
+        }
+
+        payload.current_password = formData.current_password;
+        payload.password = formData.password;
+        payload.password_confirmation = formData.password_confirmation;
       }
 
       const res = await authAPI.updateProfile(payload);
@@ -76,7 +88,14 @@ export default function ProfilePage() {
         router.push("/login");
       }, 1500);
     } catch (err: any) {
-      setMessage({ text: err.message || "Failed to update profile", type: "error" });
+      const errorMsg = err.response?.data?.errors?.current_password?.[0]
+        || err.response?.data?.errors?.password?.[0]
+        || err.response?.data?.errors?.email?.[0]
+        || err.response?.data?.error
+        || err.response?.data?.message
+        || err.message
+        || "Failed to update profile";
+      setMessage({ text: errorMsg, type: "error" });
     } finally {
       setIsSubmitting(false);
     }
