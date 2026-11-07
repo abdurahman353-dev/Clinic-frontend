@@ -9,8 +9,6 @@ import { Pagination } from "@/components/ui/Pagination";
 export default function VitalsTab({
   patientId,
   onTotalChange,
-  isInitialLoaded,
-  onLoadComplete,
   initialData = [],
   isVisitPaid = false,
   activeVisitId = null,
@@ -18,8 +16,6 @@ export default function VitalsTab({
 }: {
   patientId?: number;
   onTotalChange: (total: number) => void;
-  isInitialLoaded: boolean;
-  onLoadComplete: () => void;
   initialData?: any[];
   isVisitPaid?: boolean;
   activeVisitId?: number | null;
@@ -46,10 +42,10 @@ export default function VitalsTab({
   });
 
   useEffect(() => {
-    fetchVitals({ page: currentPage }).then(() => {
-      if (!isInitialLoaded) onLoadComplete();
-    });
-  }, [fetchVitals, currentPage, isInitialLoaded, onLoadComplete]);
+    if (initialData.length === 0 || currentPage > 1) {
+      fetchVitals({ page: currentPage });
+    }
+  }, [fetchVitals, currentPage, initialData.length]);
 
   useEffect(() => {
     if (meta?.total !== undefined) {

@@ -14,6 +14,10 @@ import ConsultationsTab from "@/components/patients/ConsultationsTab";
 import BillingTab from "@/components/patients/BillingTab";
 import { printHtml } from "@/lib/print";
 
+// Global in-memory cache so returning to a patient's profile opens in 0ms
+const patientMemoryCache = new Map<string, any>();
+let cachedGlobalFee: number | null = null;
+
 function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
   const unwrappedId = unwrappedParams.id;
@@ -22,54 +26,66 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const initialTab = searchParams.get("tab") || "vitals";
 
-  const [patient, setPatient] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const cachedPatient = patientMemoryCache.get(unwrappedId);
+  const [patient, setPatient] = useState<any>(cachedPatient || null);
+  const [isLoading, setIsLoading] = useState(!cachedPatient);
   const [errorMsg, setErrorMsg] = useState("");
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // New Visit State
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
-  const [globalFee, setGlobalFee] = useState<number | null>(null);
+  const [globalFee, setGlobalFee] = useState<number | null>(cachedGlobalFee);
   const [isStartingVisit, setIsStartingVisit] = useState(false);
 
-  // Centralized state for tabs to avoid re-fetching on switch
-  const [vitalsTotal, setVitalsTotal] = useState(0);
-  const [investigationsTotal, setInvestigationsTotal] = useState(0);
-  const [prescriptionsTotal, setPrescriptionsTotal] = useState(0);
-  const [isVitalsLoaded, setIsVitalsLoaded] = useState(false);
-  const [isInvestigationsLoaded, setIsInvestigationsLoaded] = useState(false);
-  const [isPrescriptionsLoaded, setIsPrescriptionsLoaded] = useState(false);
+  // Tab badge counts (populated immediately from cached or loaded patient data)
+  const [vitalsTotal, setVitalsTotal] = useState(cachedPatient?.vitals?.length || 0);
+  const [investigationsTotal, setInvestigationsTotal] = useState(cachedPatient?.investigations?.length || 0);
+  const [prescriptionsTotal, setPrescriptionsTotal] = useState(cachedPatient?.prescriptions?.length || 0);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab && ["vitals", "consultations", "investigations", "prescriptions"].includes(tab)) {
+    if (tab && ["vitals", "consultations", "investigations", "prescriptions", "billing"].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
 
-  // New state for pre-loaded data
-  const [vitalsData, setVitalsData] = useState<any[]>([]);
-  const [investigationsData, setInvestigationsData] = useState<any[]>([]);
-  const [prescriptionsData, setPrescriptionsData] = useState<any[]>([]);
-
   // New state for visit status
-  const [isVisitPaid, setIsVisitPaid] = useState(false);
-  const [activeVisitId, setActiveVisitId] = useState<number | null>(null);
+  const [isVisitPaid, setIsVisitPaid] = useState(() => {
+    if (cachedPatient?.visits && cachedPatient.visits.length > 0) {
+      const sortedVisits = [...cachedPatient.visits].sort((a: any, b: any) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      return sortedVisits[0]?.status === 'paid';
+    }
+    return false;
+  });
+  const [activeVisitId, setActiveVisitId] = useState<number | null>(() => {
+    if (cachedPatient?.visits && cachedPatient.visits.length > 0) {
+      const sortedVisits = [...cachedPatient.visits].sort((a: any, b: any) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      return sortedVisits[0]?.status !== 'paid' ? sortedVisits[0]?.id : null;
+    }
+    return null;
+  });
 
   const fetchPatient = useCallback(async () => {
     try {
-      // Fetch patient and all historical data in parallel for instant tab switching
-      // We now include 'visits' to check if the latest one is already paid
-      const [patientRes] = await Promise.all([
-        patientAPI.get(unwrappedId, { include: 'vitalSigns,investigations,prescriptions.items,visits' })
-      ]);
+      // Load patient record with all related clinical items in a single query
+      const patientRes = await patientAPI.get(unwrappedId, {
+        include: 'visits,vitalSigns,investigations,prescriptions.items'
+      });
 
       const p = patientRes.data;
+      patientMemoryCache.set(unwrappedId, p);
       setPatient(p);
+
+      if (p.vitals) setVitalsTotal(p.vitals.length);
+      if (p.investigations) setInvestigationsTotal(p.investigations.length);
+      if (p.prescriptions) setPrescriptionsTotal(p.prescriptions.length);
 
       // Determine if the MOST RECENT visit is paid, or if they have no visits at all (force start visit)
       if (p.visits && p.visits.length > 0) {
-        // Sort by creation date descending to get the latest visit
         const sortedVisits = [...p.visits].sort((a: any, b: any) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
@@ -80,26 +96,10 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
         setIsVisitPaid(true); // Force start visit for new patients too
         setActiveVisitId(null);
       }
-
-      // Populate individual tab states from the 'deep-loaded' patient object
-      if (p.vitals) {
-        setVitalsData(p.vitals);
-        setVitalsTotal(p.vitals.length);
-        setIsVitalsLoaded(true);
-      }
-      if (p.investigations) {
-        setInvestigationsData(p.investigations);
-        setInvestigationsTotal(p.investigations.length);
-        setIsInvestigationsLoaded(true);
-      }
-      if (p.prescriptions) {
-        setPrescriptionsData(p.prescriptions);
-        setPrescriptionsTotal(p.prescriptions.length);
-        setIsPrescriptionsLoaded(true);
-      }
-
     } catch (err: any) {
-      setErrorMsg(err.message || "Failed to load patient data");
+      if (!patientMemoryCache.has(unwrappedId)) {
+        setErrorMsg(err.message || "Failed to load patient data");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -108,11 +108,20 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
   useEffect(() => {
     fetchPatient();
 
-    // Load the global clinic consultation fee
-    settingsAPI.get().then((res: any) => {
-      const fee = res?.data?.consultation_fee ?? res?.consultation_fee;
-      setGlobalFee(fee !== undefined && fee !== null ? parseFloat(String(fee)) : 500);
-    }).catch(() => setGlobalFee(500));
+    // Load the global clinic consultation fee once with caching
+    if (cachedGlobalFee !== null) {
+      setGlobalFee(cachedGlobalFee);
+    } else {
+      settingsAPI.get().then((res: any) => {
+        const fee = res?.data?.consultation_fee ?? res?.consultation_fee;
+        const parsedFee = fee !== undefined && fee !== null ? parseFloat(String(fee)) : 500;
+        cachedGlobalFee = parsedFee;
+        setGlobalFee(parsedFee);
+      }).catch(() => {
+        cachedGlobalFee = 500;
+        setGlobalFee(500);
+      });
+    }
   }, [fetchPatient]);
 
   const handleStartVisit = async (e: React.FormEvent) => {
@@ -145,7 +154,7 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const handlePrintHistoryForm = () => {
     if (!patient) return;
 
-    const latestVital = vitalsData?.[0] || {};
+    const latestVital = patient?.vitals?.[0] || {};
     const today = new Date().toLocaleDateString("en-GB");
 
     const html = `
@@ -526,21 +535,20 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
           </nav>
         </div>
 
-        {/* Tab Content Placeholder */}
+        {/* Tab Content - all tabs stay mounted so data is prefetched in the
+            background and switching between them is instant. */}
         <div className="p-6 bg-slate-50 min-h-[400px]">
-          {activeTab === "vitals" && (
+          <div className={activeTab === "vitals" ? "" : "hidden"}>
             <VitalsTab
               patientId={patient.db_id}
-              initialData={vitalsData}
+              initialData={patient.vitals || []}
               onTotalChange={setVitalsTotal}
-              isInitialLoaded={isVitalsLoaded}
-              onLoadComplete={() => setIsVitalsLoaded(true)}
               isVisitPaid={isVisitPaid}
               activeVisitId={activeVisitId}
               onStartNewVisit={() => setIsVisitModalOpen(true)}
             />
-          )}
-          {activeTab === "consultations" && (
+          </div>
+          <div className={activeTab === "consultations" ? "" : "hidden"}>
             <ConsultationsTab
               patientId={patient.db_id}
               patient={patient}
@@ -549,34 +557,30 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
               activeVisitId={activeVisitId}
               onStartNewVisit={() => setIsVisitModalOpen(true)}
             />
-          )}
-          {activeTab === "investigations" && (
+          </div>
+          <div className={activeTab === "investigations" ? "" : "hidden"}>
             <InvestigationsTab
               patientId={patient.db_id}
-              initialData={investigationsData}
+              initialData={patient.investigations || []}
               onTotalChange={setInvestigationsTotal}
-              isInitialLoaded={isInvestigationsLoaded}
-              onLoadComplete={() => setIsInvestigationsLoaded(true)}
               isVisitPaid={isVisitPaid}
               activeVisitId={activeVisitId}
               onStartNewVisit={() => setIsVisitModalOpen(true)}
             />
-          )}
-          {activeTab === "prescriptions" && (
+          </div>
+          <div className={activeTab === "prescriptions" ? "" : "hidden"}>
             <PrescriptionsTab
               patientId={patient.db_id}
-              initialData={prescriptionsData}
+              initialData={patient.prescriptions || []}
               onTotalChange={setPrescriptionsTotal}
-              isInitialLoaded={isPrescriptionsLoaded}
-              onLoadComplete={() => setIsPrescriptionsLoaded(true)}
               isVisitPaid={isVisitPaid}
               activeVisitId={activeVisitId}
               onStartNewVisit={() => setIsVisitModalOpen(true)}
             />
-          )}
-          {activeTab === "billing" && (
+          </div>
+          <div className={activeTab === "billing" ? "" : "hidden"}>
             <BillingTab patientId={patient.db_id} />
-          )}
+          </div>
         </div>
       </div>
 

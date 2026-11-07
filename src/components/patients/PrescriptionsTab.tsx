@@ -20,8 +20,6 @@ interface PrescriptionItem {
 export default function PrescriptionsTab({
   patientId,
   onTotalChange,
-  isInitialLoaded,
-  onLoadComplete,
   initialData = [],
   isVisitPaid = false,
   activeVisitId = null,
@@ -29,8 +27,6 @@ export default function PrescriptionsTab({
 }: {
   patientId?: number;
   onTotalChange: (total: number) => void;
-  isInitialLoaded: boolean;
-  onLoadComplete: () => void;
   initialData?: any[];
   isVisitPaid?: boolean;
   activeVisitId?: number | null;
@@ -51,11 +47,11 @@ export default function PrescriptionsTab({
   ]);
 
   useEffect(() => {
-    fetchPrescriptions({ page: currentPage }).then(() => {
-      if (!isInitialLoaded) onLoadComplete();
-    });
+    if (initialData.length === 0 || currentPage > 1) {
+      fetchPrescriptions({ page: currentPage });
+    }
     fetchMedicines();
-  }, [fetchPrescriptions, fetchMedicines, currentPage, isInitialLoaded, onLoadComplete]);
+  }, [fetchPrescriptions, fetchMedicines, currentPage, initialData.length]);
 
   useEffect(() => {
     if (meta?.total !== undefined) {

@@ -1,10 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
 import { prescriptionAPI, medicineAPI, visitAPI } from "@/lib/api";
 
+let cachedMedicines: any[] | null = null;
+
 export function usePrescriptions(patientId?: number, initialData: any[] = [], propActiveVisitId?: number | null) {
   const [prescriptions, setPrescriptions] = useState<any[]>(initialData);
   const [meta, setMeta] = useState<any>(initialData.length > 0 ? { total: initialData.length, per_page: initialData.length, current_page: 1, last_page: 1 } : null);
-  const [medicines, setMedicines] = useState<any[]>([]); // To populate the dropdown
+  const [medicines, setMedicines] = useState<any[]>(cachedMedicines || []); // To populate the dropdown instantly from cache
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [activeVisitId, setActiveVisitId] = useState<number | null>(propActiveVisitId || null);
@@ -43,9 +45,15 @@ export function usePrescriptions(patientId?: number, initialData: any[] = [], pr
   }, [patientId]);
 
   const fetchMedicines = useCallback(async () => {
+    if (cachedMedicines && cachedMedicines.length > 0) {
+      setMedicines(cachedMedicines);
+      return;
+    }
     try {
         const res = await medicineAPI.list({ per_page: -1 });
-        setMedicines(res.data || []);
+        const list = res.data || [];
+        cachedMedicines = list;
+        setMedicines(list);
     } catch (err) {
         console.error("Failed to load medicines", err);
     }

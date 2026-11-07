@@ -375,6 +375,7 @@ export default function CashierPage() {
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Patient / Bill</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Services</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Total</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Discount</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Paid</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Balance</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
@@ -383,7 +384,7 @@ export default function CashierPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
                   {filteredBills.length === 0 ? (
-                    <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-400 text-sm italic">No pending bills found.</td></tr>
+                    <tr><td colSpan={8} className="px-6 py-12 text-center text-slate-400 text-sm italic">No pending bills found.</td></tr>
                   ) : filteredBills.map((bill) => (
                     <tr key={bill.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -402,11 +403,20 @@ export default function CashierPage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">KSh {parseFloat(bill.grand_total).toLocaleString()}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-emerald-600">
-                        {parseFloat(bill.paid_amount) > 0 ? `KSh ${parseFloat(bill.paid_amount).toLocaleString()}` : '-'}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">KSh {parseFloat(bill.grand_total || "0").toLocaleString()}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        {parseFloat(bill.discount_amount || "0") > 0 ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            - KSh {parseFloat(bill.discount_amount).toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">-</span>
+                        )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-red-600">KSh {parseFloat(bill.balance_amount).toLocaleString()}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-emerald-600">
+                        {parseFloat(bill.paid_amount || "0") > 0 ? `KSh ${parseFloat(bill.paid_amount).toLocaleString()}` : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-red-600">KSh {parseFloat(bill.balance_amount || "0").toLocaleString()}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-semibold border uppercase ${
                           bill.status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
@@ -561,11 +571,17 @@ export default function CashierPage() {
         maxWidth="max-w-md"
       >
         <form onSubmit={handlePaymentSubmit} className="space-y-5">
-          <div className="grid grid-cols-2 gap-3">
+          <div className={`grid ${parseFloat(selectedBill?.discount_amount || "0") > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
             <div className="bg-slate-50 p-3 rounded border border-slate-200">
               <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">Original</span>
               <span className="text-sm font-medium text-slate-700">KSh {parseFloat(selectedBill?.grand_total || "0").toLocaleString()}</span>
             </div>
+            {parseFloat(selectedBill?.discount_amount || "0") > 0 && (
+              <div className="bg-amber-50 p-3 rounded border border-amber-200">
+                <span className="text-[9px] uppercase font-bold text-amber-600 block mb-0.5">Discount</span>
+                <span className="text-sm font-bold text-amber-700">- KSh {parseFloat(selectedBill?.discount_amount || "0").toLocaleString()}</span>
+              </div>
+            )}
             <div className="bg-slate-50 p-3 rounded border border-slate-200">
               <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">Already Paid</span>
               <span className="text-sm font-medium text-slate-700">KSh {parseFloat(selectedBill?.paid_amount || "0").toLocaleString()}</span>

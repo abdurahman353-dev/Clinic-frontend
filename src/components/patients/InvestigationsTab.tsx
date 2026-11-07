@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, CheckCircle2, Clock, Loader2, FileText, Edit2, X, Search, Trash2, ArrowLeft, AlertTriangle, ListChecks } from "lucide-react";
+import Link from "next/link";
+import { Plus, CheckCircle2, Clock, Loader2, FileText, Edit2, X, Search, ArrowLeft, AlertTriangle, ListChecks } from "lucide-react";
 import { useInvestigations } from "@/hooks/useInvestigations";
 import { useLabTests } from "@/hooks/useLabTests";
-import { labTestAPI } from "@/lib/api";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
@@ -17,8 +17,6 @@ const emptyBulkInvestigationRow = { name: "", type: "lab", cost: "" };
 export default function InvestigationsTab({
   patientId,
   onTotalChange,
-  isInitialLoaded,
-  onLoadComplete,
   initialData = [],
   isVisitPaid = false,
   activeVisitId = null,
@@ -26,8 +24,6 @@ export default function InvestigationsTab({
 }: {
   patientId?: number;
   onTotalChange: (total: number) => void;
-  isInitialLoaded: boolean;
-  onLoadComplete: () => void;
   initialData?: any[];
   isVisitPaid?: boolean;
   activeVisitId?: number | null;
@@ -35,7 +31,7 @@ export default function InvestigationsTab({
 }): React.JSX.Element {
   const { investigations, meta, isLoading, fetchInvestigations, addInvestigation, bulkAddInvestigations, updateInvestigation, setInvestigations } = useInvestigations(patientId, initialData, activeVisitId);
   const [currentPage, setCurrentPage] = useState(1);
-  const { labTests, isLoadingLabTests, fetchLabTests, addLabTest, updateLabTest, bulkAddLabTests, deleteLabTest } = useLabTests();
+  const { labTests, fetchLabTests, updateLabTest, bulkAddLabTests, deleteLabTest } = useLabTests();
 
   const [view, setView] = useState<FormView>("table");
   const [isNewLabTestModalOpen, setIsNewLabTestModalOpen] = useState(false);
@@ -85,11 +81,11 @@ export default function InvestigationsTab({
   });
 
   useEffect(() => {
-    fetchInvestigations({ page: currentPage }).then(() => {
-      if (!isInitialLoaded) onLoadComplete();
-    });
+    if (initialData.length === 0 || currentPage > 1) {
+      fetchInvestigations({ page: currentPage });
+    }
     fetchLabTests();
-  }, [fetchInvestigations, fetchLabTests, currentPage, isInitialLoaded, onLoadComplete]);
+  }, [fetchInvestigations, fetchLabTests, currentPage, initialData.length]);
 
   useEffect(() => {
     if (meta?.total !== undefined) {
@@ -227,45 +223,37 @@ export default function InvestigationsTab({
   };
 
   const handleNewLabTestSubmit = async (e: React.FormEvent) => {
-    const validTests = bulkNewLabTests.filter(t => t.name.trim() !== "");
+    e.preventDefault();
+    const validTests = bulkNewLabTests.filter((t: any) => t.name?.trim() !== "");
     if (validTests.length === 0) {
       toast.error("Please add at least one investigation name");
       return;
     }
 
-    // Optimistic: Close modal and show success immediately
     setIsNewLabTestModalOpen(false);
     toast.success(`${validTests.length} investigation types are being registered...`);
-    
-    // Background: Process the registration
+
     try {
-      await bulkAddLabTests(validTests.map(test => ({
-        name: test.name,
-        type: test.type,
+      await bulkAddLabTests(validTests.map((test: any) => ({
+        name: test.name.trim(),
+        type: test.type || "lab",
         default_cost: parseFloat(test.default_cost) || 0
       })));
-      toast.success(`${validTests.length} investigation types registered successfully.`);
+      toast.success(`${validTests.length} investigation type(s) registered successfully.`);
       setBulkNewLabTests([{ name: "", type: "lab", default_cost: "" }]);
     } catch (error: any) {
-      // API interceptor handles visual error; hook handles state restoration
       setIsNewLabTestModalOpen(true);
     }
   };
 
-  const addBulkRow = () => setBulkNewLabTests([...bulkNewLabTests, { name: "", type: "lab", default_cost: "" }]);
+  const addBulkRow = () => setBulkNewLabTests(prev => [...prev, { name: "", type: "lab", default_cost: "" }]);
 
   const removeBulkRow = (index: number) => {
-    if (bulkNewLabTests.length > 1) {
-      const newRows = [...bulkNewLabTests];
-      newRows.splice(index, 1);
-      setBulkNewLabTests(newRows);
-    }
+    setBulkNewLabTests(prev => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
   };
 
   const updateBulkRow = (index: number, field: string, value: string) => {
-    const newRows = [...bulkNewLabTests];
-    newRows[index] = { ...newRows[index], [field]: value };
-    setBulkNewLabTests(newRows);
+    setBulkNewLabTests(prev => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
   };
 
   const resetBulkRequestForm = () => {
@@ -427,14 +415,23 @@ export default function InvestigationsTab({
             <div className="relative">
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-sm font-medium text-slate-700">Investigation Name *</label>
-                <button
-                  type="button"
-                  onClick={() => setIsNewLabTestModalOpen(true)}
-                  className="text-xs text-primary-600 hover:text-primary-700 font-medium inline-flex items-center"
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Add New Type
-                </button>
+                {/* <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsNewLabTestModalOpen(true)}
+                    className="text-xs text-primary-600 hover:text-primary-700 font-medium inline-flex items-center"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add New Type
+                  </button>
+                  <span className="text-slate-300">|</span>
+                  <Link
+                    href="/investigations"
+                    className="text-xs text-slate-500 hover:text-slate-700 font-medium inline-flex items-center"
+                  >
+                    Manage Types
+                  </Link>
+                </div> */}
               </div>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -465,9 +462,9 @@ export default function InvestigationsTab({
                   <button
                     type="button"
                     onClick={() => {
-                        setSearchTerm("");
-                        setSelectedTests([]);
-                        if(editingId) setRequestForm({ ...requestForm, name: "" });
+                      setSearchTerm("");
+                      setSelectedTests([]);
+                      if (editingId) setRequestForm({ ...requestForm, name: "" });
                     }}
                     className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600 p-1"
                   >
@@ -547,9 +544,8 @@ export default function InvestigationsTab({
                   value={selectedTests.length > 1 ? "multiple" : (selectedTests.length === 1 ? selectedTests[0].type : requestForm.type)}
                   onChange={e => setRequestForm({ ...requestForm, type: e.target.value })}
                   disabled={selectedTests.length > 0 || (!!editingId && searchTerm !== "")}
-                  className={`w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
-                    selectedTests.length > 0 || (!!editingId && searchTerm !== "") ? 'bg-slate-50 text-slate-500 cursor-not-allowed border-dashed' : ''
-                  }`}
+                  className={`w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${selectedTests.length > 0 || (!!editingId && searchTerm !== "") ? 'bg-slate-50 text-slate-500 cursor-not-allowed border-dashed' : ''
+                    }`}
                 >
                   <option value="lab">Laboratory (Blood, Urine, etc.)</option>
                   <option value="radiology">Radiology (X-Ray, MRI, Ultrasound)</option>
@@ -569,9 +565,8 @@ export default function InvestigationsTab({
                     type="number"
                     value={requestForm.cost}
                     onChange={e => setRequestForm({ ...requestForm, cost: e.target.value })}
-                    className={`block w-full rounded-lg border border-slate-300 py-2 pl-12 pr-3 focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${
-                      (selectedTests.length > 0 || (editingId && searchTerm)) ? 'bg-slate-50 text-slate-500 cursor-not-allowed border-dashed' : ''
-                    }`}
+                    className={`block w-full rounded-lg border border-slate-300 py-2 pl-12 pr-3 focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${(selectedTests.length > 0 || (editingId && searchTerm)) ? 'bg-slate-50 text-slate-500 cursor-not-allowed border-dashed' : ''
+                      }`}
                     placeholder="0.00"
                     readOnly={selectedTests.length > 0 || (!!editingId && searchTerm !== "")}
                   />
@@ -812,7 +807,7 @@ export default function InvestigationsTab({
           <div className="flex-1">
             <h3 className="text-sm font-bold text-amber-900 leading-tight">Visit Closed (Fully Paid)</h3>
             <p className="text-xs text-amber-800 mt-1">
-              This visit is already finalized or no active visit exists. To request tests, please <button 
+              This visit is already finalized or no active visit exists. To request tests, please <button
                 onClick={onStartNewVisit}
                 className="font-black underline decoration-amber-300 hover:text-amber-950 transition-colors"
               >Start a New Visit</button> first.
