@@ -95,8 +95,8 @@ export default function PrescriptionsPage() {
             onClick={() => setIsAddModalOpen(true)}
             className="inline-flex items-center justify-center rounded-md text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-primary-600 text-white hover:bg-primary-700 h-10 px-4 shadow-sm"
           >
-             <Pill className="mr-2 h-4 w-4" />
-             New Prescription
+            <Pill className="mr-2 h-4 w-4" />
+            New Prescription
           </button>
         </div>
       </div>
@@ -147,11 +147,11 @@ export default function PrescriptionsPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       {rx.patient_id ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                           In-patient
+                          In-patient
                         </span>
                       ) : (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-100">
-                           Walk-in
+                          Walk-in
                         </span>
                       )}
                     </td>
@@ -170,7 +170,7 @@ export default function PrescriptionsPage() {
                         >
                           <Eye className="h-4 w-4" />
                         </button>
-                        
+
                         {!rx.patient_id ? (
                           // Walk-in logic: Robust lock check across all potential payment indicators
                           (() => {
@@ -180,10 +180,10 @@ export default function PrescriptionsPage() {
                             const iStatus = (rx.invoice_status || "").toLowerCase();
                             const billStatus = (rx.bill?.status || "").toLowerCase();
                             const invStatus = (rx.invoice?.status || "").toLowerCase();
-                            
+
                             const paidIndicators = ['paid', 'completed', 'billed', 'settled', 'collected', 'dispensed'];
-                            const isPaid = 
-                              rx.is_cleared || 
+                            const isPaid =
+                              rx.is_cleared ||
                               rx.is_paid ||
                               paidIndicators.includes(status) ||
                               paidIndicators.includes(pStatus) ||
@@ -213,8 +213,8 @@ export default function PrescriptionsPage() {
                           })()
                         ) : (
                           // In-patient logic: Always show History button (editing locked inside History if paid)
-                          <Link 
-                            href={`/patients/${rx.patient_id}?tab=prescriptions`} 
+                          <Link
+                            href={`/patients/${rx.patient_id}?tab=prescriptions`}
                             className="inline-flex items-center gap-1.5 text-primary-600 hover:text-primary-700 font-bold bg-primary-50 px-2 py-1 rounded border border-primary-100 transition-all hover:scale-105 shadow-sm"
                             title="View Patient History"
                           >
@@ -306,11 +306,11 @@ export default function PrescriptionsPage() {
           </div>
         )}
       </Modal>
-      
-      <DirectPrescriptionModal 
-        isOpen={isAddModalOpen} 
-        onClose={handleCloseModal} 
-        onSuccess={fetchPrescriptions} 
+
+      <DirectPrescriptionModal
+        isOpen={isAddModalOpen}
+        onClose={handleCloseModal}
+        onSuccess={fetchPrescriptions}
         prescription={editPrescription}
       />
     </div>

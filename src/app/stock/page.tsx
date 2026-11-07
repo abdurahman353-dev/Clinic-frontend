@@ -17,7 +17,6 @@ import {
   Trash2
 } from "lucide-react";
 import { useStock } from "@/hooks/useStock";
-import { medicineAPI } from "@/lib/api";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Pagination } from "@/components/ui/Pagination";
@@ -25,8 +24,11 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 
+const BULK_DOSAGE_FORMS = ["tablet", "capsule", "syrup", "suspension", "injection", "ointment", "cream", "lotion", "drops", "inhaler", "sachet", "suppository"];
+const BULK_UNITS = ["tablet", "capsule", "bottle", "vial", "ampoule", "tube", "sachet", "puff"];
+
 export default function StockManagement() {
-  const { medicines, meta, summary, allCategories, isLoading, fetchMedicines, addMedicine, updateMedicine, addStock, bulkAddStock, adjustStock, updateCategory, deleteCategory } = useStock();
+  const { medicines, meta, summary, allCategories, isLoading, fetchMedicines, addMedicine, updateMedicine, bulkAddMedicines, adjustStock, updateCategory, deleteCategory } = useStock();
   const { user } = useAuth();
   const router = useRouter();
 
@@ -41,11 +43,23 @@ export default function StockManagement() {
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
 
-  // Bulk Add Stock Modal State
+  // Bulk Add New Items Modal State
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
-  const [bulkMedicineOptions, setBulkMedicineOptions] = useState<any[]>([]);
-  const [bulkLoadingOptions, setBulkLoadingOptions] = useState(false);
-  const emptyBulkRow = { medicine_id: "", quantity: "", buying_price: "", batch_number: "", expiry_date: "" };
+  const emptyBulkRow = {
+    name: "",
+    category: "",
+    dosage_form: "tablet",
+    size: "",
+    unit: "tablet",
+    unit_price: "",
+    buying_price: "",
+    initial_stock: "",
+    minimum_stock: "",
+    reorder_level: "",
+    batch_number: "",
+    expiry_date: "",
+    description: ""
+  };
   const [bulkRows, setBulkRows] = useState<any[]>([{ ...emptyBulkRow }]);
 
   // Adjustment Modal State
@@ -68,7 +82,7 @@ export default function StockManagement() {
     buying_price: "",
     description: "",
     size: "",
-    unit: "tablets",
+    unit: "tablet",
     dosage_form: "tablet",
     initial_stock: "",
     minimum_stock: "",
@@ -137,7 +151,7 @@ export default function StockManagement() {
     setIsAddItemModalOpen(false);
     setEditingId(null);
     setFormData({
-      name: "", category: "Antibiotics", unit_price: "", buying_price: "", description: "", size: "", unit: "tablets",
+      name: "", category: "Antibiotics", unit_price: "", buying_price: "", description: "", size: "", unit: "tablet",
       dosage_form: "tablet", initial_stock: "", minimum_stock: "", reorder_level: "", batch_number: "", expiry_date: ""
     });
 
@@ -165,7 +179,7 @@ export default function StockManagement() {
       buying_price: item.stock?.buying_price?.toString() || "",
       description: item.description || "",
       size: item.size || "",
-      unit: item.unit || "tablets",
+      unit: item.unit || "tablet",
       dosage_form: item.dosage_form || "tablet",
       initial_stock: item.stock?.quantity?.toString() || "",
       minimum_stock: item.stock?.minimum_stock?.toString() || "50",
@@ -179,25 +193,14 @@ export default function StockManagement() {
   const handleAdd = () => {
     setEditingId(null);
     setFormData({
-      name: "", category: "Antibiotics", unit_price: "", buying_price: "", description: "", size: "", unit: "tablets",
+      name: "", category: "Antibiotics", unit_price: "", buying_price: "", description: "", size: "", unit: "tablet",
       dosage_form: "tablet", initial_stock: "", minimum_stock: "", reorder_level: "", batch_number: "", expiry_date: ""
     });
     setIsAddItemModalOpen(true);
   };
 
-  const handleOpenBulk = async () => {
+  const handleOpenBulk = () => {
     setIsBulkModalOpen(true);
-    if (bulkMedicineOptions.length === 0) {
-      setBulkLoadingOptions(true);
-      try {
-        const res = await medicineAPI.list({ per_page: -1 });
-        setBulkMedicineOptions(res.data || []);
-      } catch (err) {
-        // Global error handler in api.js shows the message
-      } finally {
-        setBulkLoadingOptions(false);
-      }
-    }
   };
 
   const addBulkRow = () => setBulkRows(prev => [...prev, { ...emptyBulkRow }]);
@@ -210,30 +213,61 @@ export default function StockManagement() {
     setBulkRows(prev => prev.map((row, i) => i === index ? { ...row, [field]: value } : row));
   };
 
+  const rowHasContent = (row: any) =>
+    (row.name?.trim() || row.category?.trim() || row.size?.trim() ||
+      row.unit_price !== "" || row.buying_price !== "" || row.initial_stock !== "" ||
+      row.minimum_stock !== "" || row.reorder_level !== "" ||
+      row.batch_number?.trim() || row.expiry_date || row.description?.trim());
+
   const handleBulkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const payload = bulkRows
-      .filter(row => row.medicine_id && row.quantity !== "")
-      .map(row => ({
-        medicine_id: parseInt(row.medicine_id, 10),
-        quantity: parseInt(row.quantity, 10),
-        buying_price: row.buying_price !== "" ? parseFloat(row.buying_price) : null,
-        batch_number: row.batch_number || null,
-        expiry_date: row.expiry_date || null,
-      }));
+    const filledRows = bulkRows.filter(rowHasContent);
 
-    if (payload.length === 0) {
-      toast.error("Add at least one row with a product and quantity.");
+    if (filledRows.length === 0) {
+      toast.error("Add at least one new item.");
       return;
     }
 
+    if (filledRows.some(row => !row.name?.trim())) {
+      toast.error("Item name is required for every row.");
+      return;
+    }
+
+    const payload = filledRows.map(row => {
+      let finalSize = (row.size || "").trim();
+      const isVolume = ["syrup", "suspension", "liquid", "drops"].includes((row.dosage_form || "").toLowerCase());
+      if (finalSize && isVolume && /^\d+(\.\d+)?$/.test(finalSize)) {
+        finalSize += " ml";
+      }
+
+      return {
+        name: row.name.trim(),
+        category: (row.category || "").trim() || null,
+        unit_price: row.unit_price !== "" ? parseFloat(row.unit_price) : 0,
+        description: (row.description || "").trim() || null,
+        size: finalSize || null,
+        unit: row.unit || null,
+        dosage_form: row.dosage_form || null,
+        initial_stock: row.initial_stock !== "" ? parseInt(row.initial_stock, 10) : 0,
+        buying_price: row.buying_price !== "" ? parseFloat(row.buying_price) : null,
+        minimum_stock: row.minimum_stock !== "" ? parseInt(row.minimum_stock, 10) : 0,
+        reorder_level: row.reorder_level !== "" ? parseInt(row.reorder_level, 10) : 0,
+        batch_number: (row.batch_number || "").trim() || null,
+        expiry_date: row.expiry_date || null,
+      };
+    });
+
     setIsSubmitting(true);
     try {
-      await bulkAddStock(payload);
-      toast.success(`${payload.length} stock ${payload.length === 1 ? 'entry' : 'entries'} added successfully!`);
+      await bulkAddMedicines(payload);
+      toast.success(`${payload.length} new ${payload.length === 1 ? 'item' : 'items'} added to inventory!`);
       setIsBulkModalOpen(false);
       setBulkRows([{ ...emptyBulkRow }]);
+      setSearchTerm("");
+      setDebouncedSearch("");
+      setFilter("all");
+      setCurrentPage(1);
     } catch (err) {
       // Global error handler in api.js shows the message
     } finally {
@@ -349,7 +383,7 @@ export default function StockManagement() {
             className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 h-10 px-4 py-2 shadow-sm"
           >
             <PackagePlus className="mr-2 h-4 w-4" />
-            Bulk Add Stock
+            Bulk Add Items
           </button>
           <button
             onClick={handleAdd}
@@ -730,76 +764,110 @@ export default function StockManagement() {
         </form>
       </Modal>
 
-      {/* Bulk Add Stock Modal */}
+      {/* Bulk Add New Items Modal */}
       <Modal
         isOpen={isBulkModalOpen}
         onClose={() => setIsBulkModalOpen(false)}
-        title="Bulk Add Stock"
-        description="Add incoming stock for one or more existing products at once"
-        maxWidth="max-w-5xl"
+        title="Bulk Add New Items"
+        description="Create multiple new medications or supplies with their initial stock at once"
+        maxWidth="max-w-6xl"
       >
         <form onSubmit={handleBulkSubmit} className="space-y-4">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[760px]">
-              <thead>
-                <tr className="text-slate-600 text-xs font-bold uppercase tracking-wider bg-slate-50">
-                  <th className="px-3 py-2 border-b border-slate-200">Product *</th>
-                  <th className="px-3 py-2 border-b border-slate-200 w-28">Quantity *</th>
-                  <th className="px-3 py-2 border-b border-slate-200 w-36">Buying Price</th>
-                  <th className="px-3 py-2 border-b border-slate-200 w-32">Brand Name.</th>
-                  <th className="px-3 py-2 border-b border-slate-200 w-40">Expiry Date</th>
-                  <th className="px-3 py-2 border-b border-slate-200 w-10"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {bulkRows.map((row, index) => (
-                  <tr key={index} className="hover:bg-slate-50">
-                    <td className="px-2 py-2">
-                      <select required value={row.medicine_id} onChange={e => updateBulkRow(index, 'medicine_id', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
-                        <option value="">{bulkLoadingOptions ? "Loading products..." : "Select product..."}</option>
-                        {bulkMedicineOptions.map((med) => (
-                          <option key={med.id} value={med.id}>{med.name}{med.size ? ` (${med.size})` : ''}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-2 py-2">
-                      <input required type="number" min="0" value={row.quantity} onChange={e => updateBulkRow(index, 'quantity', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 100" />
-                    </td>
-                    <td className="px-2 py-2">
-                      <div className="relative rounded-md shadow-sm">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
-                          <span className="text-slate-400 text-xs">KSh</span>
-                        </div>
-                        <input type="number" step="0.01" min="0" value={row.buying_price} onChange={e => updateBulkRow(index, 'buying_price', e.target.value)} className="block w-full rounded-md border-slate-300 pl-10 focus:border-primary-500 focus:ring-primary-500 sm:text-sm py-1.5" placeholder="0.00" />
-                      </div>
-                    </td>
-                    <td className="px-2 py-2">
-                      <input type="text" value={row.batch_number} onChange={e => updateBulkRow(index, 'batch_number', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Optional" />
-                    </td>
-                    <td className="px-2 py-2">
-                      <input type="date" value={row.expiry_date} onChange={e => updateBulkRow(index, 'expiry_date', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-                    </td>
-                    <td className="px-2 py-2 text-right">
-                      {bulkRows.length > 1 && (
-                        <button type="button" onClick={() => removeBulkRow(index)} className="text-slate-400 hover:text-red-600 transition-colors">
-                          <X className="h-4 w-4" />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="max-h-[65vh] overflow-y-auto pr-1 space-y-4">
+            {bulkRows.map((row, index) => (
+              <div key={index} className="rounded-xl border border-slate-200 bg-slate-50/40 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-slate-700">New Item {index + 1}</h4>
+                  {bulkRows.length > 1 && (
+                    <button type="button" onClick={() => removeBulkRow(index)} className="text-slate-400 hover:text-red-600 transition-colors" title="Remove item">
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="lg:col-span-2">
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Item Name *</label>
+                    <input type="text" value={row.name} onChange={e => updateBulkRow(index, 'name', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. Paracetamol" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Category</label>
+                    <input list="bulk-category-options" type="text" value={row.category} onChange={e => updateBulkRow(index, 'category', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Select or type new" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Dosage Form</label>
+                    <select value={row.dosage_form} onChange={e => updateBulkRow(index, 'dosage_form', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                      <option value="">Select form...</option>
+                      {BULK_DOSAGE_FORMS.map(form => (
+                        <option key={form} value={form}>{form.charAt(0).toUpperCase() + form.slice(1)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Size / Strength</label>
+                    <input type="text" value={row.size} onChange={e => updateBulkRow(index, 'size', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 500mg or 200ml" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Tracking Unit</label>
+                    <select value={row.unit} onChange={e => updateBulkRow(index, 'unit', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                      <option value="">Select unit...</option>
+                      {BULK_UNITS.map(unit => (
+                        <option key={unit} value={unit}>{unit}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Quantity in Stock</label>
+                    <input type="number" min="0" value={row.initial_stock} onChange={e => updateBulkRow(index, 'initial_stock', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Defaults to 0" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Selling Price (KSh)</label>
+                    <input type="number" step="0.01" min="0" value={row.unit_price} onChange={e => updateBulkRow(index, 'unit_price', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="0.00" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Buying Price (KSh)</label>
+                    <input type="number" step="0.01" min="0" value={row.buying_price} onChange={e => updateBulkRow(index, 'buying_price', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Cost per unit" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Reorder Level</label>
+                    <input type="number" min="0" value={row.reorder_level} onChange={e => updateBulkRow(index, 'reorder_level', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Defaults to 0" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Min. Safe Stock</label>
+                    <input type="number" min="0" value={row.minimum_stock} onChange={e => updateBulkRow(index, 'minimum_stock', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Defaults to 0" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Brand Name</label>
+                    <input type="text" value={row.batch_number} onChange={e => updateBulkRow(index, 'batch_number', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Optional" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Expiry Date</label>
+                    <input type="date" value={row.expiry_date} onChange={e => updateBulkRow(index, 'expiry_date', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+                  </div>
+                  <div className="md:col-span-2 lg:col-span-3">
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Description</label>
+                    <textarea rows={2} value={row.description} onChange={e => updateBulkRow(index, 'description', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Optional notes..." />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
+
+          <datalist id="bulk-category-options">
+            {allCategories.map(cat => <option key={cat} value={cat} />)}
+          </datalist>
+
           <div className="flex justify-between items-center pt-2">
             <button type="button" onClick={addBulkRow} className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700">
-              <Plus className="h-4 w-4 mr-1" /> Add Another Row
+              <Plus className="h-4 w-4 mr-1" /> Add Another Item
             </button>
+            <span className="text-xs text-slate-400">Blank rows are ignored</span>
           </div>
+
           <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
             <button type="button" onClick={() => setIsBulkModalOpen(false)} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
             <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Add Stock"}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Add Items"}
             </button>
           </div>
         </form>

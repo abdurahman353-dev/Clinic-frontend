@@ -85,6 +85,15 @@ export function useStock() {
     return await stockAPI.bulkStore({ stocks });
   };
 
+  const bulkAddMedicines = async (items: any[]) => {
+    const res = await medicineAPI.bulkStore(items);
+    if (Array.isArray(res) && res.length > 0) {
+      setMedicines(prev => [...res, ...prev]);
+      setSummary((prev: any) => prev ? { ...prev, total: (prev.total || 0) + res.length } : prev);
+    }
+    return res;
+  };
+
   const addStock = async (stockData: { medicine_id: string | number, quantity: number, buying_price?: number | null, batch_number?: string, expiry_date?: string }) => {
     const res = await stockAPI.store(stockData);
     if (res) {
@@ -154,5 +163,5 @@ export function useStock() {
     }
   };
 
-  return { medicines, meta, summary, allCategories, isLoading, isRefreshing, errorMsg, fetchMedicines, fetchAllCategories, addMedicine, updateMedicine, addStock, bulkAddStock, adjustStock, updateCategory, deleteCategory, setMedicines };
+  return { medicines, meta, summary, allCategories, isLoading, isRefreshing, errorMsg, fetchMedicines, fetchAllCategories, addMedicine, updateMedicine, addStock, bulkAddStock, bulkAddMedicines, adjustStock, updateCategory, deleteCategory, setMedicines };
 }

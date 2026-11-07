@@ -77,6 +77,7 @@ declare module "@/lib/api" {
   export interface MedicineAPI {
     list: (params?: any) => Promise<any>;
     store: (data: any) => Promise<any>;
+    bulkStore: (items: any[]) => Promise<any>;
     update: (id: string | number, data: any) => Promise<any>;
     categories: () => Promise<string[]>;
     updateCategory: (old_name: string, new_name: string) => Promise<any>;

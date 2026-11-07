@@ -375,6 +375,11 @@ export const medicineAPI = {
         notifyDataChange();
         return unwrapResource(response.data);
     },
+    bulkStore: async (items) => {
+        const response = await apiClient.post('/medicines/bulk', { items });
+        notifyDataChange();
+        return unwrapResource(response.data);
+    },
     update: async (id, data) => {
         const response = await apiClient.put(`/medicines/${id}`, data);
         notifyDataChange();
