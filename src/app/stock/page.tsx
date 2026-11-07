@@ -142,7 +142,7 @@ export default function StockManagement() {
       size: finalSize,
       unit_price: formData.unit_price ? parseFloat(formData.unit_price) : 0,
       buying_price: formData.buying_price ? parseFloat(formData.buying_price) : null,
-      initial_stock: formData.initial_stock ? parseInt(formData.initial_stock, 10) : 0,
+      initial_stock: formData.initial_stock ? parseFloat(formData.initial_stock) : 0,
       minimum_stock: formData.minimum_stock ? parseInt(formData.minimum_stock, 10) : 0,
       reorder_level: formData.reorder_level ? parseInt(formData.reorder_level, 10) : 0,
     };
@@ -249,7 +249,7 @@ export default function StockManagement() {
         size: finalSize || null,
         unit: row.unit || null,
         dosage_form: row.dosage_form || null,
-        initial_stock: row.initial_stock !== "" ? parseInt(row.initial_stock, 10) : 0,
+        initial_stock: row.initial_stock !== "" ? parseFloat(row.initial_stock) : 0,
         buying_price: row.buying_price !== "" ? parseFloat(row.buying_price) : null,
         minimum_stock: row.minimum_stock !== "" ? parseInt(row.minimum_stock, 10) : 0,
         reorder_level: row.reorder_level !== "" ? parseInt(row.reorder_level, 10) : 0,
@@ -286,7 +286,7 @@ export default function StockManagement() {
     e.preventDefault();
     if (!selectedItem?.stock?.id || !adjustQty) return;
 
-    const adjustment = parseInt(adjustQty, 10);
+    const adjustment = parseFloat(adjustQty);
     const finalAdjustment = adjustType === "restock" ? adjustment : -adjustment;
 
     // Optimistic UI: Close modal and show success immediately
@@ -702,7 +702,7 @@ export default function StockManagement() {
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Quantity In Stock *</label>
-              <input required type="number" min="0" name="initial_stock" value={formData.initial_stock} onChange={handleChange} disabled={!!editingId} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm disabled:opacity-50 disabled:bg-slate-50" placeholder="e.g. 500" />
+              <input required type="number" min="0" step="0.01" name="initial_stock" value={formData.initial_stock} onChange={handleChange} disabled={!!editingId} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm disabled:opacity-50 disabled:bg-slate-50" placeholder="e.g. 500" />
               {editingId && <p className="text-xs text-slate-500 mt-1">Quantity adjust/restock in separate flow.</p>}
             </div>
             <div className="flex gap-4">
@@ -818,7 +818,7 @@ export default function StockManagement() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Quantity in Stock</label>
-                    <input type="number" min="0" value={row.initial_stock} onChange={e => updateBulkRow(index, 'initial_stock', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Defaults to 0" />
+                    <input type="number" min="0" step="0.01" value={row.initial_stock} onChange={e => updateBulkRow(index, 'initial_stock', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Defaults to 0" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Selling Price (KSh)</label>
@@ -895,7 +895,8 @@ export default function StockManagement() {
                 <input
                   required
                   type="number"
-                  min="1"
+                  min="0.1"
+                  step="0.01"
                   max={adjustType === "dispense" ? selectedItem?.stock?.quantity : undefined}
                   value={adjustQty}
                   onChange={(e) => setAdjustQty(e.target.value)}
@@ -910,7 +911,7 @@ export default function StockManagement() {
                 <div className="mt-2 flex justify-between text-[11px] font-bold">
                   <span className="text-slate-400 uppercase tracking-tighter">Projected Balance</span>
                   <span className="text-red-600 font-mono">
-                    {Math.max(0, (selectedItem?.stock?.quantity || 0) - (parseInt(adjustQty, 10) || 0))} {selectedItem?.unit}
+                    {Math.max(0, (selectedItem?.stock?.quantity || 0) - (parseFloat(adjustQty) || 0))} {selectedItem?.unit}
                   </span>
                 </div>
               )}
@@ -918,7 +919,7 @@ export default function StockManagement() {
                 <div className="mt-2 flex justify-between text-[11px] font-bold">
                   <span className="text-slate-400 uppercase tracking-tighter">New Total Level</span>
                   <span className="text-green-600 font-mono">
-                    {(selectedItem?.stock?.quantity || 0) + (parseInt(adjustQty, 10) || 0)} {selectedItem?.unit}
+                    {(selectedItem?.stock?.quantity || 0) + (parseFloat(adjustQty) || 0)} {selectedItem?.unit}
                   </span>
                 </div>
               )}

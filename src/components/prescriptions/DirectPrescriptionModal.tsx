@@ -6,11 +6,15 @@ import { medicineAPI, stockAPI, prescriptionAPI } from "@/lib/api";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { calculateQuantity, getFormCategory, getMedicineStrengthLabel } from "@/lib/dosage";
 
 interface Medicine {
   id: number;
   name: string;
   unit_price: number;
+  size?: string | null;
+  unit?: string | null;
+  dosage_form?: string | null;
 }
 
 interface Item {
@@ -115,56 +119,6 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
     }
   };
 
-  const getFormCategory = (med: any) => {
-    if (!med) return "exact";
-    const form = (med.dosage_form || "").toLowerCase();
-    const unit = (med.unit || "").toLowerCase();
-
-    const volumeForms = ["bottle", "syrup", "suspension", "liquid"];
-    const volumeUnits = ["bottle"];
-
-    const manualForms = ["tube", "ointment", "cream"];
-    const manualUnits = ["tube"];
-
-    if (volumeForms.some(v => form.includes(v)) || volumeUnits.includes(unit)) return "volume";
-    if (manualForms.some(m => form.includes(m)) || manualUnits.includes(unit)) return "manual";
-
-    return "exact";
-  };
-
-  const calculateQty = (item: Item, med: any) => {
-    const category = getFormCategory(med);
-    if (category === "manual") return item.quantity || 1;
-
-    const dose = parseFloat(item.dosage) || 0;
-    const freqMap: Record<string, number> = {
-      "once a day": 1,
-      "twice a day": 2,
-      "three times a day": 3,
-      "four times a day": 4,
-      "every 4 hours": 6,
-      "every 6 hours": 4,
-      "every 8 hours": 3,
-      "every 12 hours": 2,
-      "at bedtime": 1
-    };
-    const freq = freqMap[item.frequency] || 0;
-    const dur = parseInt(item.duration) || 0;
-
-    if (category === "volume") {
-      const sizeStr = med?.size?.toString() || "1";
-      const match = sizeStr.match(/(\d+(\.\d+)?)/);
-      const bottleSize = match ? parseFloat(match[0]) : 1;
-
-      const totalMl = dose * freq * dur;
-      const bottles = Math.ceil(totalMl / bottleSize);
-      return bottles > 0 ? bottles : 1;
-    }
-
-    const result = Math.ceil(dose * freq * dur);
-    return result > 0 ? result : 1;
-  };
-
   const updateItem = (index: number, field: keyof Item, value: any) => {
     const newItems = [...items];
     const item = { ...newItems[index], [field]: value };
@@ -178,7 +132,7 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
 
     // Auto-calculate quantity if it's not the manual quantity field being changed
     if (field !== "quantity" && med) {
-      item.quantity = calculateQty(item, med);
+      item.quantity = calculateQuantity(item, med, item.quantity);
     }
     
     newItems[index] = item;
@@ -381,13 +335,10 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
                             if (originalItem) originalQty = (originalItem.quantity || 0);
                           }
                           const totalAvailable = physicalStock + originalQty;
-                          const stockLabel = originalQty > 0
-                            ? `${physicalStock} in-stock + ${originalQty} prescribed`
-                            : `${physicalStock} in-stock`;
 
                           return {
                             value: m.id.toString(),
-                            label: `${m.name} - KSh ${m.unit_price.toLocaleString()} (${stockLabel})`,
+                            label: `${m.name} - KSh ${m.unit_price.toLocaleString()} (${getMedicineStrengthLabel(m)})`,
                             disabled: totalAvailable <= 0
                           };
                         });
@@ -474,11 +425,12 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
                         <input
                           type="number"
                           required
-                          min="1"
+                          min="0.1"
+                          step="0.01"
                           readOnly
                           title="Quantity is auto-calculated"
                           value={item.quantity}
-                          onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value))}
+                          onChange={(e) => updateItem(index, "quantity", parseFloat(e.target.value))}
                           className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all outline-none text-sm font-bold text-primary-900 cursor-not-allowed"
                         />
                       </div>
