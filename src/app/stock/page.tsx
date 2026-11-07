@@ -29,12 +29,12 @@ export default function StockManagement() {
   const { medicines, meta, summary, allCategories, isLoading, fetchMedicines, addMedicine, updateMedicine, addStock, bulkAddStock, adjustStock, updateCategory, deleteCategory } = useStock();
   const { user } = useAuth();
   const router = useRouter();
-  
+
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [filter, setFilter] = useState("all");
-  
+
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -332,7 +332,7 @@ export default function StockManagement() {
     return Array.from(new Set([...allCategories, ...current]));
   }, [allCategories, formData.category]);
 
-  const filteredCategories = availableCategories.filter(cat => 
+  const filteredCategories = availableCategories.filter(cat =>
     cat.toLowerCase().includes(categorySearch.toLowerCase())
   );
 
@@ -448,7 +448,7 @@ export default function StockManagement() {
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Item Details</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Category</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Batch</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Brand Name</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Stock Level</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Price / Unit</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Expiry</th>
@@ -561,7 +561,7 @@ export default function StockManagement() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Category *</label>
               <div className="relative">
-                <div 
+                <div
                   className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm bg-white flex items-center justify-between cursor-pointer focus-within:ring-2 focus-within:ring-primary-500 transition-all"
                   onClick={() => setIsCategoryOpen(!isCategoryOpen)}
                 >
@@ -577,23 +577,23 @@ export default function StockManagement() {
                       <Search className="h-3 w-3 mr-2" /> Search or Add New
                     </div>
                     <div className="p-2">
-                       <input 
-                         type="text" 
-                         autoFocus
-                         className="w-full px-2 py-1.5 text-sm border-0 focus:ring-0 bg-slate-50 rounded-md"
-                         placeholder="New or search..."
-                         value={categorySearch}
-                         onChange={(e) => setCategorySearch(e.target.value)}
-                         onClick={(e) => e.stopPropagation()}
-                       />
+                      <input
+                        type="text"
+                        autoFocus
+                        className="w-full px-2 py-1.5 text-sm border-0 focus:ring-0 bg-slate-50 rounded-md"
+                        placeholder="New or search..."
+                        value={categorySearch}
+                        onChange={(e) => setCategorySearch(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
                     </div>
                     <div className="max-h-[130px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                       {filteredCategories.map((cat) => (
-                        <div 
-                          key={cat} 
+                        <div
+                          key={cat}
                           className={`group px-3 py-2 text-sm cursor-pointer hover:bg-primary-50 flex items-center justify-between transition-colors ${formData.category === cat ? 'bg-primary-50 text-primary-700 font-bold' : 'text-slate-600'}`}
                           onClick={() => {
-                            setFormData({...formData, category: cat});
+                            setFormData({ ...formData, category: cat });
                             setIsCategoryOpen(false);
                             setCategorySearch("");
                           }}
@@ -603,15 +603,15 @@ export default function StockManagement() {
                             {formData.category === cat && <Check className="h-3.5 w-3.5 ml-2 text-primary-500" />}
                           </div>
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button 
-                              type="button" 
+                            <button
+                              type="button"
                               onClick={(e) => handleCategoryEdit(cat, e)}
                               className="p-1 hover:bg-white rounded text-slate-400 hover:text-primary-600 shadow-sm border border-transparent hover:border-slate-100"
                             >
                               <Edit2 className="h-3 w-3" />
                             </button>
-                            <button 
-                              type="button" 
+                            <button
+                              type="button"
                               onClick={(e) => handleCategoryDelete(cat, e)}
                               className="p-1 hover:bg-white rounded text-slate-400 hover:text-red-600 shadow-sm border border-transparent hover:border-slate-100"
                             >
@@ -620,12 +620,12 @@ export default function StockManagement() {
                           </div>
                         </div>
                       ))}
-                      
+
                       {categorySearch && !availableCategories.includes(categorySearch) && (
-                        <div 
+                        <div
                           className="px-3 py-3 text-sm cursor-pointer hover:bg-slate-50 border-t border-slate-100 text-primary-600 font-bold flex items-center bg-blue-50/30"
                           onClick={() => {
-                            setFormData({...formData, category: categorySearch});
+                            setFormData({ ...formData, category: categorySearch });
                             setIsCategoryOpen(false);
                             setCategorySearch("");
                           }}
@@ -707,7 +707,7 @@ export default function StockManagement() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Batch Number</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Brand Name</label>
               <input type="text" name="batch_number" value={formData.batch_number} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Optional" />
             </div>
             <div>
@@ -746,7 +746,7 @@ export default function StockManagement() {
                   <th className="px-3 py-2 border-b border-slate-200">Product *</th>
                   <th className="px-3 py-2 border-b border-slate-200 w-28">Quantity *</th>
                   <th className="px-3 py-2 border-b border-slate-200 w-36">Buying Price</th>
-                  <th className="px-3 py-2 border-b border-slate-200 w-32">Batch No.</th>
+                  <th className="px-3 py-2 border-b border-slate-200 w-32">Brand Name.</th>
                   <th className="px-3 py-2 border-b border-slate-200 w-40">Expiry Date</th>
                   <th className="px-3 py-2 border-b border-slate-200 w-10"></th>
                 </tr>
