@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState } from "react";
 import { Bell, Search, UserCircle, LogOut, User, Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useStock } from "@/hooks/useStock";
+import { useStockAlert } from "@/hooks/useStockAlert";
 import Link from "next/link";
 import { Breadcrumb } from "./Breadcrumb";
 
@@ -18,27 +18,7 @@ export function Header({
 }) {
   const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { medicines, fetchMedicines } = useStock();
-
-  useEffect(() => {
-    fetchMedicines();
-  }, [fetchMedicines]);
-
-  const stockAlertStatus = useMemo(() => {
-    let status = 'none';
-    medicines.forEach((m: any) => {
-      const qty = m.stock?.quantity || 0;
-      const min = m.stock?.minimum_stock || 0;
-      const reorder = m.stock?.reorder_level || 0;
-      
-      if (qty <= min) {
-        status = 'critical';
-      } else if (qty <= reorder && status !== 'critical') {
-        status = 'low';
-      }
-    });
-    return status;
-  }, [medicines]);
+  const stockAlertStatus = useStockAlert(!!user?.roles?.includes('super-admin'));
 
   let bellColorClass = "text-slate-400 hover:text-slate-500";
   let bellBgClass = "hover:bg-slate-100";

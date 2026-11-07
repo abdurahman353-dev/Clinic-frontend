@@ -35,8 +35,12 @@ export default function Home() {
 
     fetchDashboardData();
 
-    // POLING: Refresh dashboard every 60 seconds for real-time feel
-    const interval = setInterval(fetchDashboardData, 60000);
+    // Refresh dashboard every 120 seconds only when tab is active
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        fetchDashboardData();
+      }
+    }, 120000);
     return () => clearInterval(interval);
   }, []);
 

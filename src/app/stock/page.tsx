@@ -5,6 +5,7 @@ import {
   Package,
   AlertTriangle,
   Plus,
+  PackagePlus,
   Search,
   ArrowUpRight,
   ArrowDownRight,
@@ -25,7 +26,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 
 export default function StockManagement() {
-  const { medicines, meta, summary, allCategories, isLoading, fetchMedicines, fetchAllCategories, addMedicine, updateMedicine, addStock, adjustStock, updateCategory, deleteCategory } = useStock();
+  const { medicines, meta, summary, allCategories, isLoading, fetchMedicines, addMedicine, updateMedicine, addStock, bulkAddStock, adjustStock, updateCategory, deleteCategory } = useStock();
   const { user } = useAuth();
   const router = useRouter();
   
@@ -39,6 +40,13 @@ export default function StockManagement() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
+
+  // Bulk Add Stock Modal State
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [bulkMedicineOptions, setBulkMedicineOptions] = useState<any[]>([]);
+  const [bulkLoadingOptions, setBulkLoadingOptions] = useState(false);
+  const emptyBulkRow = { medicine_id: "", quantity: "", buying_price: "", batch_number: "", expiry_date: "" };
+  const [bulkRows, setBulkRows] = useState<any[]>([{ ...emptyBulkRow }]);
 
   // Adjustment Modal State
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
@@ -57,6 +65,7 @@ export default function StockManagement() {
     name: "",
     category: "Antibiotics",
     unit_price: "",
+    buying_price: "",
     description: "",
     size: "",
     unit: "tablets",
@@ -80,7 +89,7 @@ export default function StockManagement() {
     };
   }, [searchTerm]);
 
-  const loadStock = useCallback(async () => {
+  const loadStock = useCallback(async (options: { silent?: boolean } = {}) => {
     const params: any = {
       'page': currentPage,
       'filter[search]': debouncedSearch
@@ -88,7 +97,7 @@ export default function StockManagement() {
     if (filter !== "all") {
       params['filter[status]'] = filter;
     }
-    await fetchMedicines(params);
+    await fetchMedicines(params, options);
   }, [fetchMedicines, currentPage, debouncedSearch, filter]);
 
   useEffect(() => {
@@ -98,8 +107,7 @@ export default function StockManagement() {
       return;
     }
     loadStock();
-    fetchAllCategories();
-  }, [loadStock, fetchAllCategories, user, router]);
+  }, [loadStock, user, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -119,6 +127,7 @@ export default function StockManagement() {
       ...formData,
       size: finalSize,
       unit_price: formData.unit_price ? parseFloat(formData.unit_price) : 0,
+      buying_price: formData.buying_price ? parseFloat(formData.buying_price) : null,
       initial_stock: formData.initial_stock ? parseInt(formData.initial_stock, 10) : 0,
       minimum_stock: formData.minimum_stock ? parseInt(formData.minimum_stock, 10) : 0,
       reorder_level: formData.reorder_level ? parseInt(formData.reorder_level, 10) : 0,
@@ -128,7 +137,7 @@ export default function StockManagement() {
     setIsAddItemModalOpen(false);
     setEditingId(null);
     setFormData({
-      name: "", category: "Antibiotics", unit_price: "", description: "", size: "", unit: "tablets",
+      name: "", category: "Antibiotics", unit_price: "", buying_price: "", description: "", size: "", unit: "tablets",
       dosage_form: "tablet", initial_stock: "", minimum_stock: "", reorder_level: "", batch_number: "", expiry_date: ""
     });
 
@@ -140,7 +149,6 @@ export default function StockManagement() {
         await addMedicine(payload);
         toast.success("Item added to inventory successfully!");
       }
-      loadStock(); // Re-sync
     } catch (err: any) {
       // Global errorHandler in api.js handles this
     } finally {
@@ -154,6 +162,7 @@ export default function StockManagement() {
       name: item.name || "",
       category: item.category || "Antibiotics",
       unit_price: item.unit_price?.toString() || "",
+      buying_price: item.stock?.buying_price?.toString() || "",
       description: item.description || "",
       size: item.size || "",
       unit: item.unit || "tablets",
@@ -170,10 +179,66 @@ export default function StockManagement() {
   const handleAdd = () => {
     setEditingId(null);
     setFormData({
-      name: "", category: "Antibiotics", unit_price: "", description: "", size: "", unit: "tablets",
+      name: "", category: "Antibiotics", unit_price: "", buying_price: "", description: "", size: "", unit: "tablets",
       dosage_form: "tablet", initial_stock: "", minimum_stock: "", reorder_level: "", batch_number: "", expiry_date: ""
     });
     setIsAddItemModalOpen(true);
+  };
+
+  const handleOpenBulk = async () => {
+    setIsBulkModalOpen(true);
+    if (bulkMedicineOptions.length === 0) {
+      setBulkLoadingOptions(true);
+      try {
+        const res = await medicineAPI.list({ per_page: -1 });
+        setBulkMedicineOptions(res.data || []);
+      } catch (err) {
+        // Global error handler in api.js shows the message
+      } finally {
+        setBulkLoadingOptions(false);
+      }
+    }
+  };
+
+  const addBulkRow = () => setBulkRows(prev => [...prev, { ...emptyBulkRow }]);
+
+  const removeBulkRow = (index: number) => {
+    setBulkRows(prev => prev.length > 1 ? prev.filter((_, i) => i !== index) : prev);
+  };
+
+  const updateBulkRow = (index: number, field: string, value: string) => {
+    setBulkRows(prev => prev.map((row, i) => i === index ? { ...row, [field]: value } : row));
+  };
+
+  const handleBulkSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const payload = bulkRows
+      .filter(row => row.medicine_id && row.quantity !== "")
+      .map(row => ({
+        medicine_id: parseInt(row.medicine_id, 10),
+        quantity: parseInt(row.quantity, 10),
+        buying_price: row.buying_price !== "" ? parseFloat(row.buying_price) : null,
+        batch_number: row.batch_number || null,
+        expiry_date: row.expiry_date || null,
+      }));
+
+    if (payload.length === 0) {
+      toast.error("Add at least one row with a product and quantity.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await bulkAddStock(payload);
+      toast.success(`${payload.length} stock ${payload.length === 1 ? 'entry' : 'entries'} added successfully!`);
+      setIsBulkModalOpen(false);
+      setBulkRows([{ ...emptyBulkRow }]);
+    } catch (err) {
+      // Global error handler in api.js shows the message
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleOpenAdjust = (item: any, type: "restock" | "dispense") => {
@@ -197,10 +262,9 @@ export default function StockManagement() {
     setIsSubmitting(true);
     try {
       await adjustStock(selectedItem.stock.id, finalAdjustment);
-      loadStock(); // Re-sync
     } catch (err) {
-      // Re-fetch or handle error (api.js interceptor handles visual error)
-      loadStock();
+      // Re-fetch to restore the correct state on error
+      loadStock({ silent: true });
     } finally {
       setIsSubmitting(false);
     }
@@ -228,7 +292,6 @@ export default function StockManagement() {
 
     try {
       await updateCategory(oldName, nextName);
-      loadStock();
     } catch (err) {
       // Hook handles state restoration
     }
@@ -250,7 +313,6 @@ export default function StockManagement() {
 
     try {
       await deleteCategory(name);
-      loadStock();
     } catch (err) {
       // Hook handles state restoration
     }
@@ -281,13 +343,22 @@ export default function StockManagement() {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Stock Management</h1>
           <p className="text-slate-500 mt-1">Manage clinic inventory and supplies</p>
         </div>
-        <button
-          onClick={handleAdd}
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-primary-600 text-white hover:bg-primary-700 h-10 px-4 py-2 shadow-sm"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Item
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleOpenBulk}
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 h-10 px-4 py-2 shadow-sm"
+          >
+            <PackagePlus className="mr-2 h-4 w-4" />
+            Bulk Add Stock
+          </button>
+          <button
+            onClick={handleAdd}
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-primary-600 text-white hover:bg-primary-700 h-10 px-4 py-2 shadow-sm"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Item
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -428,7 +499,10 @@ export default function StockManagement() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-bold text-slate-900">KSh {item.unit_price || '0.00'}</div>
-                        <div className="text-xs text-slate-500 mt-0.5">{item.unit || 'units'}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">Selling / {item.unit || 'units'}</div>
+                        <div className="text-[11px] text-slate-500 mt-1">
+                          Buying: <span className="font-medium text-slate-700">KSh {item.stock?.buying_price ?? '0.00'}</span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {item.stock?.expiry_date ? (
@@ -613,9 +687,14 @@ export default function StockManagement() {
                 </select>
               </div>
               <div className="flex-1">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Unit Price (KSh)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Selling Price (KSh)</label>
                 <input type="number" step="0.01" name="unit_price" value={formData.unit_price} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="0.00" />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Buying Price (KSh)</label>
+              <input type="number" step="0.01" min="0" name="buying_price" value={formData.buying_price} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Cost price per unit" />
             </div>
 
             <div>
@@ -646,6 +725,81 @@ export default function StockManagement() {
             <button type="button" onClick={() => { setIsAddItemModalOpen(false); setEditingId(null); }} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
             <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {editingId ? "Saving..." : "Adding..."}</> : editingId ? "Save Changes" : "Add to Inventory"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Bulk Add Stock Modal */}
+      <Modal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        title="Bulk Add Stock"
+        description="Add incoming stock for one or more existing products at once"
+        maxWidth="max-w-5xl"
+      >
+        <form onSubmit={handleBulkSubmit} className="space-y-4">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[760px]">
+              <thead>
+                <tr className="text-slate-600 text-xs font-bold uppercase tracking-wider bg-slate-50">
+                  <th className="px-3 py-2 border-b border-slate-200">Product *</th>
+                  <th className="px-3 py-2 border-b border-slate-200 w-28">Quantity *</th>
+                  <th className="px-3 py-2 border-b border-slate-200 w-36">Buying Price</th>
+                  <th className="px-3 py-2 border-b border-slate-200 w-32">Batch No.</th>
+                  <th className="px-3 py-2 border-b border-slate-200 w-40">Expiry Date</th>
+                  <th className="px-3 py-2 border-b border-slate-200 w-10"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {bulkRows.map((row, index) => (
+                  <tr key={index} className="hover:bg-slate-50">
+                    <td className="px-2 py-2">
+                      <select required value={row.medicine_id} onChange={e => updateBulkRow(index, 'medicine_id', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                        <option value="">{bulkLoadingOptions ? "Loading products..." : "Select product..."}</option>
+                        {bulkMedicineOptions.map((med) => (
+                          <option key={med.id} value={med.id}>{med.name}{med.size ? ` (${med.size})` : ''}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-2 py-2">
+                      <input required type="number" min="0" value={row.quantity} onChange={e => updateBulkRow(index, 'quantity', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 100" />
+                    </td>
+                    <td className="px-2 py-2">
+                      <div className="relative rounded-md shadow-sm">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
+                          <span className="text-slate-400 text-xs">KSh</span>
+                        </div>
+                        <input type="number" step="0.01" min="0" value={row.buying_price} onChange={e => updateBulkRow(index, 'buying_price', e.target.value)} className="block w-full rounded-md border-slate-300 pl-10 focus:border-primary-500 focus:ring-primary-500 sm:text-sm py-1.5" placeholder="0.00" />
+                      </div>
+                    </td>
+                    <td className="px-2 py-2">
+                      <input type="text" value={row.batch_number} onChange={e => updateBulkRow(index, 'batch_number', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Optional" />
+                    </td>
+                    <td className="px-2 py-2">
+                      <input type="date" value={row.expiry_date} onChange={e => updateBulkRow(index, 'expiry_date', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+                    </td>
+                    <td className="px-2 py-2 text-right">
+                      {bulkRows.length > 1 && (
+                        <button type="button" onClick={() => removeBulkRow(index)} className="text-slate-400 hover:text-red-600 transition-colors">
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex justify-between items-center pt-2">
+            <button type="button" onClick={addBulkRow} className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700">
+              <Plus className="h-4 w-4 mr-1" /> Add Another Row
+            </button>
+          </div>
+          <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <button type="button" onClick={() => setIsBulkModalOpen(false)} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
+            <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Add Stock"}
             </button>
           </div>
         </form>

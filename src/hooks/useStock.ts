@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { medicineAPI, stockAPI } from "@/lib/api";
+import { onDataChange } from "@/lib/dataEvents";
 
 export function useStock() {
   const [medicines, setMedicines] = useState<any[]>([]);
@@ -7,20 +8,37 @@ export function useStock() {
   const [summary, setSummary] = useState<any>(null);
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const lastParamsRef = useRef<Record<string, any>>({});
 
-  const fetchMedicines = useCallback(async (params = {}) => {
-    setIsLoading(true);
+  const fetchMedicines = useCallback(async (params: Record<string, any> = {}, options: { silent?: boolean } = {}) => {
+    const silent = options.silent === true;
+    lastParamsRef.current = params;
+
+    if (silent) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     setErrorMsg("");
+
     try {
       const res = await medicineAPI.list(params);
       setMedicines(res.data || []);
       setMeta(res.meta || null);
       setSummary(res.summary || null);
+      if (Array.isArray(res.categories)) {
+        setAllCategories(res.categories);
+      }
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to load medicines and stock");
     } finally {
-      setIsLoading(false);
+      if (silent) {
+        setIsRefreshing(false);
+      } else {
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -33,16 +51,18 @@ export function useStock() {
     }
   }, []);
 
+  // Any successful mutation anywhere in the app triggers a silent re-sync.
+  useEffect(() => onDataChange(() => {
+    fetchMedicines(lastParamsRef.current, { silent: true });
+  }), [fetchMedicines]);
+
   const addMedicine = async (medData: any) => {
-    try {
-      const res = await medicineAPI.store(medData);
-      if (res.data) {
-        setMedicines(prev => [res.data, ...prev]);
-      }
-      return res.data;
-    } catch (err: any) {
-      throw err;
+    const res = await medicineAPI.store(medData);
+    if (res) {
+      setMedicines(prev => [res, ...prev]);
+      setSummary((prev: any) => prev ? { ...prev, total: (prev.total || 0) + 1 } : prev);
     }
+    return res;
   };
 
   const updateMedicine = async (medId: number, medData: any) => {
@@ -51,43 +71,43 @@ export function useStock() {
 
     try {
       const res = await medicineAPI.update(medId, medData);
-      if (res.data) {
-        setMedicines(p => p.map(m => m.id === medId ? res.data : m));
+      if (res) {
+        setMedicines(p => p.map(m => m.id === medId ? res : m));
       }
-      return res.data;
+      return res;
     } catch (err: any) {
       setMedicines(prev);
       throw err;
     }
   };
 
-  const addStock = async (stockData: { medicine_id: string | number, quantity: number, batch_number?: string, expiry_date?: string }) => {
-     try {
-         const res = await stockAPI.store(stockData);
-         if (res.data) {
-            setMedicines(prev => prev.map(m => {
-                if (m.id == stockData.medicine_id) {
-                    return { ...m, stock: res.data };
-                }
-                return m;
-            }));
-         }
-         return res.data;
-     } catch (err: any) {
-         throw err;
-     }
+  const bulkAddStock = async (stocks: any[]) => {
+    return await stockAPI.bulkStore({ stocks });
+  };
+
+  const addStock = async (stockData: { medicine_id: string | number, quantity: number, buying_price?: number | null, batch_number?: string, expiry_date?: string }) => {
+    const res = await stockAPI.store(stockData);
+    if (res) {
+      setMedicines(prev => prev.map(m => {
+        if (m.id == stockData.medicine_id) {
+          return { ...m, stock: res };
+        }
+        return m;
+      }));
+    }
+    return res;
   };
 
   const adjustStock = async (stockId: number, adjustment: number) => {
     // Optimistic local update
     setMedicines(prev => prev.map(m => {
       if (m.stock && m.stock.id === stockId) {
-        return { 
-          ...m, 
-          stock: { 
-            ...m.stock, 
-            quantity: (m.stock.quantity ?? 0) + adjustment 
-          } 
+        return {
+          ...m,
+          stock: {
+            ...m.stock,
+            quantity: (m.stock.quantity ?? 0) + adjustment
+          }
         };
       }
       return m;
@@ -95,16 +115,16 @@ export function useStock() {
 
     try {
       const res = await stockAPI.adjust(stockId, adjustment);
-      if (res.data) {
+      if (res) {
         setMedicines(prev => prev.map(m => {
           if (m.stock && m.stock.id === stockId) {
-            return { ...m, stock: res.data };
+            return { ...m, stock: res };
           }
           return m;
         }));
       }
-      return res.data;
-    } catch (err: any) {
+      return res;
+    } catch (err) {
       // Caller should re-fetch medicines to restore correct state on error
       throw err;
     }
@@ -134,5 +154,5 @@ export function useStock() {
     }
   };
 
-  return { medicines, meta, summary, allCategories, isLoading, errorMsg, fetchMedicines, fetchAllCategories, addMedicine, updateMedicine, addStock, adjustStock, updateCategory, deleteCategory, setMedicines };
+  return { medicines, meta, summary, allCategories, isLoading, isRefreshing, errorMsg, fetchMedicines, fetchAllCategories, addMedicine, updateMedicine, addStock, bulkAddStock, adjustStock, updateCategory, deleteCategory, setMedicines };
 }

@@ -1,8 +1,18 @@
 import type { NextConfig } from "next";
 
+const backendUrl = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000")
+  .replace(/\/+$/, "")
+  .replace(/\/api$/, "");
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
-// Force dev server restart to pick up new routes

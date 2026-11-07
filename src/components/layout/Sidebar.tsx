@@ -4,8 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, Activity, NotepadText, FileText, Package, CreditCard, BarChart3, Shield, ScrollText } from "lucide-react";
 import Image from "next/image";
-import { useState, useEffect } from "react";
-import { stockAPI } from "@/lib/api";
+import { useStockAlert } from "@/hooks/useStockAlert";
 import { useAuth } from "@/context/AuthContext";
 
 export function Sidebar({ 
@@ -21,43 +20,9 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const { user } = useAuth();
-  const [stockStatus, setStockStatus] = useState<'normal' | 'low' | 'critical'>('normal');
 
   const isAdmin = user?.roles?.includes('super-admin');
-
-  useEffect(() => {
-    // Only check stock status for super-admins
-    if (!isAdmin) return;
-
-    const checkStock = async () => {
-      try {
-        const response = await stockAPI.list();
-        const stocks = response.data || [];
-
-        let hasCritical = false;
-        let hasLow = false;
-
-        stocks.forEach((m: any) => {
-          const qty = m.quantity || 0;
-          const min = m.minimum_stock || 0;
-          const reorder = m.reorder_level || 0;
-
-          if (qty <= min) hasCritical = true;
-          else if (qty <= reorder) hasLow = true;
-        });
-
-        if (hasCritical) setStockStatus('critical');
-        else if (hasLow) setStockStatus('low');
-        else setStockStatus('normal');
-      } catch (error) {
-        console.error("Failed to check stock status", error);
-      }
-    };
-
-    checkStock();
-    const interval = setInterval(checkStock, 60000); // Check every minute
-    return () => clearInterval(interval);
-  }, [isAdmin]);
+  const stockStatus = useStockAlert(!!isAdmin);
 
   const navItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },

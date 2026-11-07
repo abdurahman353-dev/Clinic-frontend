@@ -86,6 +86,7 @@ declare module "@/lib/api" {
   export interface StockAPI {
     list: (params?: any) => Promise<any>;
     store: (data: any) => Promise<any>;
+    bulkStore: (data: any) => Promise<any>;
     adjust: (id: string | number, adjustment: number) => Promise<any>;
   }
 

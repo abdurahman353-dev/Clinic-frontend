@@ -1,18 +1,29 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 import { toast } from "sonner";
+import { notifyDataChange } from "./dataEvents";
 
 const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-const API_BASE_URL = RAW_API_URL.endsWith('/api') ? RAW_API_URL : `${RAW_API_URL}/api`;
+const ABSOLUTE_API_URL = RAW_API_URL.endsWith('/api') ? RAW_API_URL : `${RAW_API_URL}/api`;
+// In the browser, use the Next.js proxy so requests are same-origin (no CORS preflight).
+const API_BASE_URL = typeof window !== 'undefined' ? '/api' : ABSOLUTE_API_URL;
 
 // Create axios instance with default config
 const apiClient = axios.create({
     baseURL: API_BASE_URL,
+    timeout: 30000,
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
     },
 });
+
+// Unwrap a single-resource response ({ data: {...} }) while keeping list payloads intact.
+const unwrapResource = (payload) => (
+    payload && typeof payload === 'object' && !Array.isArray(payload) && 'data' in payload
+        ? payload.data
+        : payload
+);
 
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
@@ -312,14 +323,17 @@ export const prescriptionAPI = {
     },
     store: async (visitId, data) => {
         const response = await apiClient.post(`/visits/${visitId}/prescriptions`, data);
+        notifyDataChange();
         return response.data;
     },
     update: async (visitId, id, data) => {
         const response = await apiClient.patch(`/visits/${visitId}/prescriptions/${id}`, data);
+        notifyDataChange();
         return response.data;
     },
     delete: async (visitId, id) => {
         const response = await apiClient.delete(`/visits/${visitId}/prescriptions/${id}`);
+        notifyDataChange();
         return response.data;
     },
     listGlobal: async (params = {}) => {
@@ -328,14 +342,17 @@ export const prescriptionAPI = {
     },
     deleteGlobal: async (id) => {
         const response = await apiClient.delete(`/prescriptions/${id}`);
+        notifyDataChange();
         return response.data;
     },
     storeStandalone: async (data) => {
         const response = await apiClient.post('/prescriptions/standalone', data);
+        notifyDataChange();
         return response.data;
     },
     updateStandalone: async (id, data) => {
         const response = await apiClient.patch(`/prescriptions/standalone/${id}`, data);
+        notifyDataChange();
         return response.data;
     },
     get: async (id) => {
@@ -355,18 +372,22 @@ export const medicineAPI = {
     },
     store: async (data) => {
         const response = await apiClient.post('/medicines', data);
-        return response.data;
+        notifyDataChange();
+        return unwrapResource(response.data);
     },
     update: async (id, data) => {
         const response = await apiClient.put(`/medicines/${id}`, data);
-        return response.data;
+        notifyDataChange();
+        return unwrapResource(response.data);
     },
     updateCategory: async (old_name, new_name) => {
         const response = await apiClient.post('/medicines/category/update', { old_name, new_name });
+        notifyDataChange();
         return response.data;
     },
     deleteCategory: async (name) => {
         const response = await apiClient.post('/medicines/category/delete', { name });
+        notifyDataChange();
         return response.data;
     },
     categories: async () => {
@@ -382,11 +403,18 @@ export const stockAPI = {
     },
     store: async (data) => {
         const response = await apiClient.post('/stocks', data);
-        return response.data;
+        notifyDataChange();
+        return unwrapResource(response.data);
+    },
+    bulkStore: async (data) => {
+        const response = await apiClient.post('/stocks/bulk', data);
+        notifyDataChange();
+        return unwrapResource(response.data);
     },
     adjust: async (id, adjustment) => {
         const response = await apiClient.patch(`/stocks/${id}/adjust`, { adjustment });
-        return response.data;
+        notifyDataChange();
+        return unwrapResource(response.data);
     }
 };
 
