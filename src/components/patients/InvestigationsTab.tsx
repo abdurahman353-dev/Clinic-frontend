@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, CheckCircle2, Clock, Loader2, FileText, Edit2, X, Search, Trash2, ArrowLeft, AlertTriangle } from "lucide-react";
+import { Plus, CheckCircle2, Clock, Loader2, FileText, Edit2, X, Search, Trash2, ArrowLeft, AlertTriangle, ListChecks } from "lucide-react";
 import { useInvestigations } from "@/hooks/useInvestigations";
 import { useLabTests } from "@/hooks/useLabTests";
 import { labTestAPI } from "@/lib/api";
@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { Pagination } from "@/components/ui/Pagination";
 
 type FormView = "table" | "request" | "result";
+
+const emptyBulkInvestigationRow = { name: "", type: "lab", cost: "" };
 
 export default function InvestigationsTab({
   patientId,
@@ -31,7 +33,7 @@ export default function InvestigationsTab({
   activeVisitId?: number | null;
   onStartNewVisit?: () => void;
 }): React.JSX.Element {
-  const { investigations, meta, isLoading, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations } = useInvestigations(patientId, initialData, activeVisitId);
+  const { investigations, meta, isLoading, fetchInvestigations, addInvestigation, bulkAddInvestigations, updateInvestigation, setInvestigations } = useInvestigations(patientId, initialData, activeVisitId);
   const [currentPage, setCurrentPage] = useState(1);
   const { labTests, isLoadingLabTests, fetchLabTests, addLabTest, updateLabTest, bulkAddLabTests, deleteLabTest } = useLabTests();
 
@@ -46,6 +48,9 @@ export default function InvestigationsTab({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTests, setSelectedTests] = useState<any[]>([]);
   const [bulkNewLabTests, setBulkNewLabTests] = useState<any[]>([{ name: "", type: "lab", default_cost: "" }]);
+  const [isBulkRequestModalOpen, setIsBulkRequestModalOpen] = useState(false);
+  const [bulkInvestigationRows, setBulkInvestigationRows] = useState<any[]>([{ ...emptyBulkInvestigationRow }]);
+  const [bulkInvestigationNotes, setBulkInvestigationNotes] = useState("");
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [labTestToDelete, setLabTestToDelete] = useState<any>(null);
 
@@ -131,15 +136,19 @@ export default function InvestigationsTab({
           ? selectedTests
           : [{ name: requestForm.name, type: requestForm.type, cost: requestForm.cost }];
 
-        await Promise.all(testsToRequest.map(test =>
-          addInvestigation({
-            name: test.name,
-            type: test.type,
-            notes: requestForm.notes,
-            cost: test.cost || test.default_cost,
-            diagnosis: requestForm.diagnosis
-          })
-        ));
+        const payload = testsToRequest.map(test => ({
+          name: test.name,
+          type: test.type,
+          notes: requestForm.notes,
+          cost: test.cost || test.default_cost || 0,
+          diagnosis: requestForm.diagnosis
+        }));
+
+        if (payload.length > 1) {
+          await bulkAddInvestigations(payload);
+        } else {
+          await addInvestigation(payload[0]);
+        }
         toast.success(`${testsToRequest.length} investigation(s) requested successfully`);
       }
       resetRequestForm();
@@ -257,6 +266,84 @@ export default function InvestigationsTab({
     const newRows = [...bulkNewLabTests];
     newRows[index] = { ...newRows[index], [field]: value };
     setBulkNewLabTests(newRows);
+  };
+
+  const resetBulkRequestForm = () => {
+    setBulkInvestigationRows([{ ...emptyBulkInvestigationRow }]);
+    setBulkInvestigationNotes("");
+  };
+
+  const handleOpenBulkRequest = () => {
+    resetBulkRequestForm();
+    setIsBulkRequestModalOpen(true);
+  };
+
+  const addBulkInvestigationRow = () => {
+    setBulkInvestigationRows(prev => [...prev, { ...emptyBulkInvestigationRow }]);
+  };
+
+  const removeBulkInvestigationRow = (index: number) => {
+    setBulkInvestigationRows(prev => prev.length > 1 ? prev.filter((_, i) => i !== index) : prev);
+  };
+
+  const updateBulkInvestigationRow = (index: number, field: string, value: string) => {
+    setBulkInvestigationRows(prev => prev.map((row, i) => {
+      if (i !== index) return row;
+
+      const next = { ...row, [field]: value };
+      if (field === "name") {
+        const match = labTests.find(test => test.name.toLowerCase() === value.trim().toLowerCase());
+        if (match) {
+          next.type = match.type || "lab";
+          next.cost = match.default_cost !== null && match.default_cost !== undefined ? String(match.default_cost) : "";
+        }
+      }
+      return next;
+    }));
+  };
+
+  const bulkRowHasContent = (row: any) => row.name?.trim() || row.cost !== "";
+
+  const handleBulkRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const filledRows = bulkInvestigationRows.filter(bulkRowHasContent);
+
+    if (filledRows.length === 0) {
+      toast.error("Please add at least one investigation");
+      return;
+    }
+
+    if (filledRows.some(row => !row.name?.trim())) {
+      toast.error("Investigation name is required for every row");
+      return;
+    }
+
+    if (filledRows.some(row => row.cost !== "" && isNaN(parseFloat(row.cost)))) {
+      toast.error("Please enter a valid test fee for every investigation");
+      return;
+    }
+
+    const payload = filledRows.map(row => ({
+      name: row.name.trim(),
+      type: row.type || "lab",
+      cost: row.cost !== "" ? parseFloat(row.cost) : 0,
+      notes: bulkInvestigationNotes.trim() || null,
+    }));
+
+    setIsSubmitting(true);
+
+    try {
+      const created = await bulkAddInvestigations(payload);
+      toast.success(`${created.length} investigation(s) requested successfully`);
+      setIsBulkRequestModalOpen(false);
+      resetBulkRequestForm();
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || "Failed to request investigations";
+      toast.error(errorMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEditLabTestSubmit = async (e: React.FormEvent) => {
@@ -734,18 +821,33 @@ export default function InvestigationsTab({
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-slate-900">Investigations &amp; Labs</h2>
-        <button
-          onClick={handleAddRequest}
-          disabled={isVisitPaid}
-          className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 h-9 px-4 shadow-sm
-            ${isVisitPaid ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' : 'bg-primary-600 text-white hover:bg-primary-700'}
-          `}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Request Test
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleOpenBulkRequest}
+            disabled={isVisitPaid}
+            className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 h-9 px-4 border shadow-sm
+              ${isVisitPaid
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200'
+                : 'bg-white text-primary-700 border-primary-200 hover:bg-primary-50'
+              }
+            `}
+          >
+            <ListChecks className="mr-2 h-4 w-4" />
+            Bulk Request
+          </button>
+          <button
+            onClick={handleAddRequest}
+            disabled={isVisitPaid}
+            className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 h-9 px-4 shadow-sm
+              ${isVisitPaid ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' : 'bg-primary-600 text-white hover:bg-primary-700'}
+            `}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Request Test
+          </button>
+        </div>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden min-h-[200px]">
@@ -834,6 +936,139 @@ export default function InvestigationsTab({
           onPageChange={(page) => setCurrentPage(page)}
         />
       </div>
+
+      <Modal
+        isOpen={isBulkRequestModalOpen}
+        onClose={() => {
+          if (!isSubmitting) {
+            setIsBulkRequestModalOpen(false);
+            resetBulkRequestForm();
+          }
+        }}
+        title="Bulk Request Investigations"
+        description="Add multiple investigation requests for this patient in one submission"
+        maxWidth="max-w-5xl"
+      >
+        <form onSubmit={handleBulkRequestSubmit} className="space-y-4">
+          <datalist id="bulk-investigation-options">
+            {labTests.map(test => (
+              <option key={test.id} value={test.name} />
+            ))}
+          </datalist>
+
+          <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-3">
+            {bulkInvestigationRows.map((row, index) => (
+              <div key={index} className="rounded-xl border border-slate-200 bg-slate-50/40 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-slate-700">Investigation {index + 1}</h4>
+                  {bulkInvestigationRows.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeBulkInvestigationRow(index)}
+                      className="text-slate-400 hover:text-red-600 transition-colors"
+                      title="Remove investigation"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                  <div className="md:col-span-6">
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Investigation Name *</label>
+                    <input
+                      list="bulk-investigation-options"
+                      type="text"
+                      value={row.name}
+                      onChange={e => updateBulkInvestigationRow(index, "name", e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      placeholder="Search or type investigation name"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Category</label>
+                    <select
+                      value={row.type}
+                      onChange={e => updateBulkInvestigationRow(index, "type", e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    >
+                      <option value="lab">Laboratory</option>
+                      <option value="radiology">Radiology</option>
+                      <option value="procedure">Procedure</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Fee (KES)</label>
+                    <div className="relative rounded-md shadow-sm">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
+                        <span className="text-slate-400 text-xs">KSh</span>
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={row.cost}
+                        onChange={e => updateBulkInvestigationRow(index, "cost", e.target.value)}
+                        className="block w-full rounded-md border-slate-300 pl-10 focus:border-primary-500 focus:ring-primary-500 sm:text-sm py-2"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={addBulkInvestigationRow}
+            className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Add Another Investigation
+          </button>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Clinical Notes / Reason</label>
+            <textarea
+              value={bulkInvestigationNotes}
+              onChange={e => setBulkInvestigationNotes(e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              placeholder="Shared reason or clinical indication for these investigations..."
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-100">
+            <p className="text-xs text-slate-500">
+              {bulkInvestigationRows.filter(bulkRowHasContent).length} investigation(s) ready
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsBulkRequestModalOpen(false);
+                  resetBulkRequestForm();
+                }}
+                className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex items-center px-5 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 transition-colors active:scale-[0.98]"
+              >
+                {isSubmitting
+                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Requesting...</>
+                  : "Request Investigations"
+                }
+              </button>
+            </div>
+          </div>
+        </form>
+      </Modal>
 
       {/* Library modals are fine to remain as modals — they're admin/utility actions */}
       <Modal

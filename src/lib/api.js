@@ -237,6 +237,10 @@ export const investigationAPI = {
         const response = await apiClient.post(`/visits/${visitId}/investigations`, data);
         return response.data;
     },
+    bulkStore: async (visitId, data) => {
+        const response = await apiClient.post(`/visits/${visitId}/investigations/bulk`, data);
+        return response.data;
+    },
     update: async (visitId, invId, data) => {
         const response = await apiClient.patch(`/visits/${visitId}/investigations/${invId}`, { ...data, _method: 'PATCH' });
         return response.data;

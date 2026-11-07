@@ -43,6 +43,7 @@ declare module "@/lib/api" {
   export interface InvestigationAPI {
     list: (visitId: string | number) => Promise<any>;
     store: (visitId: string | number, data: any) => Promise<any>;
+    bulkStore: (visitId: string | number, data: any) => Promise<any>;
     update: (visitId: string | number, invId: string | number, data: any) => Promise<any>;
     listGlobal: (params?: any) => Promise<any>;
     storeStandalone: (data: any) => Promise<any>;

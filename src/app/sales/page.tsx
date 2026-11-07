@@ -16,6 +16,7 @@ import {
   Pill,
   Activity,
   HeartPulse,
+  BadgePercent,
   X
 } from "lucide-react";
 import {
@@ -176,13 +177,20 @@ export default function SalesDashboard() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <SummaryCard
           title="Total Revenue"
           value={`KSh ${Number(summary.grand_total || 0).toLocaleString()}`}
           subtext={`${summary.transaction_count || 0} Transactions`}
           icon={<DollarSign className="h-6 w-6 text-emerald-600" />}
           color="emerald"
+        />
+        <SummaryCard
+          title="Discounts Given"
+          value={`KSh ${Number(summary.discount_total || 0).toLocaleString()}`}
+          subtext="For period transactions"
+          icon={<BadgePercent className="h-6 w-6 text-rose-600" />}
+          color="rose"
         />
         <SummaryCard
           title="Consultations"
@@ -425,7 +433,8 @@ function SummaryCard({ title, value, subtext, icon, color }: any) {
     blue: "bg-blue-50 text-blue-600",
     purple: "bg-purple-50 text-purple-600",
     pink: "bg-pink-50 text-pink-600",
-    orange: "bg-orange-50 text-orange-600"
+    orange: "bg-orange-50 text-orange-600",
+    rose: "bg-rose-50 text-rose-600"
   };
 
   return (

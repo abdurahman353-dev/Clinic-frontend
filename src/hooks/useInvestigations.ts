@@ -41,40 +41,68 @@ export function useInvestigations(patientId?: number, initialData: any[] = [], p
     }
   }, [patientId]);
 
-  const addInvestigation = async (invData: any) => {
+  const resolveVisitId = async () => {
     if (!patientId) throw new Error("Patient ID is required");
+
     let visitId = activeVisitId;
-    
+    if (visitId) return visitId;
+
+    const visitsResponse = await visitAPI.list({
+      'filter[patient_id]': patientId,
+      'sort': '-created_at'
+    });
+    const recentVisit = visitsResponse.data?.[0];
+    const isRecent = recentVisit && (new Date().getTime() - new Date(recentVisit.created_at).getTime()) < 24 * 60 * 60 * 1000;
+
+    if (recentVisit && isRecent && recentVisit.status !== 'paid') {
+      visitId = recentVisit.id;
+    } else {
+      throw new Error("No active visit found for today. Please start a new visit from the Patient Profile before adding records.");
+    }
+
+    if (!visitId) throw new Error("Failed to resolve visit ID");
+
+    setActiveVisitId(visitId);
+    return visitId;
+  };
+
+  const addInvestigation = async (invData: any) => {
     try {
-      // Find or create visit
-      if (!visitId) {
-        const visitsResponse = await visitAPI.list({ 
-          'filter[patient_id]': patientId,
-          'sort': '-created_at'
-        });
-        const recentVisit = visitsResponse.data?.[0];
-        const isRecent = recentVisit && (new Date().getTime() - new Date(recentVisit.created_at).getTime()) < 24 * 60 * 60 * 1000;
-        
-        if (recentVisit && isRecent && recentVisit.status !== 'paid') {
-          visitId = recentVisit.id;
-        } else {
-          throw new Error("No active visit found for today. Please start a new visit from the Patient Profile before adding records.");
-        }
-        setActiveVisitId(visitId);
-      }
-
-      if (!visitId) throw new Error("Failed to resolve visit ID");
-
+      const visitId = await resolveVisitId();
       const res = await investigationAPI.store(visitId, invData);
-      
+
       if (res.data) {
         setInvestigations(prev => [res.data, ...prev]);
+        setMeta((prev: any) => prev
+          ? { ...prev, total: (prev.total || 0) + 1 }
+          : { total: 1, per_page: 1, current_page: 1, last_page: 1 }
+        );
       }
-      
+
       return res.data;
     } catch (err: any) {
       throw err;
     }
+  };
+
+  const bulkAddInvestigations = async (investigationsData: any[]) => {
+    if (!investigationsData.length) {
+      throw new Error("At least one investigation is required");
+    }
+
+    const visitId = await resolveVisitId();
+    const res = await investigationAPI.bulkStore(visitId, { investigations: investigationsData });
+    const created = res.data || [];
+
+    if (created.length > 0) {
+      setInvestigations(prev => [...created, ...prev]);
+      setMeta((prev: any) => prev
+        ? { ...prev, total: (prev.total || 0) + created.length }
+        : { total: created.length, per_page: created.length, current_page: 1, last_page: 1 }
+      );
+    }
+
+    return created;
   };
 
   const updateInvestigation = async (invId: number, updateData: any) => {
@@ -95,5 +123,5 @@ export function useInvestigations(patientId?: number, initialData: any[] = [], p
     }
   };
 
-  return { investigations, meta, isLoading, errorMsg, fetchInvestigations, addInvestigation, updateInvestigation, setInvestigations };
+  return { investigations, meta, isLoading, errorMsg, fetchInvestigations, addInvestigation, bulkAddInvestigations, updateInvestigation, setInvestigations };
 }
