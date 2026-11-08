@@ -42,9 +42,7 @@ export default function VitalsTab({
   });
 
   useEffect(() => {
-    if (currentPage > 1) {
-      fetchVitals({ page: currentPage });
-    }
+    fetchVitals({ page: currentPage });
   }, [fetchVitals, currentPage]);
 
   useEffect(() => {

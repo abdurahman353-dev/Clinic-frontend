@@ -71,9 +71,10 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
 
   const fetchPatient = useCallback(async () => {
     try {
-      // Load patient record with all related clinical items in a single query
+      // Load only the patient record and visit list. Each tab loads its own
+      // clinical data in parallel after mount, keeping the profile fast.
       const patientRes = await patientAPI.get(unwrappedId, {
-        include: 'visits,vitalSigns,investigations,prescriptions.items'
+        include: 'visits'
       });
 
       const p = patientRes.data;

@@ -47,9 +47,7 @@ export default function PrescriptionsTab({
   ]);
 
   useEffect(() => {
-    if (currentPage > 1) {
-      fetchPrescriptions({ page: currentPage });
-    }
+    fetchPrescriptions({ page: currentPage });
     fetchMedicines();
   }, [fetchPrescriptions, fetchMedicines, currentPage]);
 

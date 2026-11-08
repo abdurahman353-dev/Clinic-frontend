@@ -31,10 +31,9 @@ export default function InvestigationsTab({
 }): React.JSX.Element {
   const { investigations, meta, isLoading, fetchInvestigations, addInvestigation, bulkAddInvestigations, updateInvestigation, setInvestigations } = useInvestigations(patientId, initialData, activeVisitId);
   const [currentPage, setCurrentPage] = useState(1);
-  const { labTests, fetchLabTests, updateLabTest, bulkAddLabTests, deleteLabTest } = useLabTests();
+  const { labTests, fetchLabTests, updateLabTest, deleteLabTest } = useLabTests();
 
   const [view, setView] = useState<FormView>("table");
-  const [isNewLabTestModalOpen, setIsNewLabTestModalOpen] = useState(false);
   const [isEditLabTestModalOpen, setIsEditLabTestModalOpen] = useState(false);
   const [editingLabTest, setEditingLabTest] = useState<any>(null);
   const [selectedInvId, setSelectedInvId] = useState<number | null>(null);
@@ -43,7 +42,6 @@ export default function InvestigationsTab({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTests, setSelectedTests] = useState<any[]>([]);
-  const [bulkNewLabTests, setBulkNewLabTests] = useState<any[]>([{ name: "", type: "lab", default_cost: "" }]);
   const [isBulkRequestModalOpen, setIsBulkRequestModalOpen] = useState(false);
   const [bulkInvestigationRows, setBulkInvestigationRows] = useState<any[]>([{ ...emptyBulkInvestigationRow }]);
   const [bulkInvestigationNotes, setBulkInvestigationNotes] = useState("");
@@ -93,9 +91,7 @@ export default function InvestigationsTab({
   });
 
   useEffect(() => {
-    if (currentPage > 1) {
-      fetchInvestigations({ page: currentPage });
-    }
+    fetchInvestigations({ page: currentPage });
     fetchLabTests();
   }, [fetchInvestigations, fetchLabTests, currentPage]);
 
@@ -232,40 +228,6 @@ export default function InvestigationsTab({
     setSearchTerm("");
     setIsDropdownOpen(false);
     setView("request");
-  };
-
-  const handleNewLabTestSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const validTests = bulkNewLabTests.filter((t: any) => t.name?.trim() !== "");
-    if (validTests.length === 0) {
-      toast.error("Please add at least one investigation name");
-      return;
-    }
-
-    setIsNewLabTestModalOpen(false);
-    toast.success(`${validTests.length} investigation types are being registered...`);
-
-    try {
-      await bulkAddLabTests(validTests.map((test: any) => ({
-        name: test.name.trim(),
-        type: test.type || "lab",
-        default_cost: parseFloat(test.default_cost) || 0
-      })));
-      toast.success(`${validTests.length} investigation type(s) registered successfully.`);
-      setBulkNewLabTests([{ name: "", type: "lab", default_cost: "" }]);
-    } catch (error: any) {
-      setIsNewLabTestModalOpen(true);
-    }
-  };
-
-  const addBulkRow = () => setBulkNewLabTests(prev => [...prev, { name: "", type: "lab", default_cost: "" }]);
-
-  const removeBulkRow = (index: number) => {
-    setBulkNewLabTests(prev => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
-  };
-
-  const updateBulkRow = (index: number, field: string, value: string) => {
-    setBulkNewLabTests(prev => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
   };
 
   const resetBulkRequestForm = () => {
@@ -642,72 +604,6 @@ export default function InvestigationsTab({
           </form>
         </div>
 
-        {/* Add New Lab Test Type Modal (Bulk) - kept as modal since it's a library action */}
-        <Modal
-          isOpen={isNewLabTestModalOpen}
-          onClose={() => setIsNewLabTestModalOpen(false)}
-          title="Add New Investigation Types"
-          description="Register one or more test types to the master library"
-          maxWidth="max-w-4xl"
-        >
-          <form onSubmit={handleNewLabTestSubmit} className="space-y-4">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[600px]">
-                <thead>
-                  <tr className="text-slate-600 text-xs font-bold uppercase tracking-wider bg-slate-50">
-                    <th className="px-3 py-2 border-b border-slate-200">Investigation Name *</th>
-                    <th className="px-3 py-2 border-b border-slate-200">Category</th>
-                    <th className="px-3 py-2 border-b border-slate-200 w-32">Price (KES) *</th>
-                    <th className="px-3 py-2 border-b border-slate-200 w-10"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {bulkNewLabTests.map((row, index) => (
-                    <tr key={index} className="hover:bg-slate-50">
-                      <td className="px-2 py-2">
-                        <input required type="text" value={row.name} onChange={e => updateBulkRow(index, 'name', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. Thyroid Profile" />
-                      </td>
-                      <td className="px-2 py-2">
-                        <select value={row.type} onChange={e => updateBulkRow(index, 'type', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
-                          <option value="lab">Laboratory</option>
-                          <option value="radiology">Radiology</option>
-                          <option value="procedure">Procedure</option>
-                        </select>
-                      </td>
-                      <td className="px-2 py-2">
-                        <div className="relative rounded-md shadow-sm">
-                          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
-                            <span className="text-slate-400 text-xs">KSh</span>
-                          </div>
-                          <input required type="number" value={row.default_cost} onChange={e => updateBulkRow(index, 'default_cost', e.target.value)} className="block w-full rounded-md border-slate-300 pl-8 focus:border-primary-500 focus:ring-primary-500 sm:text-sm py-1.5" placeholder="0.00" />
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 text-right">
-                        {bulkNewLabTests.length > 1 && (
-                          <button type="button" onClick={() => removeBulkRow(index)} className="text-slate-400 hover:text-red-600 transition-colors">
-                            <X className="h-4 w-4" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex justify-between items-center pt-2">
-              <button type="button" onClick={addBulkRow} className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700">
-                <Plus className="h-4 w-4 mr-1" /> Add Another Row
-              </button>
-            </div>
-            <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
-              <button type="button" onClick={() => setIsNewLabTestModalOpen(false)} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
-              <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
-                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Register Investigations"}
-              </button>
-            </div>
-          </form>
-        </Modal>
-
         {/* Edit Lab Test Type Modal */}
         <Modal
           isOpen={isEditLabTestModalOpen}
@@ -1080,60 +976,6 @@ export default function InvestigationsTab({
                 }
               </button>
             </div>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Library modals are fine to remain as modals — they're admin/utility actions */}
-      <Modal
-        isOpen={isNewLabTestModalOpen}
-        onClose={() => setIsNewLabTestModalOpen(false)}
-        title="Add New Investigation Types"
-        description="Register one or more test types to the master library"
-        maxWidth="max-w-4xl"
-      >
-        <form onSubmit={handleNewLabTestSubmit} className="space-y-4">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[600px]">
-              <thead>
-                <tr className="text-slate-600 text-xs font-bold uppercase tracking-wider bg-slate-50">
-                  <th className="px-3 py-2 border-b border-slate-200">Investigation Name *</th>
-                  <th className="px-3 py-2 border-b border-slate-200">Category</th>
-                  <th className="px-3 py-2 border-b border-slate-200 w-32">Price (KES) *</th>
-                  <th className="px-3 py-2 border-b border-slate-200 w-10"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {bulkNewLabTests.map((row, index) => (
-                  <tr key={index} className="hover:bg-slate-50">
-                    <td className="px-2 py-2"><input required type="text" value={row.name} onChange={e => updateBulkRow(index, 'name', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. Thyroid Profile" /></td>
-                    <td className="px-2 py-2">
-                      <select value={row.type} onChange={e => updateBulkRow(index, 'type', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
-                        <option value="lab">Laboratory</option>
-                        <option value="radiology">Radiology</option>
-                        <option value="procedure">Procedure</option>
-                      </select>
-                    </td>
-                    <td className="px-2 py-2">
-                      <div className="relative rounded-md shadow-sm">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2"><span className="text-slate-400 text-xs">KSh</span></div>
-                        <input required type="number" value={row.default_cost} onChange={e => updateBulkRow(index, 'default_cost', e.target.value)} className="block w-full rounded-md border-slate-300 pl-8 focus:border-primary-500 focus:ring-primary-500 sm:text-sm py-1.5" placeholder="0.00" />
-                      </div>
-                    </td>
-                    <td className="px-2 py-2 text-right">{bulkNewLabTests.length > 1 && <button type="button" onClick={() => removeBulkRow(index)} className="text-slate-400 hover:text-red-600 transition-colors"><X className="h-4 w-4" /></button>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex justify-between items-center pt-2">
-            <button type="button" onClick={addBulkRow} className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700"><Plus className="h-4 w-4 mr-1" /> Add Another Row</button>
-          </div>
-          <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
-            <button type="button" onClick={() => setIsNewLabTestModalOpen(false)} className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
-            <button type="submit" disabled={isSubmitting} className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50">
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Register Investigations"}
-            </button>
           </div>
         </form>
       </Modal>
