@@ -386,9 +386,39 @@ export default function StockManagement() {
       return;
     }
 
-    if (filledRows.some(row => !row.name?.trim())) {
-      toast.error("Item name is required for every row.");
-      return;
+    // Validate all mandatory fields matching the single Add Item modal
+    for (let i = 0; i < filledRows.length; i++) {
+      const row = filledRows[i];
+      const itemLabel = row.name?.trim() ? `"${row.name.trim()}" (Item ${i + 1})` : `Item ${i + 1}`;
+
+      if (!row.name?.trim()) {
+        toast.error(`Item ${i + 1}: Item Name is required.`);
+        return;
+      }
+      if (!row.category?.trim()) {
+        toast.error(`${itemLabel}: Category is required.`);
+        return;
+      }
+      if (!row.dosage_form) {
+        toast.error(`${itemLabel}: Dosage Form is required.`);
+        return;
+      }
+      if (!row.unit) {
+        toast.error(`${itemLabel}: Tracking Unit is required.`);
+        return;
+      }
+      if (row.initial_stock === "" || row.initial_stock === undefined || isNaN(Number(row.initial_stock))) {
+        toast.error(`${itemLabel}: Quantity in Stock is required.`);
+        return;
+      }
+      if (row.reorder_level === "" || row.reorder_level === undefined || isNaN(Number(row.reorder_level))) {
+        toast.error(`${itemLabel}: Reorder Level is required.`);
+        return;
+      }
+      if (row.minimum_stock === "" || row.minimum_stock === undefined || isNaN(Number(row.minimum_stock))) {
+        toast.error(`${itemLabel}: Min. Safe Stock is required.`);
+        return;
+      }
     }
 
     const payload = filledRows.map(row => {
@@ -875,11 +905,11 @@ export default function StockManagement() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   <div className="lg:col-span-2">
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Item Name *</label>
-                    <input type="text" value={row.name} onChange={e => updateBulkRow(index, 'name', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. Paracetamol" />
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Item Name *</label>
+                    <input required type="text" value={row.name} onChange={e => updateBulkRow(index, 'name', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. Paracetamol" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Category</label>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Category *</label>
                     <CategoryDropdown
                       value={row.category}
                       onChange={cat => updateBulkRow(index, 'category', cat)}
@@ -891,8 +921,8 @@ export default function StockManagement() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Dosage Form</label>
-                    <select value={row.dosage_form} onChange={e => updateBulkRow(index, 'dosage_form', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Dosage Form *</label>
+                    <select required value={row.dosage_form} onChange={e => updateBulkRow(index, 'dosage_form', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
                       <option value="">Select form...</option>
                       {BULK_DOSAGE_FORMS.map(form => (
                         <option key={form} value={form}>{form.charAt(0).toUpperCase() + form.slice(1)}</option>
@@ -904,8 +934,8 @@ export default function StockManagement() {
                     <input type="text" value={row.size} onChange={e => updateBulkRow(index, 'size', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 500mg or 200ml" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Tracking Unit</label>
-                    <select value={row.unit} onChange={e => updateBulkRow(index, 'unit', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Tracking Unit *</label>
+                    <select required value={row.unit} onChange={e => updateBulkRow(index, 'unit', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
                       <option value="">Select unit...</option>
                       {BULK_UNITS.map(unit => (
                         <option key={unit} value={unit}>{unit}</option>
@@ -913,8 +943,8 @@ export default function StockManagement() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Quantity in Stock</label>
-                    <input type="number" min="0" step="0.01" value={row.initial_stock} onChange={e => updateBulkRow(index, 'initial_stock', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Defaults to 0" />
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Quantity In Stock *</label>
+                    <input required type="number" min="0" step="0.01" value={row.initial_stock} onChange={e => updateBulkRow(index, 'initial_stock', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 500" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Selling Price (KSh)</label>
@@ -925,12 +955,12 @@ export default function StockManagement() {
                     <input type="number" step="0.01" min="0" value={row.buying_price} onChange={e => updateBulkRow(index, 'buying_price', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Cost per unit" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Reorder Level</label>
-                    <input type="number" min="0" value={row.reorder_level} onChange={e => updateBulkRow(index, 'reorder_level', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Defaults to 0" />
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Reorder Level *</label>
+                    <input required type="number" min="0" value={row.reorder_level} onChange={e => updateBulkRow(index, 'reorder_level', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 100" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Min. Safe Stock</label>
-                    <input type="number" min="0" value={row.minimum_stock} onChange={e => updateBulkRow(index, 'minimum_stock', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Defaults to 0" />
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Min. Safe Stock *</label>
+                    <input required type="number" min="0" value={row.minimum_stock} onChange={e => updateBulkRow(index, 'minimum_stock', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 50" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Brand Name</label>
