@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
 import { Plus, CheckCircle2, Clock, Loader2, FileText, Edit2, X, Search, ArrowLeft, AlertTriangle, ListChecks } from "lucide-react";
 import { useInvestigations } from "@/hooks/useInvestigations";
 import { useLabTests } from "@/hooks/useLabTests";
@@ -417,8 +416,8 @@ export default function InvestigationsTab({
                     editingId
                       ? "Investigation name..."
                       : selectedTests.length > 0
-                      ? "Search to add another test..."
-                      : "Search or type investigation name... (Multi-select allowed)"
+                        ? "Search to add another test..."
+                        : "Search or type investigation name... (Multi-select allowed)"
                   }
                   autoComplete="off"
                 />
@@ -446,9 +445,8 @@ export default function InvestigationsTab({
                         return (
                           <div
                             key={test.id}
-                            className={`cursor-pointer select-none py-2 px-3 hover:bg-primary-50/60 transition-colors flex items-center justify-between group ${
-                              isAlreadySelected ? 'bg-primary-50/40 text-primary-700 font-medium' : 'text-slate-800'
-                            }`}
+                            className={`cursor-pointer select-none py-2 px-3 hover:bg-primary-50/60 transition-colors flex items-center justify-between group ${isAlreadySelected ? 'bg-primary-50/40 text-primary-700 font-medium' : 'text-slate-800'
+                              }`}
                             onClick={() => selectLabTest(test)}
                           >
                             <div className="flex-1 min-w-0 pr-2">
@@ -734,7 +732,7 @@ export default function InvestigationsTab({
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-slate-900">Investigations &amp; Labs</h2>
         <div className="flex items-center gap-2">
-          <button
+          {/* <button
             onClick={handleOpenBulkRequest}
             disabled={isVisitPaid}
             className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 h-9 px-4 border shadow-sm
@@ -746,7 +744,7 @@ export default function InvestigationsTab({
           >
             <ListChecks className="mr-2 h-4 w-4" />
             Bulk Request
-          </button>
+          </button> */}
           <button
             onClick={handleAddRequest}
             disabled={isVisitPaid}

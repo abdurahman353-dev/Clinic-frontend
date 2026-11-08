@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Package,
   AlertTriangle,
@@ -27,6 +27,165 @@ import { useRouter } from "next/navigation";
 const BULK_DOSAGE_FORMS = ["tablet", "capsule", "syrup", "suspension", "injection", "ointment", "cream", "lotion", "drops", "inhaler", "sachet", "suppository"];
 const BULK_UNITS = ["tablet", "capsule", "bottle", "vial", "ampoule", "tube", "sachet", "puff"];
 
+interface CategoryDropdownProps {
+  value: string;
+  onChange: (value: string) => void;
+  availableCategories: string[];
+  onEditCategory?: (cat: string, e: React.MouseEvent) => void;
+  onDeleteCategory?: (cat: string, e: React.MouseEvent) => void;
+  placeholder?: string;
+  size?: "sm" | "md";
+}
+
+function CategoryDropdown({
+  value,
+  onChange,
+  availableCategories,
+  onEditCategory,
+  onDeleteCategory,
+  placeholder = "Select category...",
+  size = "md"
+}: CategoryDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const filtered = useMemo(() => {
+    return availableCategories.filter(cat =>
+      cat.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [availableCategories, search]);
+
+  const isExactMatch = availableCategories.some(
+    cat => cat.toLowerCase() === search.trim().toLowerCase()
+  );
+
+  return (
+    <div ref={dropdownRef} className="relative w-full">
+      <div
+        className={`w-full ${size === 'sm' ? 'px-3 py-2 text-xs sm:text-sm' : 'px-3 py-2 text-sm'} border border-slate-300 rounded-md shadow-sm bg-white flex items-center justify-between cursor-pointer focus-within:ring-2 focus-within:ring-primary-500 transition-all select-none hover:border-slate-400`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={`truncate mr-2 ${value ? "text-slate-900 font-medium" : "text-slate-400"}`}>
+          {value || placeholder}
+        </span>
+        <ChevronDown className={`h-4 w-4 text-slate-400 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full min-w-[220px] bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="p-2 border-b border-slate-100 italic font-medium text-xs text-primary-600 bg-slate-50 flex items-center">
+            <Search className="h-3 w-3 mr-2" /> Search or Add New
+          </div>
+          <div className="p-2 border-b border-slate-100">
+            <input
+              type="text"
+              autoFocus
+              className="w-full px-2.5 py-1.5 text-xs sm:text-sm border border-slate-200 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 bg-slate-50 rounded-md placeholder-slate-400"
+              placeholder="Search or type new..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (search.trim()) {
+                    onChange(search.trim());
+                    setIsOpen(false);
+                    setSearch("");
+                  }
+                }
+              }}
+            />
+          </div>
+          <div className="max-h-[140px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 divide-y divide-slate-50">
+            {filtered.map((cat) => (
+              <div
+                key={cat}
+                className={`group px-3 py-2 text-xs sm:text-sm cursor-pointer hover:bg-primary-50 flex items-center justify-between transition-colors ${
+                  value === cat ? 'bg-primary-50 text-primary-700 font-bold' : 'text-slate-700'
+                }`}
+                onClick={() => {
+                  onChange(cat);
+                  setIsOpen(false);
+                  setSearch("");
+                }}
+              >
+                <div className="flex items-center truncate mr-2">
+                  <span className="truncate">{cat}</span>
+                  {value === cat && <Check className="h-3.5 w-3.5 ml-2 text-primary-600 flex-shrink-0" />}
+                </div>
+                {(onEditCategory || onDeleteCategory) && (
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    {onEditCategory && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditCategory(cat, e);
+                        }}
+                        className="p-1 hover:bg-white rounded text-slate-400 hover:text-primary-600 shadow-sm border border-transparent hover:border-slate-100"
+                        title="Rename category"
+                      >
+                        <Edit2 className="h-3 w-3" />
+                      </button>
+                    )}
+                    {onDeleteCategory && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteCategory(cat, e);
+                        }}
+                        className="p-1 hover:bg-white rounded text-slate-400 hover:text-red-600 shadow-sm border border-transparent hover:border-slate-100"
+                        title="Delete category"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {filtered.length === 0 && !search.trim() && (
+              <div className="px-3 py-3 text-xs text-slate-400 text-center italic">
+                No categories available
+              </div>
+            )}
+
+            {search.trim() && !isExactMatch && (
+              <div
+                className="px-3 py-2.5 text-xs sm:text-sm cursor-pointer hover:bg-primary-100/60 border-t border-slate-100 text-primary-700 font-bold flex items-center bg-primary-50/50 transition-colors"
+                onClick={() => {
+                  onChange(search.trim());
+                  setIsOpen(false);
+                  setSearch("");
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2 text-primary-600 flex-shrink-0" />
+                <span className="truncate">Create &quot;{search.trim()}&quot;</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function StockManagement() {
   const { medicines, meta, summary, allCategories, isLoading, fetchMedicines, addMedicine, updateMedicine, bulkAddMedicines, adjustStock, updateCategory, deleteCategory } = useStock();
   const { user } = useAuth();
@@ -40,8 +199,6 @@ export default function StockManagement() {
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
-  const [categorySearch, setCategorySearch] = useState("");
 
   // Bulk Add New Items Modal State
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
@@ -323,6 +480,7 @@ export default function StockManagement() {
     setIsEditCategoryModalOpen(false);
     toast.success(`Category "${oldName}" renamed to "${nextName}"`);
     if (formData.category === oldName) setFormData({ ...formData, category: nextName });
+    setBulkRows(prev => prev.map(r => r.category === oldName ? { ...r, category: nextName } : r));
 
     try {
       await updateCategory(oldName, nextName);
@@ -344,6 +502,7 @@ export default function StockManagement() {
     setIsDeleteCategoryModalOpen(false);
     toast.success(`Category "${name}" removed`);
     if (formData.category === name) setFormData({ ...formData, category: "Antibiotics" });
+    setBulkRows(prev => prev.map(r => r.category === name ? { ...r, category: "" } : r));
 
     try {
       await deleteCategory(name);
@@ -361,14 +520,11 @@ export default function StockManagement() {
   }, [summary]);
 
   const availableCategories = useMemo(() => {
-    // Use server-fetched full list; also include currently selected category in case it's new
+    // Use server-fetched full list; also include currently selected category and bulk categories
     const current = formData.category ? [formData.category] : [];
-    return Array.from(new Set([...allCategories, ...current]));
-  }, [allCategories, formData.category]);
-
-  const filteredCategories = availableCategories.filter(cat =>
-    cat.toLowerCase().includes(categorySearch.toLowerCase())
-  );
+    const bulkCats = bulkRows.map(r => r.category).filter(Boolean);
+    return Array.from(new Set([...allCategories, ...current, ...bulkCats]));
+  }, [allCategories, formData.category, bulkRows]);
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
@@ -594,83 +750,15 @@ export default function StockManagement() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Category *</label>
-              <div className="relative">
-                <div
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm bg-white flex items-center justify-between cursor-pointer focus-within:ring-2 focus-within:ring-primary-500 transition-all"
-                  onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                >
-                  <span className={formData.category ? "text-slate-900" : "text-slate-400"}>
-                    {formData.category || "Select category..."}
-                  </span>
-                  <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
-                </div>
-
-                {isCategoryOpen && (
-                  <div className="absolute z-50 mt-1 (restock?)... ml-1 w-full bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in duration-150">
-                    <div className="p-2 border-b border-slate-100 italic font-medium text-xs text-primary-500 bg-slate-50 flex items-center">
-                      <Search className="h-3 w-3 mr-2" /> Search or Add New
-                    </div>
-                    <div className="p-2">
-                      <input
-                        type="text"
-                        autoFocus
-                        className="w-full px-2 py-1.5 text-sm border-0 focus:ring-0 bg-slate-50 rounded-md"
-                        placeholder="New or search..."
-                        value={categorySearch}
-                        onChange={(e) => setCategorySearch(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                    <div className="max-h-[130px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
-                      {filteredCategories.map((cat) => (
-                        <div
-                          key={cat}
-                          className={`group px-3 py-2 text-sm cursor-pointer hover:bg-primary-50 flex items-center justify-between transition-colors ${formData.category === cat ? 'bg-primary-50 text-primary-700 font-bold' : 'text-slate-600'}`}
-                          onClick={() => {
-                            setFormData({ ...formData, category: cat });
-                            setIsCategoryOpen(false);
-                            setCategorySearch("");
-                          }}
-                        >
-                          <div className="flex items-center">
-                            {cat}
-                            {formData.category === cat && <Check className="h-3.5 w-3.5 ml-2 text-primary-500" />}
-                          </div>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              type="button"
-                              onClick={(e) => handleCategoryEdit(cat, e)}
-                              className="p-1 hover:bg-white rounded text-slate-400 hover:text-primary-600 shadow-sm border border-transparent hover:border-slate-100"
-                            >
-                              <Edit2 className="h-3 w-3" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => handleCategoryDelete(cat, e)}
-                              className="p-1 hover:bg-white rounded text-slate-400 hover:text-red-600 shadow-sm border border-transparent hover:border-slate-100"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-
-                      {categorySearch && !availableCategories.includes(categorySearch) && (
-                        <div
-                          className="px-3 py-3 text-sm cursor-pointer hover:bg-slate-50 border-t border-slate-100 text-primary-600 font-bold flex items-center bg-blue-50/30"
-                          onClick={() => {
-                            setFormData({ ...formData, category: categorySearch });
-                            setIsCategoryOpen(false);
-                            setCategorySearch("");
-                          }}
-                        >
-                          <Plus className="h-4 w-4 mr-2" /> Create "{categorySearch}"
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <CategoryDropdown
+                value={formData.category}
+                onChange={cat => setFormData(prev => ({ ...prev, category: cat }))}
+                availableCategories={availableCategories}
+                onEditCategory={handleCategoryEdit}
+                onDeleteCategory={handleCategoryDelete}
+                placeholder="Select category..."
+                size="md"
+              />
             </div>
 
             <div>
@@ -792,7 +880,15 @@ export default function StockManagement() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Category</label>
-                    <input list="bulk-category-options" type="text" value={row.category} onChange={e => updateBulkRow(index, 'category', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Select or type new" />
+                    <CategoryDropdown
+                      value={row.category}
+                      onChange={cat => updateBulkRow(index, 'category', cat)}
+                      availableCategories={availableCategories}
+                      onEditCategory={handleCategoryEdit}
+                      onDeleteCategory={handleCategoryDelete}
+                      placeholder="Select or create..."
+                      size="sm"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Dosage Form</label>
@@ -852,10 +948,6 @@ export default function StockManagement() {
               </div>
             ))}
           </div>
-
-          <datalist id="bulk-category-options">
-            {allCategories.map(cat => <option key={cat} value={cat} />)}
-          </datalist>
 
           <div className="flex justify-between items-center pt-2">
             <button type="button" onClick={addBulkRow} className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700">
