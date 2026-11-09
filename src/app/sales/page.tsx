@@ -36,6 +36,7 @@ import { Modal } from "@/components/ui/Modal";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { Pagination } from "@/components/ui/Pagination";
 
 export default function SalesDashboard() {
   const { user } = useAuth();
@@ -51,6 +52,8 @@ export default function SalesDashboard() {
   const [selectedDayBills, setSelectedDayBills] = useState<any[]>([]);
   const [loadingDayDetails, setLoadingDayDetails] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
+  const [dayPage, setDayPage] = useState(1);
+  const DAY_PER_PAGE = 8;
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
@@ -75,6 +78,7 @@ export default function SalesDashboard() {
 
   const handleViewDaily = async (date: string) => {
     setSelectedDate(date);
+    setDayPage(1);
     setIsDailyModalOpen(true);
     setLoadingDayDetails(true);
     try {
@@ -360,66 +364,84 @@ export default function SalesDashboard() {
           ) : selectedDayBills.length === 0 ? (
             <div className="text-center py-12 text-slate-500">No transactions found for this date.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-sm">
-                <thead>
-                  <tr className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                    <th className="px-4 py-2">Patient</th>
-                    <th className="px-4 py-2 text-right">Consultation</th>
-                    <th className="px-4 py-2 text-right">Vitals</th>
-                    <th className="px-4 py-2 text-right">Lab</th>
-                    <th className="px-4 py-2 text-right">Pharmacy</th>
-                    <th className="px-4 py-2 text-right">Total Paid</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {Object.values(selectedDayBills.reduce((acc: any, bill: any) => {
-                    const pid = bill.patient?.patient_id || 'unknown';
-                    if (!acc[pid]) {
-                      acc[pid] = {
-                        patient: bill.patient,
-                        consultation_fee: 0,
-                        vitals_total: 0,
-                        investigation_total: 0,
-                        medicine_total: 0,
-                        grand_total: 0
-                      };
-                    }
-                    acc[pid].consultation_fee += Number(bill.consultation_fee || 0);
-                    acc[pid].vitals_total += Number(bill.vitals_total || 0);
-                    acc[pid].investigation_total += Number(bill.investigation_total || 0);
-                    acc[pid].medicine_total += Number(bill.medicine_total || 0);
-                    acc[pid].grand_total += Number(bill.grand_total || 0);
-                    return acc;
-                  }, {})).map((groupedBill: any, index: number) => (
-                    <tr key={index} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-4">
-                        <div className="font-bold text-slate-900">{groupedBill.patient?.name}</div>
-                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{groupedBill.patient?.patient_id}</div>
-                      </td>
-                      <td className="px-4 py-4 text-right text-slate-500 font-medium">KSh {Number(groupedBill.consultation_fee).toLocaleString()}</td>
-                      <td className="px-4 py-4 text-right text-slate-500 font-medium">KSh {Number(groupedBill.vitals_total).toLocaleString()}</td>
-                      <td className="px-4 py-4 text-right text-slate-500 font-medium">KSh {Number(groupedBill.investigation_total).toLocaleString()}</td>
-                      <td className="px-4 py-4 text-right text-slate-500 font-medium">KSh {Number(groupedBill.medicine_total).toLocaleString()}</td>
-                      <td className="px-4 py-4 text-right font-black text-slate-900">
-                        KSh {Number(groupedBill.grand_total).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                  <tr className="bg-slate-50/80 font-black border-t border-slate-200">
-                    <td className="px-4 py-5 text-slate-900 uppercase tracking-widest text-xs">TOTALS</td>
-                    <td className="px-4 py-5 text-right text-slate-900">KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.consultation_fee || 0), 0).toLocaleString()}</td>
-                    <td className="px-4 py-5 text-right text-slate-900">KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.vitals_total || 0), 0).toLocaleString()}</td>
-                    <td className="px-4 py-5 text-right text-slate-900">KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.investigation_total || 0), 0).toLocaleString()}</td>
-                    <td className="px-4 py-5 text-right text-slate-900">KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.medicine_total || 0), 0).toLocaleString()}</td>
-                    <td className="px-4 py-5 text-right text-primary-600 text-base">
-                      KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.grand_total || 0), 0).toLocaleString()}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            (() => {
+              const groupedArray: any[] = Object.values(selectedDayBills.reduce((acc: any, bill: any) => {
+                const pid = bill.patient?.patient_id || 'unknown';
+                if (!acc[pid]) {
+                  acc[pid] = {
+                    patient: bill.patient,
+                    consultation_fee: 0,
+                    vitals_total: 0,
+                    investigation_total: 0,
+                    medicine_total: 0,
+                    grand_total: 0
+                  };
+                }
+                acc[pid].consultation_fee += Number(bill.consultation_fee || 0);
+                acc[pid].vitals_total += Number(bill.vitals_total || 0);
+                acc[pid].investigation_total += Number(bill.investigation_total || 0);
+                acc[pid].medicine_total += Number(bill.medicine_total || 0);
+                acc[pid].grand_total += Number(bill.grand_total || 0);
+                return acc;
+              }, {}));
 
+              const paginatedGrouped = groupedArray.slice((dayPage - 1) * DAY_PER_PAGE, dayPage * DAY_PER_PAGE);
+              const dayMeta = groupedArray.length > 0 ? {
+                total: groupedArray.length,
+                per_page: DAY_PER_PAGE,
+                current_page: dayPage,
+                last_page: Math.ceil(groupedArray.length / DAY_PER_PAGE),
+                from: (dayPage - 1) * DAY_PER_PAGE + 1,
+                to: Math.min(dayPage * DAY_PER_PAGE, groupedArray.length)
+              } : null;
+
+              return (
+                <div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                          <th className="px-4 py-2">Patient</th>
+                          <th className="px-4 py-2 text-right">Consultation</th>
+                          <th className="px-4 py-2 text-right">Vitals</th>
+                          <th className="px-4 py-2 text-right">Lab</th>
+                          <th className="px-4 py-2 text-right">Pharmacy</th>
+                          <th className="px-4 py-2 text-right">Total Paid</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {paginatedGrouped.map((groupedBill: any, index: number) => (
+                          <tr key={index} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-4 py-4">
+                              <div className="font-bold text-slate-900">{groupedBill.patient?.name}</div>
+                              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{groupedBill.patient?.patient_id}</div>
+                            </td>
+                            <td className="px-4 py-4 text-right text-slate-500 font-medium">KSh {Number(groupedBill.consultation_fee).toLocaleString()}</td>
+                            <td className="px-4 py-4 text-right text-slate-500 font-medium">KSh {Number(groupedBill.vitals_total).toLocaleString()}</td>
+                            <td className="px-4 py-4 text-right text-slate-500 font-medium">KSh {Number(groupedBill.investigation_total).toLocaleString()}</td>
+                            <td className="px-4 py-4 text-right text-slate-500 font-medium">KSh {Number(groupedBill.medicine_total).toLocaleString()}</td>
+                            <td className="px-4 py-4 text-right font-black text-slate-900">
+                              KSh {Number(groupedBill.grand_total).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="bg-slate-50/80 font-black border-t border-slate-200">
+                          <td className="px-4 py-5 text-slate-900 uppercase tracking-widest text-xs">TOTALS</td>
+                          <td className="px-4 py-5 text-right text-slate-900">KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.consultation_fee || 0), 0).toLocaleString()}</td>
+                          <td className="px-4 py-5 text-right text-slate-900">KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.vitals_total || 0), 0).toLocaleString()}</td>
+                          <td className="px-4 py-5 text-right text-slate-900">KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.investigation_total || 0), 0).toLocaleString()}</td>
+                          <td className="px-4 py-5 text-right text-slate-900">KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.medicine_total || 0), 0).toLocaleString()}</td>
+                          <td className="px-4 py-5 text-right text-primary-600 text-base">
+                            KSh {selectedDayBills.reduce((acc, b) => acc + Number(b.grand_total || 0), 0).toLocaleString()}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <Pagination meta={dayMeta} onPageChange={setDayPage} />
+                </div>
+              );
+            })()
           )}
         </div>
       </Modal>

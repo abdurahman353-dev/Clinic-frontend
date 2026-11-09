@@ -6,6 +6,7 @@ import { billingAPI, paymentAPI, visitAPI } from "@/lib/api";
 import { toast } from "sonner";
 import { Modal } from "@/components/ui/Modal";
 import { printHtml } from "@/lib/print";
+import { Pagination } from "@/components/ui/Pagination";
 
 // Utility: print a bill object as an A5 receipt
 function printBill(bill: any, title = "WAFAA MEDICAL", subtitle = "Invoice / Receipt") {
@@ -197,6 +198,12 @@ export default function BillingTab({ patientId, isActive = true }: { patientId: 
   const [isLoading, setIsLoading] = useState(true);
   const [hasFetched, setHasFetched] = useState(false);
 
+  // Pagination states
+  const [billsPage, setBillsPage] = useState(1);
+  const BILLS_PER_PAGE = 6;
+  const [visitsPage, setVisitsPage] = useState(1);
+  const VISITS_PER_PAGE = 8;
+
   // Modals
   const [selectedBill, setSelectedBill] = useState<any>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -310,6 +317,28 @@ export default function BillingTab({ patientId, isActive = true }: { patientId: 
     );
   }
 
+  const paidVisits = visits.filter(v => (v.bills || []).some((b: any) => parseFloat(b.paid_amount) > 0));
+
+  const paginatedBills = bills.slice((billsPage - 1) * BILLS_PER_PAGE, billsPage * BILLS_PER_PAGE);
+  const billsMeta = bills.length > 0 ? {
+    total: bills.length,
+    per_page: BILLS_PER_PAGE,
+    current_page: billsPage,
+    last_page: Math.ceil(bills.length / BILLS_PER_PAGE),
+    from: (billsPage - 1) * BILLS_PER_PAGE + 1,
+    to: Math.min(billsPage * BILLS_PER_PAGE, bills.length)
+  } : null;
+
+  const paginatedVisits = paidVisits.slice((visitsPage - 1) * VISITS_PER_PAGE, visitsPage * VISITS_PER_PAGE);
+  const visitsMeta = paidVisits.length > 0 ? {
+    total: paidVisits.length,
+    per_page: VISITS_PER_PAGE,
+    current_page: visitsPage,
+    last_page: Math.ceil(paidVisits.length / VISITS_PER_PAGE),
+    from: (visitsPage - 1) * VISITS_PER_PAGE + 1,
+    to: Math.min(visitsPage * VISITS_PER_PAGE, paidVisits.length)
+  } : null;
+
   return (
     <div className="space-y-8">
       {/* Pending Invoices */}
@@ -320,48 +349,51 @@ export default function BillingTab({ patientId, isActive = true }: { patientId: 
         {bills.length === 0 ? (
           <p className="text-sm text-slate-500 italic py-4">No pending invoices for this patient.</p>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {bills.map(bill => (
-              <div key={bill.id} className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-xs font-mono text-slate-400">INV #{bill.id}</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase border ${
-                    bill.status === 'partial'
-                      ? 'bg-blue-50 text-blue-700 border-blue-100'
-                      : 'bg-amber-50 text-amber-700 border-amber-200'
-                  }`}>
-                    {bill.status || 'pending'}
-                  </span>
+          <div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {paginatedBills.map(bill => (
+                <div key={bill.id} className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-xs font-mono text-slate-400">INV #{bill.id}</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase border ${
+                      bill.status === 'partial'
+                        ? 'bg-blue-50 text-blue-700 border-blue-100'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
+                      {bill.status || 'pending'}
+                    </span>
+                  </div>
+                  <div className="mb-4">
+                    <p className="text-xs text-slate-500">Amount Due</p>
+                    <p className="text-xl font-black text-slate-900">KSh {parseFloat(bill.balance_amount).toLocaleString()}</p>
+                  </div>
+                  <div className="space-y-1 mb-4 border-t border-slate-100 pt-3">
+                    {bill.items?.slice(0, 2).map((item: any, i: number) => (
+                      <div key={i} className="text-xs text-slate-600 truncate uppercase flex justify-between">
+                        <span>{item.name}</span>
+                      </div>
+                    ))}
+                    {bill.items?.length > 2 && <p className="text-xs text-slate-400 italic">+{bill.items.length - 2} more items</p>}
+                  </div>
+                  <div className="flex gap-2 mt-auto">
+                    <button
+                      onClick={() => handleOpenPayment(bill)}
+                      className="flex-1 bg-slate-900 text-white py-2 rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors"
+                    >
+                      Pay Now
+                    </button>
+                    <button
+                      onClick={() => { setSelectedBill(bill); setIsInvoicePrintOpen(true); }}
+                      title="Print Invoice"
+                      className="px-3 py-2 border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50 transition-colors"
+                    >
+                      <FileText className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="mb-4">
-                  <p className="text-xs text-slate-500">Amount Due</p>
-                  <p className="text-xl font-black text-slate-900">KSh {parseFloat(bill.balance_amount).toLocaleString()}</p>
-                </div>
-                <div className="space-y-1 mb-4 border-t border-slate-100 pt-3">
-                  {bill.items?.slice(0, 2).map((item: any, i: number) => (
-                    <div key={i} className="text-xs text-slate-600 truncate uppercase flex justify-between">
-                      <span>{item.name}</span>
-                    </div>
-                  ))}
-                  {bill.items?.length > 2 && <p className="text-xs text-slate-400 italic">+{bill.items.length - 2} more items</p>}
-                </div>
-                <div className="flex gap-2 mt-auto">
-                  <button
-                    onClick={() => handleOpenPayment(bill)}
-                    className="flex-1 bg-slate-900 text-white py-2 rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors"
-                  >
-                    Pay Now
-                  </button>
-                  <button
-                    onClick={() => { setSelectedBill(bill); setIsInvoicePrintOpen(true); }}
-                    title="Print Invoice"
-                    className="px-3 py-2 border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50 transition-colors"
-                  >
-                    <FileText className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <Pagination meta={billsMeta} onPageChange={setBillsPage} />
           </div>
         )}
       </div>
@@ -371,23 +403,22 @@ export default function BillingTab({ patientId, isActive = true }: { patientId: 
         <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2 flex items-center gap-2">
           <Receipt className="h-4 w-4 text-green-600" /> Cumulative Receipts
         </h3>
-        {visits.filter(v => (v.bills || []).some((b: any) => parseFloat(b.paid_amount) > 0)).length === 0 ? (
+        {paidVisits.length === 0 ? (
           <p className="text-sm text-slate-500 italic py-4">No paid visits available for cumulative receipts.</p>
         ) : (
-          <div className="overflow-x-auto bg-white border border-slate-200 justify-between rounded-xl">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Visit Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Amount Paid</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Action</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-100">
-                {visits
-                  .filter(v => (v.bills || []).some((b: any) => parseFloat(b.paid_amount) > 0))
-                  .map(visit => {
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Visit Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Amount Paid</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-100">
+                  {paginatedVisits.map(visit => {
                     const cumulative = generateCumulativeReceipt(visit);
                     return (
                       <tr key={visit.id} className="hover:bg-slate-50">
@@ -408,8 +439,10 @@ export default function BillingTab({ patientId, isActive = true }: { patientId: 
                       </tr>
                     );
                   })}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
+            <Pagination meta={visitsMeta} onPageChange={setVisitsPage} />
           </div>
         )}
       </div>
