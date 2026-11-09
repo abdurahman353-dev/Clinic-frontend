@@ -137,9 +137,8 @@ function CategoryDropdown({
             {filtered.map((cat) => (
               <div
                 key={cat}
-                className={`group px-3 py-2 text-xs sm:text-sm cursor-pointer hover:bg-primary-50 flex items-center justify-between transition-colors ${
-                  value === cat ? 'bg-primary-50 text-primary-700 font-bold' : 'text-slate-700'
-                }`}
+                className={`group px-3 py-2 text-xs sm:text-sm cursor-pointer hover:bg-primary-50 flex items-center justify-between transition-colors ${value === cat ? 'bg-primary-50 text-primary-700 font-bold' : 'text-slate-700'
+                  }`}
                 onClick={() => {
                   onChange(cat);
                   setIsOpen(false);
@@ -398,10 +397,10 @@ export default function StockManagement() {
   };
 
   const rowHasContent = (row: any) =>
-    (row.name?.trim() || row.category?.trim() || row.size?.trim() ||
-      row.unit_price !== "" || row.buying_price !== "" || row.initial_stock !== "" ||
-      row.minimum_stock !== "" || row.reorder_level !== "" ||
-      row.batch_number?.trim() || row.expiry_date || row.description?.trim());
+  (row.name?.trim() || row.category?.trim() || row.size?.trim() ||
+    row.unit_price !== "" || row.buying_price !== "" || row.initial_stock !== "" ||
+    row.minimum_stock !== "" || row.reorder_level !== "" ||
+    row.batch_number?.trim() || row.expiry_date || row.description?.trim());
 
   const handleBulkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -876,7 +875,7 @@ export default function StockManagement() {
                 </select>
               </div>
               <div className="flex-1">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Selling Price (KSh)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Selling Price (KSh) *</label>
                 <input type="number" step="0.01" name="unit_price" value={formData.unit_price} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="0.00" />
               </div>
             </div>
@@ -984,7 +983,7 @@ export default function StockManagement() {
                     <input required type="number" min="0" step="0.01" value={row.initial_stock} onChange={e => updateBulkRow(index, 'initial_stock', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g. 500" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Selling Price (KSh)</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Selling Price (KSh) *</label>
                     <input type="number" step="0.01" min="0" value={row.unit_price} onChange={e => updateBulkRow(index, 'unit_price', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="0.00" />
                   </div>
                   <div>
