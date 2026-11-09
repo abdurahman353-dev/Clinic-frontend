@@ -156,7 +156,15 @@ export default function InvestigationsTab({
       }
       resetRequestForm();
     } catch (err: any) {
-      const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || "Failed to request investigation";
+      const rawMsg = err.response?.data?.error || err.response?.data?.message || err.message || "Failed to request investigation";
+      // Surface friendly messages for common visit-related errors
+      const errorMsg = rawMsg.includes("No visit") || rawMsg.includes("No active visit")
+        ? "No active visit found. Please start a new visit from the Patient Profile before adding investigations."
+        : rawMsg.includes("paid") || rawMsg.includes("closed")
+          ? "This visit is already paid and closed. Please start a new visit first."
+          : rawMsg.includes("timeout") || rawMsg.includes("30000")
+            ? "Request timed out. Please check your connection and try again."
+            : rawMsg;
       toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
@@ -300,7 +308,14 @@ export default function InvestigationsTab({
       setIsBulkRequestModalOpen(false);
       resetBulkRequestForm();
     } catch (err: any) {
-      const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || "Failed to request investigations";
+      const rawMsg = err.response?.data?.error || err.response?.data?.message || err.message || "Failed to request investigations";
+      const errorMsg = rawMsg.includes("No visit") || rawMsg.includes("No active visit")
+        ? "No active visit found. Please start a new visit from the Patient Profile before adding investigations."
+        : rawMsg.includes("paid") || rawMsg.includes("closed")
+          ? "This visit is already paid and closed. Please start a new visit first."
+          : rawMsg.includes("timeout") || rawMsg.includes("30000")
+            ? "Request timed out. Please check your connection and try again."
+            : rawMsg;
       toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);

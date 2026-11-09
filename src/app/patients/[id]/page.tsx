@@ -71,8 +71,6 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
 
   const fetchPatient = useCallback(async () => {
     try {
-      // Load only the patient record and visit list. Each tab loads its own
-      // clinical data in parallel after mount, keeping the profile fast.
       const patientRes = await patientAPI.get(unwrappedId, {
         include: 'visits'
       });
@@ -536,8 +534,6 @@ function PatientDetailContent({ params }: { params: Promise<{ id: string }> }) {
           </nav>
         </div>
 
-        {/* Tab Content - all tabs stay mounted so data is prefetched in the
-            background and switching between them is instant. */}
         <div className="p-6 bg-slate-50 min-h-[400px]">
           <div className={activeTab === "vitals" ? "" : "hidden"}>
             <VitalsTab

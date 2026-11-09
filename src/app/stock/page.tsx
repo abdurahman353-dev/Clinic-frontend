@@ -27,10 +27,25 @@ import { useRouter } from "next/navigation";
 const BULK_DOSAGE_FORMS = ["tablet", "capsule", "syrup", "suspension", "injection", "ointment", "cream", "lotion", "drops", "inhaler", "sachet", "suppository"];
 const BULK_UNITS = ["tablet", "capsule", "bottle", "vial", "ampoule", "tube", "sachet", "puff"];
 
+const DEFAULT_CATEGORIES = [
+  "Antibiotics",
+  "Analgesics & Painkillers",
+  "Antipyretics",
+  "Antimalarials",
+  "Antacids",
+  "Antihistamines",
+  "Antihypertensives",
+  "Supplements & Vitamins",
+  "Injections & Vaccines",
+  "Topicals & Ointments",
+  "Medical Supplies & Consumables"
+];
+
 interface CategoryDropdownProps {
   value: string;
   onChange: (value: string) => void;
   availableCategories: string[];
+  onAddCategory?: (cat: string) => void;
   onEditCategory?: (cat: string, e: React.MouseEvent) => void;
   onDeleteCategory?: (cat: string, e: React.MouseEvent) => void;
   placeholder?: string;
@@ -41,6 +56,7 @@ function CategoryDropdown({
   value,
   onChange,
   availableCategories,
+  onAddCategory,
   onEditCategory,
   onDeleteCategory,
   placeholder = "Select category...",
@@ -72,6 +88,15 @@ function CategoryDropdown({
     cat => cat.toLowerCase() === search.trim().toLowerCase()
   );
 
+  const handleCreateNew = (catName: string) => {
+    const trimmed = catName.trim();
+    if (!trimmed) return;
+    onAddCategory?.(trimmed);
+    onChange(trimmed);
+    setIsOpen(false);
+    setSearch("");
+  };
+
   return (
     <div ref={dropdownRef} className="relative w-full">
       <div
@@ -102,15 +127,13 @@ function CategoryDropdown({
                 if (e.key === 'Enter') {
                   e.preventDefault();
                   if (search.trim()) {
-                    onChange(search.trim());
-                    setIsOpen(false);
-                    setSearch("");
+                    handleCreateNew(search);
                   }
                 }
               }}
             />
           </div>
-          <div className="max-h-[140px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 divide-y divide-slate-50">
+          <div className="max-h-56 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 divide-y divide-slate-50">
             {filtered.map((cat) => (
               <div
                 key={cat}
@@ -169,11 +192,7 @@ function CategoryDropdown({
             {search.trim() && !isExactMatch && (
               <div
                 className="px-3 py-2.5 text-xs sm:text-sm cursor-pointer hover:bg-primary-100/60 border-t border-slate-100 text-primary-700 font-bold flex items-center bg-primary-50/50 transition-colors"
-                onClick={() => {
-                  onChange(search.trim());
-                  setIsOpen(false);
-                  setSearch("");
-                }}
+                onClick={() => handleCreateNew(search)}
               >
                 <Plus className="h-4 w-4 mr-2 text-primary-600 flex-shrink-0" />
                 <span className="truncate">Create &quot;{search.trim()}&quot;</span>
@@ -187,7 +206,7 @@ function CategoryDropdown({
 }
 
 export default function StockManagement() {
-  const { medicines, meta, summary, allCategories, isLoading, fetchMedicines, addMedicine, updateMedicine, bulkAddMedicines, adjustStock, updateCategory, deleteCategory } = useStock();
+  const { medicines, meta, summary, allCategories, isLoading, fetchMedicines, fetchAllCategories, addMedicine, updateMedicine, bulkAddMedicines, adjustStock, updateCategory, deleteCategory } = useStock();
   const { user } = useAuth();
   const router = useRouter();
 
@@ -199,6 +218,7 @@ export default function StockManagement() {
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
 
   // Bulk Add New Items Modal State
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
@@ -278,7 +298,8 @@ export default function StockManagement() {
       return;
     }
     loadStock();
-  }, [loadStock, user, router]);
+    fetchAllCategories();
+  }, [loadStock, fetchAllCategories, user, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -286,6 +307,12 @@ export default function StockManagement() {
 
   const handleAddItemSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.unit_price || isNaN(parseFloat(formData.unit_price)) || parseFloat(formData.unit_price) <= 0) {
+      toast.error("Selling price is required and must be greater than 0");
+      return;
+    }
+
     setIsSubmitting(true);
 
     let finalSize = formData.size.trim();
@@ -409,6 +436,10 @@ export default function StockManagement() {
       }
       if (row.initial_stock === "" || row.initial_stock === undefined || isNaN(Number(row.initial_stock))) {
         toast.error(`${itemLabel}: Quantity in Stock is required.`);
+        return;
+      }
+      if (row.unit_price === "" || row.unit_price === undefined || isNaN(parseFloat(row.unit_price)) || parseFloat(row.unit_price) <= 0) {
+        toast.error(`${itemLabel}: Selling Price is required and must be greater than 0.`);
         return;
       }
       if (row.reorder_level === "" || row.reorder_level === undefined || isNaN(Number(row.reorder_level))) {
@@ -549,12 +580,18 @@ export default function StockManagement() {
     };
   }, [summary]);
 
+  const handleCreateCategory = (newCat: string) => {
+    const trimmed = newCat.trim();
+    if (!trimmed) return;
+    setCustomCategories(prev => Array.from(new Set([...prev, trimmed])));
+  };
+
   const availableCategories = useMemo(() => {
-    // Use server-fetched full list; also include currently selected category and bulk categories
+    // Combine server-fetched categories, newly created categories, form selections, and clinical defaults
     const current = formData.category ? [formData.category] : [];
     const bulkCats = bulkRows.map(r => r.category).filter(Boolean);
-    return Array.from(new Set([...allCategories, ...current, ...bulkCats]));
-  }, [allCategories, formData.category, bulkRows]);
+    return Array.from(new Set([...allCategories, ...customCategories, ...current, ...bulkCats, ...DEFAULT_CATEGORIES])).filter(Boolean);
+  }, [allCategories, customCategories, formData.category, bulkRows]);
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">

@@ -44,20 +44,24 @@ export function useInvestigations(patientId?: number, initialData: any[] = [], p
   const resolveVisitId = async () => {
     if (!patientId) throw new Error("Patient ID is required");
 
+    // Use cached visit ID if available
     let visitId = activeVisitId;
     if (visitId) return visitId;
 
     const visitsResponse = await visitAPI.list({
       'filter[patient_id]': patientId,
-      'sort': '-created_at'
+      'sort': '-created_at',
+      'per_page': 1,
     });
     const recentVisit = visitsResponse.data?.[0];
-    const isRecent = recentVisit && (new Date().getTime() - new Date(recentVisit.created_at).getTime()) < 24 * 60 * 60 * 1000;
 
-    if (recentVisit && isRecent && recentVisit.status !== 'paid') {
+    // Accept any visit that is not fully paid (open, billed, completed)
+    if (recentVisit && recentVisit.status !== 'paid') {
       visitId = recentVisit.id;
+    } else if (recentVisit && recentVisit.status === 'paid') {
+      throw new Error("This visit is already paid and closed. Please start a new visit from the Patient Profile before adding investigations.");
     } else {
-      throw new Error("No active visit found for today. Please start a new visit from the Patient Profile before adding records.");
+      throw new Error("No visit found for this patient. Please start a new visit from the Patient Profile first.");
     }
 
     if (!visitId) throw new Error("Failed to resolve visit ID");

@@ -141,14 +141,19 @@ export default function InvestigationsPage() {
 
   const confirmDelete = async () => {
     if (!labTestToDelete) return;
+    setIsDeleteConfirmOpen(false);
+    setLabTestToDelete(null);
     try {
       await deleteLabTest(labTestToDelete.id);
       toast.success(`"${labTestToDelete.name}" removed from library`);
-      setLabTestToDelete(null);
     } catch (err: any) {
       toast.error(err.message || "Failed to delete investigation");
     }
   };
+
+  // Library pagination
+  const [libraryPage, setLibraryPage] = useState(1);
+  const LIBRARY_PER_PAGE = 15;
 
   // Filter master tests by search
   const filteredLibrary = labTests.filter((test: any) => {
@@ -156,6 +161,25 @@ export default function InvestigationsPage() {
     const term = librarySearch.toLowerCase();
     return test.name?.toLowerCase().includes(term) || test.type?.toLowerCase().includes(term);
   });
+
+  // Reset library page when search changes
+  useEffect(() => {
+    setLibraryPage(1);
+  }, [librarySearch]);
+
+  const paginatedLibrary = filteredLibrary.slice(
+    (libraryPage - 1) * LIBRARY_PER_PAGE,
+    libraryPage * LIBRARY_PER_PAGE
+  );
+
+  const libraryMeta = filteredLibrary.length > 0
+    ? {
+        total: filteredLibrary.length,
+        per_page: LIBRARY_PER_PAGE,
+        current_page: libraryPage,
+        last_page: Math.ceil(filteredLibrary.length / LIBRARY_PER_PAGE),
+      }
+    : null;
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
@@ -327,7 +351,7 @@ export default function InvestigationsPage() {
                 type="text"
                 placeholder="Search master library by name or category..."
                 value={librarySearch}
-                onChange={(e) => setLibrarySearch(e.target.value)}
+                onChange={(e) => { setLibrarySearch(e.target.value); }}
                 className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm shadow-sm"
               />
             </div>
@@ -359,7 +383,7 @@ export default function InvestigationsPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-slate-200">
-                    {filteredLibrary.map((test: any) => (
+                    {paginatedLibrary.map((test: any) => (
                       <tr key={test.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-900 text-sm">
                           {test.name}
@@ -405,6 +429,12 @@ export default function InvestigationsPage() {
               </div>
             )}
           </div>
+
+          {/* Library Pagination */}
+          <Pagination
+            meta={libraryMeta}
+            onPageChange={(page) => setLibraryPage(page)}
+          />
         </div>
       )}
 

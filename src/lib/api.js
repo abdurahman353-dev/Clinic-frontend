@@ -234,11 +234,13 @@ export const investigationAPI = {
         return response.data;
     },
     store: async (visitId, data) => {
-        const response = await apiClient.post(`/visits/${visitId}/investigations`, data);
+        // Use longer timeout for investigation requests (remote DB billing can be slow)
+        const response = await apiClient.post(`/visits/${visitId}/investigations`, data, { timeout: 60000 });
         return response.data;
     },
     bulkStore: async (visitId, data) => {
-        const response = await apiClient.post(`/visits/${visitId}/investigations/bulk`, data);
+        // Use longer timeout for bulk investigation requests
+        const response = await apiClient.post(`/visits/${visitId}/investigations/bulk`, data, { timeout: 60000 });
         return response.data;
     },
     update: async (visitId, invId, data) => {
