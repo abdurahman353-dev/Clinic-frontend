@@ -80,6 +80,7 @@ declare module "@/lib/api" {
     store: (data: any) => Promise<any>;
     bulkStore: (items: any[]) => Promise<any>;
     update: (id: string | number, data: any) => Promise<any>;
+    delete: (id: string | number) => Promise<any>;
     categories: () => Promise<string[]>;
     updateCategory: (old_name: string, new_name: string) => Promise<any>;
     deleteCategory: (name: string) => Promise<any>;

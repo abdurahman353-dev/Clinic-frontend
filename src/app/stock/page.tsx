@@ -205,7 +205,7 @@ function CategoryDropdown({
 }
 
 export default function StockManagement() {
-  const { medicines, meta, summary, allCategories, isLoading, fetchMedicines, fetchAllCategories, addMedicine, updateMedicine, bulkAddMedicines, adjustStock, updateCategory, deleteCategory } = useStock();
+  const { medicines, meta, summary, allCategories, isLoading, fetchMedicines, fetchAllCategories, addMedicine, updateMedicine, bulkAddMedicines, adjustStock, updateCategory, deleteCategory, deleteMedicine } = useStock();
   const { user } = useAuth();
   const router = useRouter();
 
@@ -250,6 +250,10 @@ export default function StockManagement() {
   const [categoryToEdit, setCategoryToEdit] = useState<string | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
+
+  // Delete Medicine State
+  const [isDeleteMedicineModalOpen, setIsDeleteMedicineModalOpen] = useState(false);
+  const [medicineToDelete, setMedicineToDelete] = useState<any>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -571,6 +575,24 @@ export default function StockManagement() {
     }
   };
 
+  const handleDeleteMedicine = (item: any) => {
+    setMedicineToDelete(item);
+    setIsDeleteMedicineModalOpen(true);
+  };
+
+  const confirmDeleteMedicine = async () => {
+    if (!medicineToDelete) return;
+    const item = medicineToDelete;
+    setIsDeleteMedicineModalOpen(false);
+    setMedicineToDelete(null);
+    try {
+      await deleteMedicine(item.id);
+      toast.success(`"${item.name}" removed from inventory`);
+    } catch {
+      toast.error(`Failed to delete "${item.name}". Please try again.`);
+    }
+  };
+
   const stats = useMemo(() => {
     return {
       totalItems: summary?.total || 0,
@@ -781,6 +803,9 @@ export default function StockManagement() {
                           </button>
                           <button onClick={() => handleOpenAdjust(item, "dispense")} className="text-slate-400 hover:text-red-600 transition-colors p-1" title="Dispense/Adjust">
                             <ArrowDownRight className="h-5 w-5" />
+                          </button>
+                          <button onClick={() => handleDeleteMedicine(item)} className="text-slate-400 hover:text-red-600 transition-colors p-1" title="Delete Medicine">
+                            <Trash2 className="h-5 w-5" />
                           </button>
                         </div>
                       </td>
@@ -1162,6 +1187,17 @@ export default function StockManagement() {
         confirmText="Remove Category"
         type="danger"
         isLoading={isSubmitting}
+      />
+
+      {/* Delete Medicine Confirmation */}
+      <ConfirmDialog
+        isOpen={isDeleteMedicineModalOpen}
+        onClose={() => { setIsDeleteMedicineModalOpen(false); setMedicineToDelete(null); }}
+        onConfirm={confirmDeleteMedicine}
+        title="Delete Medicine"
+        message={`Are you sure you want to permanently delete "${medicineToDelete?.name}${medicineToDelete?.size ? ` (${medicineToDelete.size})` : ''}" from the inventory? This action cannot be undone.`}
+        confirmText="Delete Medicine"
+        type="danger"
       />
     </div>
   );

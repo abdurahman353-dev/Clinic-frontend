@@ -422,6 +422,11 @@ export const medicineAPI = {
     categories: async () => {
         const response = await apiClient.get('/medicines/categories');
         return response.data;
+    },
+    delete: async (id) => {
+        const response = await apiClient.delete(`/medicines/${id}`);
+        notifyDataChange();
+        return response.data;
     }
 };
 

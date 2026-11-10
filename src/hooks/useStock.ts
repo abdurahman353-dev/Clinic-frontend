@@ -163,5 +163,18 @@ export function useStock() {
     }
   };
 
-  return { medicines, meta, summary, allCategories, isLoading, isRefreshing, errorMsg, fetchMedicines, fetchAllCategories, addMedicine, updateMedicine, addStock, bulkAddStock, bulkAddMedicines, adjustStock, updateCategory, deleteCategory, setMedicines };
+  const deleteMedicine = async (id: number) => {
+    const originalMedicines = [...medicines];
+    // Optimistic remove
+    setMedicines(prev => prev.filter(m => m.id !== id));
+
+    try {
+      await medicineAPI.delete(id);
+    } catch (err: any) {
+      setMedicines(originalMedicines);
+      throw err;
+    }
+  };
+
+  return { medicines, meta, summary, allCategories, isLoading, isRefreshing, errorMsg, fetchMedicines, fetchAllCategories, addMedicine, updateMedicine, addStock, bulkAddStock, bulkAddMedicines, adjustStock, updateCategory, deleteCategory, deleteMedicine, setMedicines };
 }
