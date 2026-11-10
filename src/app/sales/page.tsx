@@ -55,8 +55,13 @@ export default function SalesDashboard() {
   const [dayPage, setDayPage] = useState(1);
   const DAY_PER_PAGE = 8;
 
+  // Main table pagination
+  const [tablePage, setTablePage] = useState(1);
+  const TABLE_PER_PAGE = 10;
+
   const fetchReport = useCallback(async () => {
     setLoading(true);
+    setTablePage(1); // reset to first page on new data
     try {
       const response = await salesAPI.report(filters);
       setData(response.data);
@@ -305,49 +310,66 @@ export default function SalesDashboard() {
       </div>
 
       {/* Detailed Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="font-bold text-slate-900">Daily Sales Breakdown</h3>
-          <span className="text-xs text-slate-500">{data.daily.length} days in period</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 text-slate-600 text-xs font-bold uppercase tracking-wider">
-                <th className="px-6 py-3 border-b border-slate-100">Date</th>
-                <th className="px-6 py-3 border-b border-slate-100">Consultation</th>
-                <th className="px-6 py-3 border-b border-slate-100">Lab & Radio</th>
-                <th className="px-6 py-3 border-b border-slate-100">Pharmacy</th>
-                <th className="px-6 py-3 border-b border-slate-100">Vitals</th>
-                <th className="px-6 py-3 border-b border-slate-100">Totals</th>
-                <th className="px-6 py-3 border-b border-slate-100 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-slate-100">
-              {data.daily.map((day: any) => (
-                <tr key={day.date} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-slate-900">
-                    {new Date(day.date).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-                  </td>
-                  <td className="px-6 py-4 text-slate-600">KSh {Number(day.consultation).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-slate-600">KSh {Number(day.investigations).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-slate-600">KSh {Number(day.prescriptions).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-slate-600">KSh {Number(day.vitals).toLocaleString()}</td>
-                  <td className="px-6 py-4 font-bold text-slate-900">KSh {Number(day.total).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => handleViewDaily(day.date)}
-                      className="text-primary-600 hover:text-primary-700 font-medium"
-                    >
-                      View Daily
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {(() => {
+        const dailyRows = data.daily;
+        const totalRows = dailyRows.length;
+        const paginatedRows = dailyRows.slice((tablePage - 1) * TABLE_PER_PAGE, tablePage * TABLE_PER_PAGE);
+        const tableMeta = {
+          total: totalRows,
+          per_page: TABLE_PER_PAGE,
+          current_page: tablePage,
+          last_page: Math.ceil(totalRows / TABLE_PER_PAGE),
+          from: (tablePage - 1) * TABLE_PER_PAGE + 1,
+          to: Math.min(tablePage * TABLE_PER_PAGE, totalRows),
+        };
+
+        return (
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-slate-900">Daily Sales Breakdown</h3>
+              <span className="text-xs text-slate-500">{totalRows} days in period</span>
+            </div>
+            <div className="overflow-x-auto overflow-y-auto max-h-[480px]">
+              <table className="w-full text-left border-collapse">
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-slate-50 text-slate-600 text-xs font-bold uppercase tracking-wider">
+                    <th className="px-6 py-3 border-b border-slate-100">Date</th>
+                    <th className="px-6 py-3 border-b border-slate-100">Consultation</th>
+                    <th className="px-6 py-3 border-b border-slate-100">Lab &amp; Radio</th>
+                    <th className="px-6 py-3 border-b border-slate-100">Pharmacy</th>
+                    <th className="px-6 py-3 border-b border-slate-100">Vitals</th>
+                    <th className="px-6 py-3 border-b border-slate-100">Totals</th>
+                    <th className="px-6 py-3 border-b border-slate-100 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="text-sm divide-y divide-slate-100">
+                  {paginatedRows.map((day: any) => (
+                    <tr key={day.date} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-slate-900">
+                        {new Date(day.date).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="px-6 py-4 text-slate-600">KSh {Number(day.consultation).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-slate-600">KSh {Number(day.investigations).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-slate-600">KSh {Number(day.prescriptions).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-slate-600">KSh {Number(day.vitals).toLocaleString()}</td>
+                      <td className="px-6 py-4 font-bold text-slate-900">KSh {Number(day.total).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => handleViewDaily(day.date)}
+                          className="text-primary-600 hover:text-primary-700 font-medium"
+                        >
+                          View Daily
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination meta={tableMeta} onPageChange={(page) => { setTablePage(page); }} />
+          </div>
+        );
+      })()}
 
       {/* Daily Details Modal */}
       <Modal
