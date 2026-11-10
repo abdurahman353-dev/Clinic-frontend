@@ -59,7 +59,7 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
       ]);
       const newMeds = medsRes.data || [];
       const newStocks = stocksRes.data || [];
-      
+
       setMedicines(newMeds);
       setStocks(newStocks);
       cachedMedicines = newMeds;
@@ -97,9 +97,9 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
           })));
         }
       } else {
-         setPatientName("");
-         setReason("");
-         setItems([{ medicine_id: "", quantity: 1, dosage: "", frequency: "once a day", duration: "" }]);
+        setPatientName("");
+        setReason("");
+        setItems([{ medicine_id: "", quantity: 1, dosage: "", frequency: "once a day", duration: "" }]);
       }
 
       // If we don't have cache, or if we want to refresh stock in background
@@ -123,7 +123,7 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
     const newItems = [...items];
     const item = { ...newItems[index], [field]: value };
     const med = medicines.find(m => m.id === parseInt(item.medicine_id || "0"));
-    
+
     if (field === 'medicine_id') {
       const med = medicines.find(m => m.id === parseInt(value || "0"));
       item.unit_price = med ? med.unit_price : (item.unit_price || 0);
@@ -134,7 +134,7 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
     if (field !== "quantity" && med) {
       item.quantity = calculateQuantity(item, med, item.quantity);
     }
-    
+
     newItems[index] = item;
     setItems(newItems);
   };
@@ -175,7 +175,7 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
     }
 
     setIsSubmitting(true);
-    
+
     const data = {
       patient_name: patientName,
       notes: reason,
@@ -194,9 +194,9 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
     const currentPaymentStatus = (prescription?.payment_status || "").toLowerCase();
     const currentInvStatus = (prescription?.invoice?.status || "").toLowerCase();
     const paidIndicators = ['paid', 'completed', 'billed', 'settled', 'collected', 'dispensed'];
-    
+
     if (prescription && (
-      paidIndicators.includes(currentStatus) || 
+      paidIndicators.includes(currentStatus) ||
       paidIndicators.includes(currentBillStatus) ||
       paidIndicators.includes(currentPaymentStatus) ||
       paidIndicators.includes(currentInvStatus) ||
@@ -228,7 +228,7 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
 
   const handleReverse = async () => {
     if (!prescription) return;
-    
+
     // OPTIMISTIC UI: Close instantly
     setIsConfirmOpen(false);
     toast.success("Prescription reversed instantly!");
@@ -267,25 +267,25 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
           {/* Patient Info */}
           <div className="space-y-4">
             {prescription && (() => {
-               const currentStatus = (prescription?.status || "").toLowerCase();
-               const currentBillStatus = (prescription?.bill_status || prescription?.bill?.status || "").toLowerCase();
-               const currentInvStatus = (prescription?.invoice?.status || "").toLowerCase();
-               const paidIndicators = ['paid', 'completed', 'billed', 'settled', 'collected', 'dispensed'];
-               
-               const isPaid = paidIndicators.includes(currentStatus) || 
-                              paidIndicators.includes(currentBillStatus) ||
-                              paidIndicators.includes(currentInvStatus) ||
-                              prescription?.is_paid || prescription?.is_cleared;
-               if (!isPaid) return null;
-               return (
-                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3 text-emerald-800 animate-pulse">
-                   <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                   <div>
-                     <p className="text-sm font-bold">Payment Received</p>
-                     <p className="text-[10px] font-medium opacity-80">This record is locked for editing and deletion.</p>
-                   </div>
-                 </div>
-               );
+              const currentStatus = (prescription?.status || "").toLowerCase();
+              const currentBillStatus = (prescription?.bill_status || prescription?.bill?.status || "").toLowerCase();
+              const currentInvStatus = (prescription?.invoice?.status || "").toLowerCase();
+              const paidIndicators = ['paid', 'completed', 'billed', 'settled', 'collected', 'dispensed'];
+
+              const isPaid = paidIndicators.includes(currentStatus) ||
+                paidIndicators.includes(currentBillStatus) ||
+                paidIndicators.includes(currentInvStatus) ||
+                prescription?.is_paid || prescription?.is_cleared;
+              if (!isPaid) return null;
+              return (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3 text-emerald-800 animate-pulse">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  <div>
+                    <p className="text-sm font-bold">Payment Received</p>
+                    <p className="text-[10px] font-medium opacity-80">This record is locked for editing and deletion.</p>
+                  </div>
+                </div>
+              );
             })()}
             <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
               <User className="h-4 w-4 text-primary-500" />
@@ -304,7 +304,7 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
           <div className="h-px bg-slate-100" />
 
           {/* Medicines */}
-           <div className="space-y-4">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                 <Plus className="h-4 w-4 text-primary-500" />
@@ -360,7 +360,7 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
                         <label className="text-xs font-bold text-slate-500 uppercase px-1">Dose *</label>
                         <div className="relative">
                           <input
-                            type="text"
+                            type="number"
                             placeholder="e.g. 1"
                             required
                             value={item.dosage}
@@ -387,7 +387,7 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-500 uppercase px-1">Duration (days) *</label>
                         <input
-                          type="text"
+                          type="number"
                           placeholder="e.g. 5"
                           required
                           value={item.duration}
@@ -438,22 +438,22 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
 
                     {/* Item Total */}
                     <div className="flex justify-between items-center pt-2">
-                       <div className="flex gap-2">
-                         {items.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeItem(index)}
-                              className="text-red-500 hover:text-red-600 text-xs font-bold flex items-center gap-1 transition-colors"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Remove
-                            </button>
-                         )}
-                       </div>
-                       <div className="text-right">
-                         <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">Item Total</span>
-                         <span className="text-sm font-black text-primary-600">KSh {itemTotal.toLocaleString()}</span>
-                       </div>
+                      <div className="flex gap-2">
+                        {items.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeItem(index)}
+                            className="text-red-500 hover:text-red-600 text-xs font-bold flex items-center gap-1 transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">Item Total</span>
+                        <span className="text-sm font-black text-primary-600">KSh {itemTotal.toLocaleString()}</span>
+                      </div>
                     </div>
                   </div>
                 );
@@ -474,8 +474,8 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
 
           {/* Grand Total Bar */}
           <div className="bg-primary-50/50 p-4 rounded-xl border border-primary-100 flex justify-between items-center">
-             <span className="font-bold text-primary-900">Grand Total</span>
-             <span className="text-lg font-black text-primary-700">KSh {calculateGrandTotal().toLocaleString()}</span>
+            <span className="font-bold text-primary-900">Grand Total</span>
+            <span className="text-lg font-black text-primary-700">KSh {calculateGrandTotal().toLocaleString()}</span>
           </div>
 
           {/* Reason / Notes */}
@@ -499,18 +499,18 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
           >
             Cancel
           </button>
-          
+
           {prescription && (() => {
             const currentStatus = (prescription?.status || "").toLowerCase();
             const currentBillStatus = (prescription?.bill_status || prescription?.bill?.status || "").toLowerCase();
             const currentInvStatus = (prescription?.invoice?.status || "").toLowerCase();
             const paidIndicators = ['paid', 'completed', 'billed', 'settled', 'collected', 'dispensed'];
-            
-            const isPaid = paidIndicators.includes(currentStatus) || 
-                           paidIndicators.includes(currentBillStatus) ||
-                           paidIndicators.includes(currentInvStatus) ||
-                           prescription?.is_paid || prescription?.is_cleared;
-            
+
+            const isPaid = paidIndicators.includes(currentStatus) ||
+              paidIndicators.includes(currentBillStatus) ||
+              paidIndicators.includes(currentInvStatus) ||
+              prescription?.is_paid || prescription?.is_cleared;
+
             return (
               <button
                 type="button"
@@ -529,12 +529,12 @@ export default function DirectPrescriptionModal({ isOpen, onClose, onSuccess, pr
             const currentBillStatus = (prescription?.bill_status || prescription?.bill?.status || "").toLowerCase();
             const currentInvStatus = (prescription?.invoice?.status || "").toLowerCase();
             const paidIndicators = ['paid', 'completed', 'billed', 'settled', 'collected', 'dispensed'];
-            
-            const isPaid = paidIndicators.includes(currentStatus) || 
-                           paidIndicators.includes(currentBillStatus) ||
-                           paidIndicators.includes(currentInvStatus) ||
-                           prescription?.is_paid || prescription?.is_cleared;
-            
+
+            const isPaid = paidIndicators.includes(currentStatus) ||
+              paidIndicators.includes(currentBillStatus) ||
+              paidIndicators.includes(currentInvStatus) ||
+              prescription?.is_paid || prescription?.is_cleared;
+
             return (
               <button
                 onClick={handleSubmit}

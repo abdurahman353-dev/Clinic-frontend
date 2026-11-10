@@ -101,7 +101,7 @@ export default function PrescriptionsTab({
 
       // Calculate "Effective Stock" = Current Stock + What was already given (if editing)
       let effectiveStock = med.stock?.quantity || 0;
-      
+
       if (editingId) {
         const originalItem = originalItems.find(oi => oi.medicine_id == item.medicine_id);
         if (originalItem) {
@@ -115,7 +115,7 @@ export default function PrescriptionsTab({
     if (overStockItem) {
       const med = medicines.find(m => m.id == overStockItem.medicine_id);
       const medName = med?.name || "Unknown Medicine";
-      
+
       // Calculate display stock for error message
       let displayStock = med?.stock?.quantity || 0;
       if (editingId) {
@@ -170,7 +170,7 @@ export default function PrescriptionsTab({
     setNotes(rx.notes || "");
     const rxItems = rx.items || [];
     setOriginalItems(rxItems); // Store original items to allow smart stock validation
-    
+
     if (rxItems.length > 0) {
       setItems(rxItems.map((item: any) => ({
         medicine_id: item.medicine_id?.toString() || "",
@@ -269,7 +269,7 @@ export default function PrescriptionsTab({
                             const original = originalItems.find(oi => oi.medicine_id == m.id);
                             if (original) originalQty = original.quantity || 0;
                           }
-                          
+
                           const totalAvailable = physicalStock + originalQty;
 
                           return {
@@ -293,7 +293,7 @@ export default function PrescriptionsTab({
                       <label className="block text-xs font-medium text-slate-500 mb-1">Dose *</label>
                       <div className="relative">
                         <input
-                          type="text"
+                          type="number"
                           required
                           placeholder={(() => {
                             const med = item.medicine_id ? medicines.find(m => m.id == item.medicine_id) : null;
@@ -359,7 +359,7 @@ export default function PrescriptionsTab({
                         {(() => {
                           const med = medicines.find(m => m.id == item.medicine_id);
                           if (!med || med.stock?.quantity === undefined) return null;
-                          
+
                           let available = med.stock.quantity;
                           if (editingId) {
                             const original = originalItems.find(oi => oi.medicine_id == item.medicine_id);
@@ -396,7 +396,7 @@ export default function PrescriptionsTab({
                       className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                     />
                   </div>
-                  
+
                   {item.medicine_id && (
                     <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-sm">
                       <span className="text-slate-500 font-medium">Item Total</span>
@@ -496,7 +496,7 @@ export default function PrescriptionsTab({
           <div className="flex-1">
             <h3 className="text-sm font-bold text-amber-900 leading-tight">Visit Closed (Fully Paid)</h3>
             <p className="text-xs text-amber-800 mt-1">
-              This visit is already finalized or no active visit exists. To issue new prescriptions, please <button 
+              This visit is already finalized or no active visit exists. To issue new prescriptions, please <button
                 onClick={onStartNewVisit}
                 className="font-black underline decoration-amber-300 hover:text-amber-950 transition-colors"
               >Start a New Visit</button> first.

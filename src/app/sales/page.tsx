@@ -226,50 +226,6 @@ export default function SalesDashboard() {
         />
       </div>
 
-      {/* Detailed Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="font-bold text-slate-900">Daily Sales Breakdown</h3>
-          <span className="text-xs text-slate-500">{data.daily.length} days in period</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 text-slate-600 text-xs font-bold uppercase tracking-wider">
-                <th className="px-6 py-3 border-b border-slate-100">Date</th>
-                <th className="px-6 py-3 border-b border-slate-100">Consultation</th>
-                <th className="px-6 py-3 border-b border-slate-100">Lab & Radio</th>
-                <th className="px-6 py-3 border-b border-slate-100">Pharmacy</th>
-                <th className="px-6 py-3 border-b border-slate-100">Vitals</th>
-                <th className="px-6 py-3 border-b border-slate-100">Totals</th>
-                <th className="px-6 py-3 border-b border-slate-100 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-slate-100">
-              {data.daily.map((day: any) => (
-                <tr key={day.date} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-slate-900">
-                    {new Date(day.date).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-                  </td>
-                  <td className="px-6 py-4 text-slate-600">KSh {Number(day.consultation).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-slate-600">KSh {Number(day.investigations).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-slate-600">KSh {Number(day.prescriptions).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-slate-600">KSh {Number(day.vitals).toLocaleString()}</td>
-                  <td className="px-6 py-4 font-bold text-slate-900">KSh {Number(day.total).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => handleViewDaily(day.date)}
-                      className="text-primary-600 hover:text-primary-700 font-medium"
-                    >
-                      View Daily
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Chart */}
@@ -345,6 +301,51 @@ export default function SalesDashboard() {
               </span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Detailed Table */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="font-bold text-slate-900">Daily Sales Breakdown</h3>
+          <span className="text-xs text-slate-500">{data.daily.length} days in period</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 text-slate-600 text-xs font-bold uppercase tracking-wider">
+                <th className="px-6 py-3 border-b border-slate-100">Date</th>
+                <th className="px-6 py-3 border-b border-slate-100">Consultation</th>
+                <th className="px-6 py-3 border-b border-slate-100">Lab & Radio</th>
+                <th className="px-6 py-3 border-b border-slate-100">Pharmacy</th>
+                <th className="px-6 py-3 border-b border-slate-100">Vitals</th>
+                <th className="px-6 py-3 border-b border-slate-100">Totals</th>
+                <th className="px-6 py-3 border-b border-slate-100 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm divide-y divide-slate-100">
+              {data.daily.map((day: any) => (
+                <tr key={day.date} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-slate-900">
+                    {new Date(day.date).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                  </td>
+                  <td className="px-6 py-4 text-slate-600">KSh {Number(day.consultation).toLocaleString()}</td>
+                  <td className="px-6 py-4 text-slate-600">KSh {Number(day.investigations).toLocaleString()}</td>
+                  <td className="px-6 py-4 text-slate-600">KSh {Number(day.prescriptions).toLocaleString()}</td>
+                  <td className="px-6 py-4 text-slate-600">KSh {Number(day.vitals).toLocaleString()}</td>
+                  <td className="px-6 py-4 font-bold text-slate-900">KSh {Number(day.total).toLocaleString()}</td>
+                  <td className="px-6 py-4 text-right">
+                    <button
+                      onClick={() => handleViewDaily(day.date)}
+                      className="text-primary-600 hover:text-primary-700 font-medium"
+                    >
+                      View Daily
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
