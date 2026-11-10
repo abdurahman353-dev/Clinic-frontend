@@ -103,6 +103,17 @@ export default function InvestigationsPage() {
       return;
     }
 
+    // Client-side duplicate check within the batch
+    const names = validTests.map((t: any) => t.name.trim().toLowerCase());
+    const seen = new Set<string>();
+    for (const name of names) {
+      if (seen.has(name)) {
+        toast.error(`Duplicate name in your list: "${name}". Each investigation name must be unique.`);
+        return;
+      }
+      seen.add(name);
+    }
+
     setIsSubmittingBulk(true);
     try {
       await bulkAddLabTests(validTests.map((test: any) => ({
@@ -115,7 +126,15 @@ export default function InvestigationsPage() {
       setIsBulkAddModalOpen(false);
       fetchLabTests();
     } catch (error: any) {
-      toast.error(error.message || "Failed to register investigation types");
+      // The global API interceptor already shows a toast — only show here if it has extra context
+      const serverMsg = error?.response?.data?.message;
+      if (serverMsg && (serverMsg.includes("already exists") || serverMsg.includes("duplicate"))) {
+        toast.error(serverMsg);
+      } else if (!error?.response) {
+        // Network/timeout error not caught by interceptor
+        toast.error(error.message || "Failed to register investigation types");
+      }
+      // For 422/500 with server messages, the interceptor already toasted
     } finally {
       setIsSubmittingBulk(false);
     }

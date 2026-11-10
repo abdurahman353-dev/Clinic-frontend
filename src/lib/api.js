@@ -59,16 +59,34 @@ apiClient.interceptors.response.use(
                 }
             }
         } else if (status === 422) {
-            // Validation errors
+            // Validation errors — show the first human-readable message
             const errors = error.response.data.errors;
+            const topMessage = error.response.data.message;
             if (errors) {
-                const firstError = Object.values(errors)[0][0];
-                toast.error(firstError);
+                // Flatten nested validation keys (e.g. tests.0.name → first message)
+                const firstErrorMessages = Object.values(errors);
+                const firstMsg = Array.isArray(firstErrorMessages[0])
+                    ? firstErrorMessages[0][0]
+                    : firstErrorMessages[0];
+                toast.error(firstMsg || topMessage || message);
             } else {
-                toast.error(message);
+                toast.error(topMessage || message);
             }
         } else if (status >= 500) {
-            toast.error("Server error. Please try again later.");
+            // Check if it's a duplicate key violation — give a friendly message
+            const rawMessage = error.response?.data?.message || "";
+            if (rawMessage.includes("duplicate key") || rawMessage.includes("Unique violation") || rawMessage.includes("unique constraint")) {
+                // Try to extract the duplicate value
+                const nameMatch = rawMessage.match(/Key \(name\)=\((.+?)\) already exists/);
+                const dupName = nameMatch ? nameMatch[1] : null;
+                toast.error(
+                    dupName
+                        ? `"${dupName}" already exists. Please remove the duplicate and try again.`
+                        : "One or more items already exist. Please remove duplicates and try again."
+                );
+            } else {
+                toast.error("Server error. Please try again later.");
+            }
         } else if (error.code === 'ERR_NETWORK') {
             toast.error("Network error. Please check your connection.");
         } else {
